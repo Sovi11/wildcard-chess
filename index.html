@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wildcard Chess</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Wildcard&nbsp;Chess <span class="sub">every 2nd move bends the rules</span></h1>
+    </header>
+
+    <main>
+      <section class="board-wrap">
+        <div id="banner" class="banner"></div>
+        <canvas id="board" width="760" height="760"></canvas>
+      </section>
+
+      <aside class="panel">
+        <div class="status">
+          <span id="turn" class="turn white">White to move</span>
+          <span id="wildBadge" class="badge">★ Wildcard turn</span>
+        </div>
+
+        <div class="wild-group">
+          <div class="wild-label">Wildcard action</div>
+          <div class="wild-buttons">
+            <button class="wild-btn" data-mode="add" disabled>✚ Add pawn</button>
+            <button class="wild-btn" data-mode="remove" disabled>✖ Remove</button>
+            <button class="wild-btn" data-mode="wmove" disabled>➤ Shift</button>
+          </div>
+          <p id="hint" class="hint">Make your move.</p>
+        </div>
+
+        <div class="log-wrap">
+          <div class="wild-label">Move log</div>
+          <div id="log" class="log"></div>
+        </div>
+
+        <button id="newGame" class="new-game">↻ New game</button>
+
+        <details class="rules">
+          <summary>Rules</summary>
+          <ul>
+            <li>Standard chess, local 2-player.</li>
+            <li>Your <b>every 2nd move</b> is a wildcard turn: move normally <i>or</i> Add / Remove / Shift.</li>
+            <li><b>Add</b> a pawn on any empty square — even off the board, which grows it.</li>
+            <li><b>Remove</b> any piece except a king.</li>
+            <li><b>Shift</b> one of your pieces to any empty square.</li>
+            <li>Win by <b>capturing the king</b>. Red ring = a king is under attack.</li>
+          </ul>
+        </details>
+      </aside>
+    </main>
+  </div>
+
+  <script src="js/engine.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
