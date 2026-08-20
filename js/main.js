@@ -130,7 +130,36 @@ boardEl.addEventListener('click', (e) => {
   if (p && p.color === game.turn) { selected = { c, r }; legal = game.legalMoves(c, r); render(); }
 });
 
-function done() { selected = null; legal = []; setMode('normal'); sync(); render(); }
+function done() { selected = null; legal = []; setMode('normal'); sync(); render(); maybeAI(); }
+
+// ---- AI opponent (Black) --------------------------------------------------
+const aiBlackEl = document.getElementById('aiBlack');
+let aiThinking = false;
+function maybeAI() {
+  if (!aiBlackEl || !aiBlackEl.checked || aiThinking) return;
+  if (game.turn !== 'black' || game.winner || game.status === 'stalemate') return;
+  aiThinking = true;
+  ui.hint.textContent = 'AI is thinking…';
+  setTimeout(() => {
+    try {
+      const pos = WCAI.Pos.fromGame(game);
+      const res = pos.search({ depth: 4, K: 10, movetime: 1200, jitter: 10, seed: (Date.now() % 100000) | 0 });
+      const gm = WCAI.moveToGame(res.move);
+      if (!WCAI.applyToGame(game, gm)) {
+        // fallback: first legal piece move
+        outer: for (const [k, p] of game.board) {
+          if (p.color !== 'black') continue;
+          const [c, r] = k.split(',').map(Number);
+          for (const m of game.legalMoves(c, r)) if (game.makeMove(c, r, m.c, m.r)) break outer;
+        }
+      }
+    } finally {
+      aiThinking = false;
+      selected = null; legal = []; setMode('normal'); sync(); render();
+    }
+  }, 30);
+}
+if (aiBlackEl) aiBlackEl.addEventListener('change', maybeAI);
 
 // ---- modes ----------------------------------------------------------------
 const HINTS = {

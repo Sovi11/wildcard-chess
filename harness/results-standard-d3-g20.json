@@ -1,0 +1,431 @@
+{
+  "config": {
+    "GAMES": 20,
+    "DEPTH": 3,
+    "K": 10,
+    "JITTER": 15,
+    "MAX_PLIES": 200,
+    "SETUP": "standard"
+  },
+  "summary": {
+    "wins": {
+      "white": 4,
+      "black": 4,
+      "draw": 12
+    },
+    "term": {
+      "move-cap": 12,
+      "checkmate": 8
+    },
+    "avgPlies": 166.5,
+    "avgCells": 63.85,
+    "wildTotal": {
+      "ac": 6,
+      "rc": 9,
+      "mc": 787
+    },
+    "illegal": 0
+  },
+  "games": [
+    {
+      "idx": 0,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 1,
+          "rc": 0,
+          "mc": 21
+        },
+        "black": {
+          "ac": 1,
+          "rc": 0,
+          "mc": 26
+        }
+      },
+      "cellsEnd": 66,
+      "checksGiven": 6
+    },
+    {
+      "idx": 1,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 26
+        },
+        "black": {
+          "ac": 0,
+          "rc": 1,
+          "mc": 24
+        }
+      },
+      "cellsEnd": 63,
+      "checksGiven": 12
+    },
+    {
+      "idx": 2,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 33
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 35
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 1
+    },
+    {
+      "idx": 3,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 1,
+          "mc": 15
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 23
+        }
+      },
+      "cellsEnd": 63,
+      "checksGiven": 29
+    },
+    {
+      "idx": 4,
+      "plies": 94,
+      "result": "black",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 6
+        },
+        "black": {
+          "ac": 0,
+          "rc": 1,
+          "mc": 6
+        }
+      },
+      "cellsEnd": 63,
+      "checksGiven": 10
+    },
+    {
+      "idx": 5,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 1,
+          "rc": 0,
+          "mc": 23
+        },
+        "black": {
+          "ac": 1,
+          "rc": 1,
+          "mc": 21
+        }
+      },
+      "cellsEnd": 65,
+      "checksGiven": 17
+    },
+    {
+      "idx": 6,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 25
+        },
+        "black": {
+          "ac": 0,
+          "rc": 1,
+          "mc": 22
+        }
+      },
+      "cellsEnd": 63,
+      "checksGiven": 10
+    },
+    {
+      "idx": 7,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 30
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 30
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 9
+    },
+    {
+      "idx": 8,
+      "plies": 97,
+      "result": "white",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 7
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 10
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 10
+    },
+    {
+      "idx": 9,
+      "plies": 120,
+      "result": "black",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 10
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 8
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 8
+    },
+    {
+      "idx": 10,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 24
+        },
+        "black": {
+          "ac": 0,
+          "rc": 2,
+          "mc": 33
+        }
+      },
+      "cellsEnd": 62,
+      "checksGiven": 5
+    },
+    {
+      "idx": 11,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 16
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 25
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 11
+    },
+    {
+      "idx": 12,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 1,
+          "rc": 0,
+          "mc": 20
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 29
+        }
+      },
+      "cellsEnd": 65,
+      "checksGiven": 17
+    },
+    {
+      "idx": 13,
+      "plies": 79,
+      "result": "white",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 7
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 13
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 5
+    },
+    {
+      "idx": 14,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 1,
+          "mc": 23
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 26
+        }
+      },
+      "cellsEnd": 63,
+      "checksGiven": 9
+    },
+    {
+      "idx": 15,
+      "plies": 94,
+      "result": "black",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 11
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 9
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 1
+    },
+    {
+      "idx": 16,
+      "plies": 135,
+      "result": "white",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 12
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 18
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 10
+    },
+    {
+      "idx": 17,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 1,
+          "mc": 19
+        },
+        "black": {
+          "ac": 1,
+          "rc": 0,
+          "mc": 27
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 9
+    },
+    {
+      "idx": 18,
+      "plies": 148,
+      "result": "black",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 16
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 16
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 13
+    },
+    {
+      "idx": 19,
+      "plies": 163,
+      "result": "white",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 16
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 26
+        }
+      },
+      "cellsEnd": 64,
+      "checksGiven": 9
+    }
+  ]
+}
