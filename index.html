@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wildcard Chess</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
   <div class="app">
@@ -14,22 +14,23 @@
 
     <main>
       <section class="board-wrap">
-        <div id="banner" class="banner"></div>
-        <canvas id="board" width="760" height="760"></canvas>
+        <div id="banner" class="banner"><span id="bannerText"></span></div>
+        <svg id="board" viewBox="0 0 8 8" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision"></svg>
       </section>
 
       <aside class="panel">
         <div class="status">
           <span id="turn" class="turn white">White to move</span>
-          <span id="wildBadge" class="badge">★ Wildcard turn</span>
+          <span id="wildBadge" class="badge">★ Wildcard</span>
+          <span id="state" class="state">Check!</span>
         </div>
 
         <div class="wild-group">
           <div class="wild-label">Wildcard action</div>
           <div class="wild-buttons">
-            <button class="wild-btn" data-mode="add" disabled>✚ Add pawn</button>
-            <button class="wild-btn" data-mode="remove" disabled>✖ Remove</button>
-            <button class="wild-btn" data-mode="wmove" disabled>➤ Shift</button>
+            <button class="wild-btn" data-mode="addcell" disabled>✚ Add square</button>
+            <button class="wild-btn" data-mode="removecell" disabled>✖ Remove square</button>
+            <button class="wild-btn" data-mode="movecell" disabled>➤ Move square</button>
           </div>
           <p id="hint" class="hint">Make your move.</p>
         </div>
@@ -44,19 +45,21 @@
         <details class="rules">
           <summary>Rules</summary>
           <ul>
-            <li>Standard chess, local 2-player.</li>
-            <li>Your <b>every 2nd move</b> is a wildcard turn: move normally <i>or</i> Add / Remove / Shift.</li>
-            <li><b>Add</b> a pawn on any empty square — even off the board, which grows it.</li>
-            <li><b>Remove</b> any piece except a king.</li>
-            <li><b>Shift</b> one of your pieces to any empty square.</li>
-            <li>Win by <b>capturing the king</b>. Red ring = a king is under attack.</li>
+            <li>Standard chess for the pieces — but the <b>board itself</b> is fair game.</li>
+            <li>Your <b>every 2nd move</b> is a wildcard: move a piece normally <i>or</i> reshape the board.</li>
+            <li><b>Add square</b> — attach a new square anywhere touching the board.</li>
+            <li><b>Remove square</b> — delete an <i>empty</i> square. The hole <b>blocks sliding pieces</b>.</li>
+            <li><b>Move square</b> — pick up an <i>empty</i> square and re-attach it elsewhere.</li>
+            <li>Win by <b>checkmate</b> — on a wildcard turn you may escape check by reshaping the board (e.g. cut the attacker's line).</li>
+            <li>Pawns promote at the board's edge — extend the board and they must march further.</li>
           </ul>
         </details>
       </aside>
     </main>
   </div>
 
-  <script src="js/engine.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/engine.js?v=3"></script>
+  <script src="js/pieces.js?v=3"></script>
+  <script src="js/main.js?v=3"></script>
 </body>
 </html>

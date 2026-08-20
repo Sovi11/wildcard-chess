@@ -1,21 +1,22 @@
 # Wildcard Chess
 
-Standard chess, but **every second move bends the rules**. On your wildcard turn you can play normally *or* spend the turn to **Add**, **Remove**, or **Shift** a piece — and the board **grows** beyond 8×8 when you push pieces past the edge.
+Standard chess — but **the board itself is fair game**. Every second move, instead of moving a piece, you can reshape the terrain: add a square, remove a square, or move a square. Tear a hole in a bishop's diagonal. Grow a corridor behind the enemy king. The pieces play chess; the players play geography.
 
-## Rules (v1)
+## Rules (v3)
 
-- Standard chess setup and movement, local 2-player hotseat.
-- Each player's **2nd, 4th, 6th… move** is *wildcard-eligible*. That turn you may **either** make a normal move **or** one special action:
-  - **Add** — drop a pawn (your color) on any empty square, including one step off the current edge → the board grows (ranks `9`, `0`, `-1`, files past `h`).
-  - **Remove** — delete any one piece, yours or theirs, **except a king**.
-  - **Shift** — relocate one of *your* pieces to any empty square (no capture). Can push off-edge to expand.
-- **Expansion is deliberate.** Normal moves stay inside the current board; only a wildcard grows it (one ring at a time).
-- **Win by capturing the king** (regicide). No check/checkmate enforcement — a red ring warns when a king is attacked, but it's legal to leave it hanging.
-- Pawns auto-promote to queen at the far rank. *Castling / en-passant omitted in v1.*
+- Standard chess movement, local 2-player hotseat. Board starts 8×8.
+- Each player's **2nd, 4th, 6th… move** is *wildcard-eligible*: make a normal move **or** one board action:
+  - **Add square** — attach a new square at any empty spot touching the board (any direction, including diagonally). The board can grow without limit.
+  - **Remove square** — delete any **empty** square (occupied squares are safe). Leaves a hole.
+  - **Move square** — pick up any **empty** square and re-attach it anywhere touching the rest of the board.
+- **Holes block sliding pieces** (rook/bishop/queen lines stop at missing squares). Knights jump over holes but must land on an existing square. Square colour is just position parity — a moved square may change colour.
+- **Win by checkmate.** Full legality: no moving into check, pins are real. On a wildcard turn, board actions count as escapes — e.g. removing a square to sever the attacker's line. It's only mate if nothing (moves *or* board actions) saves you.
+- **Pawns promote at the edge of the world**: a pawn promotes when there is no square in front of it. Extend the board above the 8th rank and the pawn must march further.
+- Castling / en-passant omitted in v1.
 
 ## Play it (dev)
 
-Any static file server works — it's plain HTML/JS/Canvas, no build step:
+No build step — plain HTML/JS/SVG:
 
 ```bash
 cd wildcard-chess
@@ -23,43 +24,36 @@ python -m http.server 5180
 # open http://localhost:5180
 ```
 
-## Run as a desktop app (Electron)
+## Desktop app (Electron)
 
 ```bash
-cd wildcard-chess
 npm install
 npm start
 ```
 
-## Build a Steam-ready Windows executable
+## Steam-ready Windows build
 
 ```bash
 npm run dist:win
-# unpacked build in dist/win-unpacked/  (the folder you upload to Steam via SteamPipe)
-# installer in dist/  (nsis .exe, optional — Steam usually wants the unpacked folder)
+# dist/win-unpacked/ is the folder you upload via SteamPipe
 ```
 
-### Steam integration checklist
-1. **Steamworks SDK** — for achievements/overlay, add the `steamworks.js` npm package and call `init(<appid>)` in `electron-main.js`. Not required just to ship.
-2. **steam_appid.txt** — drop a file containing your App ID next to the executable during testing.
-3. **SteamPipe** — point `ContentBuilder` at `dist/win-unpacked/` and set the launch executable to `Wildcard Chess.exe`.
-4. Store page assets (capsules, screenshots, trailer) are separate from the build.
+See package.json for electron-builder config. For achievements/overlay later: `steamworks.js` + `steam_appid.txt`.
 
 ## Layout
 
 ```
 wildcard-chess/
   index.html          # page + UI shell
-  styles.css          # dark theme
-  js/engine.js        # pure game logic (no DOM) — unit-testable in Node
-  js/main.js          # canvas rendering + click/UI wiring
+  styles.css          # dark theme, board + void styling
+  js/engine.js        # pure game logic (cells Set + pieces Map) — Node-testable, no DOM
+  js/pieces.js        # original flat SVG piece set (no licensing issues)
+  js/main.js          # SVG rendering + click/UI wiring
   electron-main.js    # desktop wrapper
-  package.json        # electron + electron-builder config
 ```
 
-## Roadmap ideas
-- AI opponent (minimax over the variant; regicide makes eval simpler).
-- Online/hotseat toggle, move timers.
-- Wildcard balancing: per-game action budget, costlier adds, promotion choice dialog.
-- Castling / en-passant if we want full chess fidelity.
-- Sound, piece-drop animations, capsule art.
+## Roadmap
+- Analysis engine: iterative-deepening alpha-beta + variant-aware eval, candidate pruning for board actions (branching factor of square-moves is huge). Node self-play harness to answer design questions (mate feasibility, piece values on mutable terrain, game length).
+- Play vs AI in the UI (Web Worker), eval bar.
+- Balance passes: action budgets, restrict adds per game, connectivity rules.
+- Sound, animations, promotion choice, capsule art for Steam.

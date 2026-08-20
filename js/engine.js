@@ -1,50 +1,51 @@
-// Wildcard Chess — game engine (no DOM, pure logic)
-// Coordinates are integers (col, row). Row increases "up" the board.
-// The board is a Map: "col,row" -> piece. It can grow beyond the original 8x8.
+// Wildcard Chess — engine v3.
+// The wildcard operates on the BOARD, not the pieces: add / remove / move a SQUARE.
+// - cells: Set of "c,r" — which squares exist. Starts as 8x8, can grow any direction.
+// - board: Map "c,r" -> { type, color, hasMoved } — pieces standing on cells.
+// Pieces play normal chess over existing cells only; missing cells (holes) block sliders.
+// Knights jump holes but must LAND on an existing cell. Win by checkmate
+// (wildcard-aware: on a wildcard turn you may escape check by reshaping the board).
 
 const WHITE = 'white';
 const BLACK = 'black';
-
 const PIECE = { P: 'pawn', N: 'knight', B: 'bishop', R: 'rook', Q: 'queen', K: 'king' };
 
 const key = (c, r) => c + ',' + r;
 const parseKey = (k) => { const [c, r] = k.split(',').map(Number); return { c, r }; };
+const opp = (col) => (col === WHITE ? BLACK : WHITE);
+
+const NEIGH8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
 class Game {
   constructor() { this.reset(); }
 
   reset() {
-    this.board = new Map();          // key -> { type, color, id, hasMoved }
+    this.cells = new Set();
+    this.board = new Map();
     this.turn = WHITE;
-    this.moveCount = { white: 0, black: 0 }; // completed turns per color
-    this.history = [];               // array of human-readable strings
-    this.winner = null;              // null | WHITE | BLACK
-    this.lastAction = null;          // {from?, to?, kind} for highlighting
-    this._id = 1;
-    this._setupStandard();
-  }
-
-  _put(c, r, type, color, hasMoved = false) {
-    this.board.set(key(c, r), { type, color, id: this._id++, hasMoved });
-  }
-
-  _setupStandard() {
+    this.moveCount = { white: 0, black: 0 };
+    this.history = [];
+    this.winner = null;
+    this.status = 'playing';          // playing | check | checkmate | stalemate
+    this.lastAction = null;
+    for (let c = 0; c < 8; c++) for (let r = 0; r < 8; r++) this.cells.add(key(c, r));
     const back = [PIECE.R, PIECE.N, PIECE.B, PIECE.Q, PIECE.K, PIECE.B, PIECE.N, PIECE.R];
     for (let c = 0; c < 8; c++) {
-      this._put(c, 0, back[c], WHITE);
-      this._put(c, 1, PIECE.P, WHITE);
-      this._put(c, 6, PIECE.P, BLACK);
-      this._put(c, 7, back[c], BLACK);
+      this._put(c, 0, back[c], WHITE); this._put(c, 1, PIECE.P, WHITE);
+      this._put(c, 6, PIECE.P, BLACK); this._put(c, 7, back[c], BLACK);
     }
+    this._evaluate();
   }
 
+  _put(c, r, type, color, hasMoved = false) { this.board.set(key(c, r), { type, color, hasMoved }); }
   get(c, r) { return this.board.get(key(c, r)); }
+  hasCell(c, r) { return this.cells.has(key(c, r)); }
+  wildcardEligible() { return this.moveCount[this.turn] % 2 === 1; }
+  canWildcard() { return this.wildcardEligible() && !this.winner; }
 
-  // Bounding box of all pieces (defaults to the classic 8x8 when empty).
   bounds() {
-    if (this.board.size === 0) return { minC: 0, maxC: 7, minR: 0, maxR: 7 };
     let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity;
-    for (const k of this.board.keys()) {
+    for (const k of this.cells) {
       const { c, r } = parseKey(k);
       if (c < minC) minC = c; if (c > maxC) maxC = c;
       if (r < minR) minR = r; if (r > maxR) maxR = r;
@@ -52,180 +53,121 @@ class Game {
     return { minC, maxC, minR, maxR };
   }
 
-  // Active region = bounds padded by one ring of empty squares pieces may expand into.
-  activeRegion(pad = 1) {
-    const b = this.bounds();
-    return { minC: b.minC - pad, maxC: b.maxC + pad, minR: b.minR - pad, maxR: b.maxR + pad };
+  // Empty positions adjacent to the board where a new square may attach.
+  addTargets() {
+    const out = new Set();
+    for (const k of this.cells) {
+      const { c, r } = parseKey(k);
+      for (const [dc, dr] of NEIGH8) {
+        const nk = key(c + dc, r + dr);
+        if (!this.cells.has(nk)) out.add(nk);
+      }
+    }
+    return [...out].map(parseKey);
   }
 
-  inActive(c, r) {
-    const a = this.activeRegion();
-    return c >= a.minC && c <= a.maxC && r >= a.minR && r <= a.maxR;
+  // Attach targets if `exclude` (a "c,r" key) were removed from the board first.
+  _attachTargetsExcluding(exclude) {
+    const out = new Set();
+    for (const k of this.cells) {
+      if (k === exclude) continue;
+      const { c, r } = parseKey(k);
+      for (const [dc, dr] of NEIGH8) {
+        const nk = key(c + dc, r + dr);
+        if (nk !== exclude && !this.cells.has(nk)) out.add(nk);
+      }
+    }
+    return out;
   }
 
-  // True when the side to move is on a wildcard-eligible turn (their 2nd, 4th, ...).
-  wildcardEligible() { return this.moveCount[this.turn] % 2 === 1; }
+  // ---- trial: run mutate on cloned state, check `color`'s king is safe ----
+  _trial(color, mutate) {
+    const liveB = this.board, liveC = this.cells;
+    const cb = new Map(); for (const [k, p] of liveB) cb.set(k, { ...p });
+    this.board = cb; this.cells = new Set(liveC);
+    mutate();
+    const kp = this.findKing(color);
+    const safe = !!kp && !this.isAttacked(kp.c, kp.r, opp(color));
+    this.board = liveB; this.cells = liveC;
+    return safe;
+  }
 
-  // ---- Move generation (regicide rules: moving "into check" is allowed) ----
-  legalMoves(c, r) {
-    const p = this.get(c, r);
-    if (!p || p.color !== this.turn || this.winner) return [];
-    // Normal moves stay inside the current occupied board. The board only GROWS
-    // through a deliberate wildcard (Add / Shift), never via an ordinary move.
-    const a = this.bounds();
-    const inB = (x, y) => x >= a.minC && x <= a.maxC && y >= a.minR && y <= a.maxR;
-    const moves = [];
-    const push = (x, y, capture) => moves.push({ c: x, r: y, capture: !!capture });
-
-    // Returns true if the slide should continue past (x,y).
-    const slideStep = (x, y) => {
-      if (!inB(x, y)) return false;
-      const t = this.get(x, y);
-      if (!t) { push(x, y, false); return true; }
-      if (t.color !== p.color) push(x, y, true);
-      return false;
-    };
-
+  // ---- movement (over existing cells; holes block sliders) ----------------
+  _pseudo(c, r) {
+    const p = this.get(c, r); if (!p) return [];
+    const out = [];
+    const push = (x, y, capture) => out.push({ c: x, r: y, capture: !!capture });
     const slide = (dirs) => {
       for (const [dc, dr] of dirs) {
         let x = c + dc, y = r + dr;
-        while (slideStep(x, y)) { x += dc; y += dr; }
+        while (this.hasCell(x, y)) {                 // hole => stop
+          const t = this.get(x, y);
+          if (!t) push(x, y, false);
+          else { if (t.color !== p.color) push(x, y, true); break; }
+          x += dc; y += dr;
+        }
       }
     };
-
-    const step = (offsets) => {
-      for (const [dc, dr] of offsets) {
+    const step = (offs) => {
+      for (const [dc, dr] of offs) {
         const x = c + dc, y = r + dr;
-        if (!inB(x, y)) continue;
+        if (!this.hasCell(x, y)) continue;
         const t = this.get(x, y);
-        if (!t) push(x, y, false);
-        else if (t.color !== p.color) push(x, y, true);
+        if (!t) push(x, y, false); else if (t.color !== p.color) push(x, y, true);
       }
     };
-
     const DIAG = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
     const ORTHO = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-
     switch (p.type) {
       case PIECE.P: {
         const dir = p.color === WHITE ? 1 : -1;
-        if (inB(c, r + dir) && !this.get(c, r + dir)) {
+        if (this.hasCell(c, r + dir) && !this.get(c, r + dir)) {
           push(c, r + dir, false);
-          if (!p.hasMoved && !this.get(c, r + 2 * dir) && inB(c, r + 2 * dir)) push(c, r + 2 * dir, false);
+          if (!p.hasMoved && this.hasCell(c, r + 2 * dir) && !this.get(c, r + 2 * dir)) push(c, r + 2 * dir, false);
         }
         for (const dc of [-1, 1]) {
+          if (!this.hasCell(c + dc, r + dir)) continue;
           const t = this.get(c + dc, r + dir);
           if (t && t.color !== p.color) push(c + dc, r + dir, true);
         }
         break;
       }
-      case PIECE.N:
-        step([[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]]);
-        break;
+      case PIECE.N: step([[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]]); break;
       case PIECE.B: slide(DIAG); break;
       case PIECE.R: slide(ORTHO); break;
       case PIECE.Q: slide([...DIAG, ...ORTHO]); break;
       case PIECE.K: step([...DIAG, ...ORTHO]); break;
     }
-    return moves;
+    return out;
   }
 
-  // ---- Normal move ----
-  makeMove(fc, fr, tc, tr) {
-    const p = this.get(fc, fr);
-    if (!p || p.color !== this.turn || this.winner) return false;
-    const legal = this.legalMoves(fc, fr).some(m => m.c === tc && m.r === tr);
-    if (!legal) return false;
-
-    const target = this.get(tc, tr);
-    this.board.delete(key(fc, fr));
-    p.hasMoved = true;
-
-    // Promotion at the traditional far rank (generalizes for an expanding board).
-    if (p.type === PIECE.P && ((p.color === WHITE && tr >= 7) || (p.color === BLACK && tr <= 0))) {
-      p.type = PIECE.Q;
-    }
-    this.board.set(key(tc, tr), p);
-
-    let capText = '';
-    if (target) {
-      capText = ' x' + glyphLetter(target.type);
-      if (target.type === PIECE.K) this.winner = p.color;
-    }
-    this.lastAction = { kind: 'move', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
-    this._record(`${glyphLetter(p.type)} ${sq(fc, fr)}→${sq(tc, tr)}${capText}`);
-    this._endTurn();
-    return true;
+  legalMoves(c, r) {
+    const p = this.get(c, r);
+    if (!p || p.color !== this.turn || this.winner) return [];
+    return this._pseudo(c, r).filter(m => this._trial(p.color, () => {
+      this.board.delete(key(c, r));
+      this.board.set(key(m.c, m.r), { ...p, hasMoved: true });
+    }));
   }
 
-  // ---- Wildcard actions (only on a wildcard-eligible turn) ----
-  canWildcard() { return this.wildcardEligible() && !this.winner; }
-
-  wildcardAdd(c, r) {
-    if (!this.canWildcard() || this.get(c, r) || !this.inActive(c, r)) return false;
-    this._put(c, r, PIECE.P, this.turn, true);
-    this.lastAction = { kind: 'add', to: { c, r } };
-    this._record(`✚ add ${this.turn[0].toUpperCase()}-pawn @ ${sq(c, r)}`);
-    this._endTurn();
-    return true;
-  }
-
-  wildcardRemove(c, r) {
-    const t = this.get(c, r);
-    if (!this.canWildcard() || !t || t.type === PIECE.K) return false;
-    this.board.delete(key(c, r));
-    this.lastAction = { kind: 'remove', to: { c, r } };
-    this._record(`✖ remove ${t.color[0].toUpperCase()}-${glyphLetter(t.type)} @ ${sq(c, r)}`);
-    this._endTurn();
-    return true;
-  }
-
-  wildcardMove(fc, fr, tc, tr) {
-    const p = this.get(fc, fr);
-    if (!this.canWildcard() || !p || p.color !== this.turn) return false;
-    if (this.get(tc, tr) || !this.inActive(tc, tr)) return false; // empty target only
-    this.board.delete(key(fc, fr));
-    p.hasMoved = true;
-    this.board.set(key(tc, tr), p);
-    this.lastAction = { kind: 'wmove', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
-    this._record(`➤ shift ${glyphLetter(p.type)} ${sq(fc, fr)}→${sq(tc, tr)}`);
-    this._endTurn();
-    return true;
-  }
-
-  _endTurn() {
-    this.moveCount[this.turn]++;
-    if (!this.winner) this.turn = this.turn === WHITE ? BLACK : WHITE;
-  }
-
-  _record(text) {
-    this.history.push({ color: this.turn, text });
-  }
-
-  // Is (c,r) attacked by `byColor`? Used only for the "king in danger" warning.
   isAttacked(c, r, byColor) {
-    // Knights
     for (const [dc, dr] of [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]]) {
       const t = this.get(c + dc, r + dr);
       if (t && t.color === byColor && t.type === PIECE.N) return true;
     }
-    // King adjacency
-    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    for (const [dc, dr] of NEIGH8) {
       const t = this.get(c + dc, r + dr);
       if (t && t.color === byColor && t.type === PIECE.K) return true;
     }
-    // Pawns (attack toward this square): a pawn on (c±1, r-dir) hits (c,r)
     const pdir = byColor === WHITE ? 1 : -1;
     for (const dc of [-1, 1]) {
       const t = this.get(c + dc, r - pdir);
       if (t && t.color === byColor && t.type === PIECE.P) return true;
     }
-    // Sliders
     const ray = (dirs, types) => {
-      const a = this.activeRegion();
       for (const [dc, dr] of dirs) {
         let x = c + dc, y = r + dr;
-        while (x >= a.minC && x <= a.maxC && y >= a.minR && y <= a.maxR) {
+        while (this.hasCell(x, y)) {                 // holes block slider attacks too
           const t = this.get(x, y);
           if (t) { if (t.color === byColor && types.includes(t.type)) return true; break; }
           x += dc; y += dr;
@@ -238,33 +180,113 @@ class Game {
     return false;
   }
 
-  findKing(color) {
-    for (const [k, p] of this.board) if (p.type === PIECE.K && p.color === color) return parseKey(k);
-    return null;
+  findKing(color) { for (const [k, p] of this.board) if (p.type === PIECE.K && p.color === color) return parseKey(k); return null; }
+  inCheck(color) { const kp = this.findKing(color); return kp ? this.isAttacked(kp.c, kp.r, opp(color)) : false; }
+
+  makeMove(fc, fr, tc, tr) {
+    const p = this.get(fc, fr);
+    if (!p || p.color !== this.turn || this.winner) return false;
+    if (!this.legalMoves(fc, fr).some(m => m.c === tc && m.r === tr)) return false;
+    const target = this.get(tc, tr);
+    this.board.delete(key(fc, fr));
+    p.hasMoved = true;
+    this.board.set(key(tc, tr), p);
+    // Promotion: the pawn reached the edge of the world in its file.
+    const dir = p.color === WHITE ? 1 : -1;
+    if (p.type === PIECE.P && !this.hasCell(tc, tr + dir)) p.type = PIECE.Q;
+    this.lastAction = { kind: 'move', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
+    this._record(`${L(p.type)} ${sq(fc, fr)}${target ? 'x' : '–'}${sq(tc, tr)}`);
+    this._endTurn();
+    return true;
   }
 
-  // King of side-to-move (or either) currently attacked?
-  kingsInDanger() {
-    const out = [];
-    for (const color of [WHITE, BLACK]) {
-      const kpos = this.findKing(color);
-      if (kpos && this.isAttacked(kpos.c, kpos.r, color === WHITE ? BLACK : WHITE)) {
-        out.push({ color, ...kpos });
+  // ---- wildcards: reshape the board --------------------------------------
+  // Add a square at an empty position touching the board.
+  wildcardAddCell(c, r) {
+    if (!this.canWildcard() || this.hasCell(c, r)) return false;
+    const touches = NEIGH8.some(([dc, dr]) => this.hasCell(c + dc, r + dr));
+    if (!touches) return false;
+    if (!this._trial(this.turn, () => this.cells.add(key(c, r)))) return false;
+    this.cells.add(key(c, r));
+    this.lastAction = { kind: 'addcell', to: { c, r } };
+    this._record(`✚ square ${sq(c, r)}`);
+    this._endTurn();
+    return true;
+  }
+
+  // Remove an EMPTY square (leaves a hole).
+  wildcardRemoveCell(c, r) {
+    if (!this.canWildcard() || !this.hasCell(c, r) || this.get(c, r)) return false;
+    if (this.cells.size <= 1) return false;
+    if (!this._trial(this.turn, () => this.cells.delete(key(c, r)))) return false;
+    this.cells.delete(key(c, r));
+    this.lastAction = { kind: 'removecell', to: { c, r } };
+    this._record(`✖ square ${sq(c, r)}`);
+    this._endTurn();
+    return true;
+  }
+
+  // Move an EMPTY square: detach it and re-attach touching the remaining board.
+  wildcardMoveCell(fc, fr, tc, tr) {
+    if (!this.canWildcard()) return false;
+    if (!this.hasCell(fc, fr) || this.get(fc, fr)) return false;      // source must exist & be empty
+    if (this.hasCell(tc, tr)) return false;                            // target must be new ground
+    if (fc === tc && fr === tr) return false;
+    if (this.cells.size <= 1) return false;
+    if (!this._attachTargetsExcluding(key(fc, fr)).has(key(tc, tr))) return false;
+    if (!this._trial(this.turn, () => { this.cells.delete(key(fc, fr)); this.cells.add(key(tc, tr)); })) return false;
+    this.cells.delete(key(fc, fr));
+    this.cells.add(key(tc, tr));
+    this.lastAction = { kind: 'movecell', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
+    this._record(`➤ square ${sq(fc, fr)}→${sq(tc, tr)}`);
+    this._endTurn();
+    return true;
+  }
+
+  _endTurn() {
+    this.moveCount[this.turn]++;
+    if (!this.winner) { this.turn = opp(this.turn); this._evaluate(); }
+  }
+  _record(text) { this.history.push({ color: this.turn, text }); }
+
+  _evaluate() {
+    const color = this.turn;
+    const eligible = this.moveCount[color] % 2 === 1;
+    const inChk = this.inCheck(color);
+    if (this._hasAnyLegalAction(color, eligible)) { this.status = inChk ? 'check' : 'playing'; this.winner = null; return; }
+    if (inChk) { this.status = 'checkmate'; this.winner = opp(color); }
+    else { this.status = 'stalemate'; this.winner = null; }
+  }
+
+  _hasAnyLegalAction(color, eligible) {
+    for (const [k, p] of this.board) {
+      if (p.color !== color) continue;
+      const { c, r } = parseKey(k);
+      if (this.legalMoves(c, r).length) return true;
+    }
+    if (!eligible) return false;
+    for (const t of this.addTargets()) {
+      if (this._trial(color, () => this.cells.add(key(t.c, t.r)))) return true;
+    }
+    for (const k of this.cells) {
+      if (this.board.has(k)) continue;
+      if (this.cells.size <= 1) break;
+      if (this._trial(color, () => this.cells.delete(k))) return true;
+    }
+    for (const k of this.cells) {
+      if (this.board.has(k)) continue;
+      for (const tk of this._attachTargetsExcluding(k)) {
+        const t = parseKey(tk);
+        if (this._trial(color, () => { this.cells.delete(k); this.cells.add(key(t.c, t.r)); })) return true;
       }
     }
-    return out;
+    return false;
   }
 }
 
-// File letters: 0->a ... 25->z, otherwise the raw integer.
-function fileLabel(c) {
-  if (c >= 0 && c <= 25) return String.fromCharCode(97 + c);
-  return '#' + c;
-}
+function fileLabel(c) { return c >= 0 && c <= 25 ? String.fromCharCode(97 + c) : '#' + c; }
 function rankLabel(r) { return String(r + 1); }
 function sq(c, r) { return fileLabel(c) + rankLabel(r); }
-function glyphLetter(type) {
-  return { pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', king: 'K' }[type];
-}
+const L = (type) => ({ pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', king: 'K' }[type]);
 
-if (typeof module !== 'undefined') module.exports = { Game, WHITE, BLACK, PIECE, fileLabel, rankLabel, sq };
+if (typeof module !== 'undefined') module.exports = { Game, WHITE, BLACK, PIECE, sq, fileLabel, rankLabel };
