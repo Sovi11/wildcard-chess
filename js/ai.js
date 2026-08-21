@@ -285,7 +285,10 @@
         picks.push({ kind: 'mc', from: sM.cell, to: dM.cell, s: sM.s + dM.s - 10 });
       }
       picks.sort((a, b) => b.s - a.s);
-      return picks.slice(0, K);
+      // optional rule experiment: restrict which board actions exist
+      const allow = this.allowActions;
+      const filtered = allow ? picks.filter(p => allow[p.kind] !== false) : picks;
+      return filtered.slice(0, K);
     }
 
     // all legal actions for side to move (used by search)

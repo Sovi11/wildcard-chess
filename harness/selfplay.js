@@ -21,6 +21,8 @@ const cfg = {
   setup: flags.setup || 'standard',
   cadence: +flags.cadence || 2,
   budget: flags.budget !== undefined ? +flags.budget : Infinity,
+  // --no=mc,ac  disables those board actions (rule experiments)
+  allowActions: flags.no ? Object.fromEntries(String(flags.no).split(',').map(k => [k, false])) : null,
 };
 const GAMES = +args[0] || 20;
 

@@ -28,6 +28,7 @@ function playGame(cfg, idx) {
   while (!game.winner && !['stalemate', 'repetition'].includes(game.status) && stats.plies < maxPlies) {
     const pos = Pos.fromGame(game);
     if (noWild) pos.eligible = () => false;
+    if (cfg.allowActions) pos.allowActions = cfg.allowActions;
     const res = pos.search({ depth: cfg.depth || 3, K: cfg.K || 10, jitter: cfg.jitter != null ? cfg.jitter : 15, seed: (cfg.seed || 0) + idx * 1000 + stats.plies });
     const gm = moveToGame(res.move);
     if (!gm) break;
