@@ -26,8 +26,12 @@ class Game {
     this.moveCount = { white: 0, black: 0 };
     this.history = [];
     this.winner = null;
-    this.status = 'playing';          // playing | check | checkmate | stalemate
+    this.status = 'playing';          // playing | check | checkmate | stalemate | repetition
     this.lastAction = null;
+    // rule knobs: cadence = wildcard every Nth move; budget = max board actions per player
+    this.rules = this.rules || { cadence: 2, budget: Infinity };
+    this.wildUsed = { white: 0, black: 0 };
+    this.repCount = new Map();        // position key -> occurrences (threefold repetition)
     for (let c = 0; c < 8; c++) for (let r = 0; r < 8; r++) this.cells.add(key(c, r));
     const back = [PIECE.R, PIECE.N, PIECE.B, PIECE.Q, PIECE.K, PIECE.B, PIECE.N, PIECE.R];
     for (let c = 0; c < 8; c++) {
@@ -40,8 +44,13 @@ class Game {
   _put(c, r, type, color, hasMoved = false) { this.board.set(key(c, r), { type, color, hasMoved }); }
   get(c, r) { return this.board.get(key(c, r)); }
   hasCell(c, r) { return this.cells.has(key(c, r)); }
-  wildcardEligible() { return this.moveCount[this.turn] % 2 === 1; }
+  _eligibleFor(color) {
+    const cad = this.rules.cadence;
+    return this.moveCount[color] % cad === cad - 1 && this.wildUsed[color] < this.rules.budget;
+  }
+  wildcardEligible() { return this._eligibleFor(this.turn); }
   canWildcard() { return this.wildcardEligible() && !this.winner; }
+  budgetLeft(color) { return Math.max(0, this.rules.budget - this.wildUsed[color]); }
 
   bounds() {
     let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity;
@@ -208,6 +217,7 @@ class Game {
     if (!touches) return false;
     if (!this._trial(this.turn, () => this.cells.add(key(c, r)))) return false;
     this.cells.add(key(c, r));
+    this.wildUsed[this.turn]++;
     this.lastAction = { kind: 'addcell', to: { c, r } };
     this._record(`✚ square ${sq(c, r)}`);
     this._endTurn();
@@ -220,6 +230,7 @@ class Game {
     if (this.cells.size <= 1) return false;
     if (!this._trial(this.turn, () => this.cells.delete(key(c, r)))) return false;
     this.cells.delete(key(c, r));
+    this.wildUsed[this.turn]++;
     this.lastAction = { kind: 'removecell', to: { c, r } };
     this._record(`✖ square ${sq(c, r)}`);
     this._endTurn();
@@ -237,6 +248,7 @@ class Game {
     if (!this._trial(this.turn, () => { this.cells.delete(key(fc, fr)); this.cells.add(key(tc, tr)); })) return false;
     this.cells.delete(key(fc, fr));
     this.cells.add(key(tc, tr));
+    this.wildUsed[this.turn]++;
     this.lastAction = { kind: 'movecell', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
     this._record(`➤ square ${sq(fc, fr)}→${sq(tc, tr)}`);
     this._endTurn();
@@ -245,13 +257,32 @@ class Game {
 
   _endTurn() {
     this.moveCount[this.turn]++;
-    if (!this.winner) { this.turn = opp(this.turn); this._evaluate(); }
+    if (!this.winner) {
+      this.turn = opp(this.turn);
+      this._evaluate();
+      if (this.status === 'playing' || this.status === 'check') {
+        const k = this._posKey();
+        const n = (this.repCount.get(k) || 0) + 1;
+        this.repCount.set(k, n);
+        if (n >= 3) { this.status = 'repetition'; this.winner = null; }
+      }
+    }
+  }
+
+  // Position identity for repetition: terrain + pieces + turn + wildcard phase.
+  _posKey() {
+    const cad = this.rules.cadence;
+    const cells = [...this.cells].sort().join(';');
+    const pieces = [...this.board.entries()].map(([k, p]) => k + p.type[0] + p.color[0]).sort().join(';');
+    const phase = this.turn + '|' + (this.moveCount.white % cad) + '|' + (this.moveCount.black % cad)
+      + '|' + (this.budgetLeft(WHITE) > 0 ? 1 : 0) + (this.budgetLeft(BLACK) > 0 ? 1 : 0);
+    return phase + '#' + cells + '#' + pieces;
   }
   _record(text) { this.history.push({ color: this.turn, text }); }
 
   _evaluate() {
     const color = this.turn;
-    const eligible = this.moveCount[color] % 2 === 1;
+    const eligible = this._eligibleFor(color);
     const inChk = this.inCheck(color);
     if (this._hasAnyLegalAction(color, eligible)) { this.status = inChk ? 'check' : 'playing'; this.winner = null; return; }
     if (inChk) { this.status = 'checkmate'; this.winner = opp(color); }

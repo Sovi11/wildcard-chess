@@ -52,6 +52,54 @@ wildcard-chess/
   electron-main.js    # desktop wrapper
 ```
 
+## Playing the bot
+
+Pick **Opponent → Bot**, choose which side it plays, and set a level:
+
+| Level | Depth | Behaviour |
+|---|---|---|
+| 1 Beginner | 1 | Sees one move ahead, 30% random moves. Hangs pieces. |
+| 2 Casual | 2 | Spots simple captures and threats. |
+| 3 Medium | 3 | Plans ahead, uses board wildcards with purpose. **Default.** |
+| 4 Strong | 4 | Punishes mistakes, real terrain tactics. |
+| 5 Brutal | 6 | Deepest search the clock allows (~3.5s/move). |
+
+Verified ladder (colours swapped each game): Medium beat Beginner 8–0 and Casual 5.5–0.5, all wins by checkmate.
+
+## Engine architecture
+
+```
+js/engine.js   rules authority — legality, check/mate, repetition. Clones state per
+               legality probe: correct and simple, too slow for search.
+js/ai.js       search engine — its own make/unmake position with int-packed
+               coords and no allocation per node.
+```
+
+The AI mirrors the rules rather than sharing them (deliberate: the rules engine optimises for
+clarity, the search for speed), so `harness/` asserts they agree — every AI action is replayed
+through `engine.js` and any rejection is reported as `AI-ILLEGAL`.
+
+Search: iterative deepening → negamax + alpha-beta → quiescence (captures only) at the leaves.
+Move ordering by captured-piece value. ~270k nodes/sec; depth 4 in under a second.
+
+The variant-specific problem is branching factor. A wildcard turn offers ~35 piece moves **plus**
+~40 adds, ~30 removes and ~1200 square-moves. Full width is hopeless, so board actions are
+**candidate-pruned to top-K** by a static score: cut a check line to my king, freeze an enemy pawn
+by stealing the square ahead of it, deny promotion by extending the world, open escape squares
+for my king. Piece moves stay full width.
+
+Evaluation is hand-written and terrain-aware: material, mobility (counted over *existing* cells,
+so holes reduce it), king ring (how much floor surrounds the king), pawn advancement measured as
+distance to the world's edge, and a penalty for pawns with a hole in front.
+
+## Analysis harness
+
+```bash
+node harness/analyze.js --depth=5          # best action + eval for one position
+node harness/selfplay.js 30 3              # N games, stats on mates/draws/action usage
+node harness/botmatch.js 2 3 6             # level vs level, colours swapped
+```
+
 ## Roadmap
 - Analysis engine: iterative-deepening alpha-beta + variant-aware eval, candidate pruning for board actions (branching factor of square-moves is huge). Node self-play harness to answer design questions (mate feasibility, piece values on mutable terrain, game length).
 - Play vs AI in the UI (Web Worker), eval bar.

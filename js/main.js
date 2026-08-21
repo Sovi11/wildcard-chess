@@ -101,7 +101,9 @@ function parseKeyJS(k) { const [c, r] = k.split(',').map(Number); return { c, r 
 
 // ---- interaction ----------------------------------------------------------
 boardEl.addEventListener('click', (e) => {
-  if (game.winner || game.status === 'stalemate') return;
+  if (game.winner || ['stalemate', 'repetition'].includes(game.status)) return;
+  if (aiThinking) return;                                   // bot is on the clock
+  if (botEnabled() && game.turn === botSide()) return;       // not your turn
   const v = view();
   const rect = boardEl.getBoundingClientRect();
   const c = v.minC + Math.floor(((e.clientX - rect.left) / rect.width) * v.cols);
@@ -132,23 +134,42 @@ boardEl.addEventListener('click', (e) => {
 
 function done() { selected = null; legal = []; setMode('normal'); sync(); render(); maybeAI(); }
 
-// ---- AI opponent (Black) --------------------------------------------------
-const aiBlackEl = document.getElementById('aiBlack');
+// ---- bot opponent ---------------------------------------------------------
+const oppModeEl = document.getElementById('oppMode');
+const botSideEl = document.getElementById('botSide');
+const botLevelEl = document.getElementById('botLevel');
+const botBlurbEl = document.getElementById('botBlurb');
 let aiThinking = false;
+
+const botEnabled = () => oppModeEl && oppModeEl.value === 'bot';
+const botSide = () => (botSideEl ? botSideEl.value : 'black');
+
+function refreshBotUI() {
+  const on = botEnabled();
+  if (botLevelEl) botLevelEl.disabled = !on;
+  if (botSideEl) botSideEl.disabled = !on;
+  if (botBlurbEl) {
+    const lv = WCAI.levelById(botLevelEl ? botLevelEl.value : 3);
+    botBlurbEl.textContent = on ? `${lv.name} — ${lv.blurb}` : 'Two players, one screen.';
+  }
+}
+
+function gameOver() { return !!game.winner || ['stalemate', 'repetition'].includes(game.status); }
+
 function maybeAI() {
-  if (!aiBlackEl || !aiBlackEl.checked || aiThinking) return;
-  if (game.turn !== 'black' || game.winner || game.status === 'stalemate') return;
+  if (!botEnabled() || aiThinking || gameOver()) return;
+  if (game.turn !== botSide()) return;
   aiThinking = true;
-  ui.hint.textContent = 'AI is thinking…';
+  const lv = WCAI.levelById(botLevelEl ? botLevelEl.value : 3);
+  ui.hint.textContent = `${lv.name} is thinking…`;
   setTimeout(() => {
     try {
       const pos = WCAI.Pos.fromGame(game);
-      const res = pos.search({ depth: 4, K: 10, movetime: 1200, jitter: 10, seed: (Date.now() % 100000) | 0 });
-      const gm = WCAI.moveToGame(res.move);
-      if (!WCAI.applyToGame(game, gm)) {
-        // fallback: first legal piece move
+      const res = WCAI.chooseMove(pos, lv.id);
+      if (!WCAI.applyToGame(game, WCAI.moveToGame(res.move))) {
+        // fallback: any legal piece move (keeps the game alive if search whiffs)
         outer: for (const [k, p] of game.board) {
-          if (p.color !== 'black') continue;
+          if (p.color !== game.turn) continue;
           const [c, r] = k.split(',').map(Number);
           for (const m of game.legalMoves(c, r)) if (game.makeMove(c, r, m.c, m.r)) break outer;
         }
@@ -156,10 +177,14 @@ function maybeAI() {
     } finally {
       aiThinking = false;
       selected = null; legal = []; setMode('normal'); sync(); render();
+      maybeAI();   // bot may also own the next turn (e.g. after a wildcard)
     }
   }, 30);
 }
-if (aiBlackEl) aiBlackEl.addEventListener('change', maybeAI);
+
+if (oppModeEl) oppModeEl.addEventListener('change', () => { refreshBotUI(); maybeAI(); });
+if (botSideEl) botSideEl.addEventListener('change', () => { refreshBotUI(); maybeAI(); });
+if (botLevelEl) botLevelEl.addEventListener('change', refreshBotUI);
 
 // ---- modes ----------------------------------------------------------------
 const HINTS = {
@@ -185,6 +210,7 @@ document.querySelectorAll('.wild-btn').forEach(b => b.addEventListener('click', 
 document.getElementById('newGame').addEventListener('click', () => {
   game.reset(); selected = null; legal = []; setMode('normal');
   ui.banner.classList.remove('show'); sync(); render();
+  refreshBotUI(); maybeAI();
 });
 
 // ---- ui sync --------------------------------------------------------------
@@ -217,8 +243,13 @@ function sync() {
   } else if (game.status === 'stalemate') {
     ui.bannerText.textContent = 'Stalemate — draw';
     ui.banner.classList.add('show');
+  } else if (game.status === 'repetition') {
+    ui.bannerText.textContent = 'Draw by repetition';
+    ui.banner.classList.add('show');
   }
 }
 
 sync();
 render();
+refreshBotUI();
+maybeAI();

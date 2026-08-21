@@ -55,6 +55,9 @@
       }
       this.turn = spec.turn === 'white' ? W : B;
       this.counts = [spec.counts.white, spec.counts.black];
+      this.cadence = (spec.rules && spec.rules.cadence) || 2;
+      this.budget = (spec.rules && spec.rules.budget != null) ? spec.rules.budget : Infinity;
+      this.wildUsed = spec.wildUsed ? [spec.wildUsed.white, spec.wildUsed.black] : [0, 0];
       this.w = weights || DEFAULT_WEIGHTS;
       this.nodes = 0;
     }
@@ -66,10 +69,16 @@
         const [c, r] = k.split(',').map(Number);
         pieces.push([c, r, p.type, p.color, p.hasMoved]);
       }
-      return new Pos({ cells, pieces, turn: game.turn, counts: { white: game.moveCount.white, black: game.moveCount.black } }, weights);
+      return new Pos({
+        cells, pieces, turn: game.turn,
+        counts: { white: game.moveCount.white, black: game.moveCount.black },
+        rules: game.rules, wildUsed: game.wildUsed,
+      }, weights);
     }
 
-    eligible(col) { return this.counts[col] % 2 === 1; }
+    eligible(col) {
+      return this.counts[col] % this.cadence === this.cadence - 1 && this.wildUsed[col] < this.budget;
+    }
     has(k) { return this.cells.has(k); }
 
     // ---- attacks ----------------------------------------------------------
@@ -122,9 +131,9 @@
         }
         this.board.set(m.to, p);
         if (p.t === PT.king || u.wasT === PT.king) this.kings[p.col] = m.to;
-      } else if (m.kind === 'ac') { this.cells.add(m.cell); u.cell = m.cell; }
-      else if (m.kind === 'rc') { this.cells.delete(m.cell); u.cell = m.cell; }
-      else { this.cells.delete(m.from); this.cells.add(m.to); u.from = m.from; u.to = m.to; }
+      } else if (m.kind === 'ac') { this.cells.add(m.cell); u.cell = m.cell; this.wildUsed[side]++; }
+      else if (m.kind === 'rc') { this.cells.delete(m.cell); u.cell = m.cell; this.wildUsed[side]++; }
+      else { this.cells.delete(m.from); this.cells.add(m.to); u.from = m.from; u.to = m.to; this.wildUsed[side]++; }
       this.counts[side]++;
       this.turn = side === W ? B : W;
       return u;
@@ -140,9 +149,9 @@
         p.t = u.wasT; p.moved = u.wasMoved;
         this.board.set(u.from, p);
         if (p.t === PT.king) this.kings[p.col] = u.from;
-      } else if (u.kind === 'ac') this.cells.delete(u.cell);
-      else if (u.kind === 'rc') this.cells.add(u.cell);
-      else { this.cells.delete(u.to); this.cells.add(u.from); }
+      } else if (u.kind === 'ac') { this.cells.delete(u.cell); this.wildUsed[u.side]--; }
+      else if (u.kind === 'rc') { this.cells.add(u.cell); this.wildUsed[u.side]--; }
+      else { this.cells.delete(u.to); this.cells.add(u.from); this.wildUsed[u.side]--; }
     }
 
     // ---- piece move generation (pseudo) -----------------------------------
@@ -445,7 +454,39 @@
     return false;
   }
 
-  const API = { Pos, moveToGame, applyToGame, DEFAULT_WEIGHTS, PT, PT_NAME, MATE };
+  // ---- difficulty ladder --------------------------------------------------
+  // Strength is shaped by three dials: search depth (how far it sees),
+  // jitter (how loosely it picks among near-best moves), and blunder
+  // (chance it ignores the search entirely and plays a random legal action).
+  const LEVELS = [
+    { id: 1, name: 'Beginner', depth: 1, K: 4,  movetime: 250,  jitter: 130, blunder: 0.30, blurb: 'Sees one move ahead. Hangs pieces freely.' },
+    { id: 2, name: 'Casual',   depth: 2, K: 6,  movetime: 600,  jitter: 70,  blunder: 0.12, blurb: 'Spots simple captures and threats.' },
+    { id: 3, name: 'Medium',   depth: 3, K: 10, movetime: 1200, jitter: 25,  blunder: 0.03, blurb: 'Plans ahead and uses board wildcards with purpose.' },
+    { id: 4, name: 'Strong',   depth: 4, K: 12, movetime: 2000, jitter: 0,   blunder: 0,    blurb: 'Punishes mistakes. Real terrain tactics.' },
+    { id: 5, name: 'Brutal',   depth: 6, K: 16, movetime: 3500, jitter: 0,   blunder: 0,    blurb: 'Deepest search the clock allows.' },
+  ];
+  const levelById = (id) => LEVELS.find(l => l.id === +id) || LEVELS[2];
+
+  // Pick an action at the given difficulty. Returns a search result, plus
+  // {level, blundered}. seed is optional (harness reproducibility).
+  function chooseMove(pos, levelId, seed) {
+    const lv = levelById(levelId);
+    const rand = seed != null ? rng(seed) : Math.random;
+    if (lv.blunder > 0 && rand() < lv.blunder) {
+      const all = pos.genAll(lv.K);
+      if (all.length) {
+        return { move: all[Math.floor(rand() * all.length)], score: 0, depth: 0, nodes: 0, level: lv.name, blundered: true };
+      }
+    }
+    const res = pos.search({
+      depth: lv.depth, K: lv.K, movetime: lv.movetime, jitter: lv.jitter,
+      seed: seed != null ? seed : (Math.random() * 1e9) | 0,
+    });
+    res.level = lv.name; res.blundered = false;
+    return res;
+  }
+
+  const API = { Pos, moveToGame, applyToGame, DEFAULT_WEIGHTS, PT, PT_NAME, MATE, LEVELS, levelById, chooseMove };
   if (typeof module !== 'undefined') module.exports = API;
   if (typeof window !== 'undefined') window.WCAI = API;
 })();

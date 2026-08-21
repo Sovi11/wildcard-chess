@@ -40,7 +40,29 @@
           <div id="log" class="log"></div>
         </div>
 
-        <label class="ai-toggle"><input type="checkbox" id="aiBlack" /> AI plays Black</label>
+        <div class="opp-group">
+          <div class="wild-label">Opponent</div>
+          <div class="opp-row">
+            <select id="oppMode" aria-label="Opponent type">
+              <option value="human">Human (hotseat)</option>
+              <option value="bot" selected>Bot</option>
+            </select>
+            <select id="botSide" aria-label="Which side the bot plays">
+              <option value="black" selected>Bot: Black</option>
+              <option value="white">Bot: White</option>
+            </select>
+          </div>
+          <div class="opp-row">
+            <select id="botLevel" aria-label="Bot difficulty">
+              <option value="1">1 · Beginner</option>
+              <option value="2">2 · Casual</option>
+              <option value="3" selected>3 · Medium</option>
+              <option value="4">4 · Strong</option>
+              <option value="5">5 · Brutal</option>
+            </select>
+          </div>
+          <p id="botBlurb" class="blurb"></p>
+        </div>
 
         <button id="newGame" class="new-game">↻ New game</button>
 
@@ -60,9 +82,9 @@
     </main>
   </div>
 
-  <script src="js/engine.js?v=4"></script>
-  <script src="js/pieces.js?v=4"></script>
-  <script src="js/ai.js?v=4"></script>
-  <script src="js/main.js?v=4"></script>
+  <script src="js/engine.js?v=5"></script>
+  <script src="js/pieces.js?v=5"></script>
+  <script src="js/ai.js?v=5"></script>
+  <script src="js/main.js?v=5"></script>
 </body>
 </html>

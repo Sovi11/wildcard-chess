@@ -87,8 +87,16 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; al
 .logline.white { color: #ece9dd; }
 .logline.black { color: #b7c2db; }
 
-.ai-toggle { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink); margin: 0 2px 12px; cursor: pointer; user-select: none; }
-.ai-toggle input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+.opp-group { margin-bottom: 14px; }
+.opp-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.opp-row select {
+  flex: 1; min-width: 0; padding: 8px 9px; border-radius: 9px; cursor: pointer;
+  background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+  font-size: 13px; font-family: inherit; font-weight: 600;
+}
+.opp-row select:hover:not(:disabled) { border-color: var(--accent); }
+.opp-row select:disabled { opacity: .4; cursor: not-allowed; }
+.blurb { font-size: 12px; color: var(--muted); margin: 6px 2px 0; line-height: 1.45; min-height: 30px; }
 
 .new-game { width: 100%; padding: 11px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); }
 .new-game:hover { border-color: var(--accent); }
