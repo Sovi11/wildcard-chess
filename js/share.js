@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 1;
+  const VERSION = 2;   // v2 adds the en-passant square
   const TYPES = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king'];
 
   function b64url(bytes) {
@@ -48,6 +48,8 @@
     push16(game.moveCount.white); push16(game.moveCount.black);
     push16(game.wildUsed ? game.wildUsed.white : 0);
     push16(game.wildUsed ? game.wildUsed.black : 0);
+    const ep = game.epTarget;
+    bytes.push(ep ? 1 : 0, ep ? ep.c + 128 : 0, ep ? ep.r + 128 : 0);
     return b64url(bytes);
   }
 
@@ -85,6 +87,7 @@
     }
     const turn = u8() === 0 ? 'white' : 'black';
     const mcW = u16(), mcB = u16(), uW = u16(), uB = u16();
+    const epFlag = u8(), epC = u8() - 128, epR = u8() - 128;
 
     // commit
     game.cells = cells;
@@ -92,6 +95,7 @@
     game.turn = turn;
     game.moveCount = { white: mcW, black: mcB };
     game.wildUsed = { white: uW, black: uB };
+    game.epTarget = epFlag ? { c: epC, r: epR } : null;
     game.history = [];
     game.repCount = new Map();
     game.winner = null;

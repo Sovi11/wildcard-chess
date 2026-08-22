@@ -28,6 +28,7 @@ class Game {
     this.winner = null;
     this.status = 'playing';          // playing | check | checkmate | stalemate | repetition
     this.lastAction = null;
+    this.epTarget = null;             // square a double-stepped pawn skipped over
     // rule knobs: cadence = wildcard every Nth move; budget = max board actions per player
     this.rules = this.rules || { cadence: 2, budget: Infinity };
     this.wildUsed = { white: 0, black: 0 };
@@ -139,6 +140,12 @@ class Game {
           const t = this.get(c + dc, r + dir);
           if (t && t.color !== p.color) push(c + dc, r + dir, true);
         }
+        // en passant: capture onto the square an enemy pawn just skipped
+        const ep = this.epTarget;
+        if (ep && ep.r === r + dir && Math.abs(ep.c - c) === 1 && this.hasCell(ep.c, ep.r) && !this.get(ep.c, ep.r)) {
+          const victim = this.get(ep.c, r);
+          if (victim && victim.type === PIECE.P && victim.color !== p.color) push(ep.c, ep.r, true);
+        }
         break;
       }
       case PIECE.N: step([[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]]); break;
@@ -155,6 +162,8 @@ class Game {
     if (!p || p.color !== this.turn || this.winner) return [];
     return this._pseudo(c, r).filter(m => this._trial(p.color, () => {
       this.board.delete(key(c, r));
+      // en passant: the captured pawn sits beside the destination, not on it
+      if (p.type === PIECE.P && m.c !== c && !this.get(m.c, m.r)) this.board.delete(key(m.c, r));
       this.board.set(key(m.c, m.r), { ...p, hasMoved: true });
     }));
   }
@@ -210,13 +219,22 @@ class Game {
     if (!p || p.color !== this.turn || this.winner) return false;
     if (!this.legalMoves(fc, fr).some(m => m.c === tc && m.r === tr)) return false;
     const target = this.get(tc, tr);
+    // en passant: diagonal pawn move onto an empty square takes the passed pawn
+    let epCaptured = null;
+    if (p.type === PIECE.P && tc !== fc && !target) {
+      epCaptured = this.get(tc, fr) || null;
+      this.board.delete(key(tc, fr));
+    }
     this.board.delete(key(fc, fr));
     p.hasMoved = true;
     this.board.set(key(tc, tr), p);
+    // a double step leaves the skipped square capturable for exactly one reply
+    this.epTarget = (p.type === PIECE.P && Math.abs(tr - fr) === 2)
+      ? { c: fc, r: (fr + tr) / 2 } : null;
     // Promotion: the pawn reached the edge of the world in its file.
     if (p.type === PIECE.P && this._atWorldEdge(tc, tr, p.color)) p.type = PIECE.Q;
     this.lastAction = { kind: 'move', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
-    this._record(`${L(p.type)} ${sq(fc, fr)}${target ? 'x' : '–'}${sq(tc, tr)}`);
+    this._record(`${L(p.type)} ${sq(fc, fr)}${(target || epCaptured) ? 'x' : '–'}${sq(tc, tr)}${epCaptured ? ' e.p.' : ''}`);
     this._endTurn();
     return true;
   }
@@ -230,6 +248,7 @@ class Game {
     if (!this._trial(this.turn, () => this.cells.add(key(c, r)))) return false;
     this.cells.add(key(c, r));
     this.wildUsed[this.turn]++;
+    this.epTarget = null;
     this.lastAction = { kind: 'addcell', to: { c, r } };
     this._record(`✚ square ${sq(c, r)}`);
     this._endTurn();
@@ -243,6 +262,7 @@ class Game {
     if (!this._trial(this.turn, () => this.cells.delete(key(c, r)))) return false;
     this.cells.delete(key(c, r));
     this.wildUsed[this.turn]++;
+    this.epTarget = null;
     this.lastAction = { kind: 'removecell', to: { c, r } };
     this._record(`✖ square ${sq(c, r)}`);
     this._endTurn();
@@ -261,6 +281,7 @@ class Game {
     this.cells.delete(key(fc, fr));
     this.cells.add(key(tc, tr));
     this.wildUsed[this.turn]++;
+    this.epTarget = null;
     this.lastAction = { kind: 'movecell', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
     this._record(`➤ square ${sq(fc, fr)}→${sq(tc, tr)}`);
     this._endTurn();
@@ -288,7 +309,8 @@ class Game {
     const pieces = [...this.board.entries()].map(([k, p]) => k + p.type[0] + p.color[0]).sort().join(';');
     const phase = this.turn + '|' + (this.moveCount.white % cad) + '|' + (this.moveCount.black % cad)
       + '|' + (this.budgetLeft(WHITE) > 0 ? 1 : 0) + (this.budgetLeft(BLACK) > 0 ? 1 : 0);
-    return phase + '#' + cells + '#' + pieces;
+    const ep = this.epTarget ? `${this.epTarget.c},${this.epTarget.r}` : '-';
+    return phase + '|' + ep + '#' + cells + '#' + pieces;
   }
   _record(text) { this.history.push({ color: this.turn, text }); }
 

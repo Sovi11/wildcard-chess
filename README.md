@@ -12,7 +12,18 @@ Standard chess — but **the board itself is fair game**. Every second move, ins
 - **Holes block sliding pieces** (rook/bishop/queen lines stop at missing squares). Knights jump over holes but must land on an existing square. Square colour is just position parity — a moved square may change colour.
 - **Win by checkmate.** Full legality: no moving into check, pins are real. On a wildcard turn, board actions count as escapes — e.g. removing a square to sever the attacker's line. It's only mate if nothing (moves *or* board actions) saves you.
 - **Pawns promote at the edge of the world**: a pawn promotes only when there is no square anywhere ahead of it in its file. A lone hole directly in front is *not* the edge — the board may resume past it. Extend the board above the 8th rank and the pawn must march further.
-- Castling / en-passant omitted in v1.
+- **En passant** works as in normal chess: a double-stepped pawn can be taken on the square it skipped, but only on the immediate reply. Spending that reply on a board wildcard forfeits the capture.
+- Castling is not implemented yet.
+
+## Play
+
+**Online:** https://sovi11.github.io/wildcard-chess/
+
+**With a friend, two ways:**
+- *Same screen* — pick Opponent → "Friend — same screen" and pass the mouse.
+- *By link* — pick "Friend — by link". After each move you get a link; send it however you like
+  (WhatsApp, Discord). Your friend opens it, sees the exact position, plays, and sends one back.
+  The link is the whole save file (~180 characters) — no server, no accounts, no sign-up.
 
 ## Play it (dev)
 

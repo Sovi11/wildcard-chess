@@ -58,6 +58,7 @@
       this.cadence = (spec.rules && spec.rules.cadence) || 2;
       this.budget = (spec.rules && spec.rules.budget != null) ? spec.rules.budget : Infinity;
       this.wildUsed = spec.wildUsed ? [spec.wildUsed.white, spec.wildUsed.black] : [0, 0];
+      this.ep = spec.ep ? pack(spec.ep.c, spec.ep.r) : -1;    // -1 = no en-passant square
       this.w = weights || DEFAULT_WEIGHTS;
       this.nodes = 0;
     }
@@ -72,7 +73,7 @@
       return new Pos({
         cells, pieces, turn: game.turn,
         counts: { white: game.moveCount.white, black: game.moveCount.black },
-        rules: game.rules, wildUsed: game.wildUsed,
+        rules: game.rules, wildUsed: game.wildUsed, ep: game.epTarget,
       }, weights);
     }
 
@@ -129,20 +130,31 @@
     make(m) {
       const side = this.turn;
       const u = { kind: m.kind, side };
+      u.prevEp = this.ep;
       if (m.kind === 'm') {
         const p = this.board.get(m.from);
         u.from = m.from; u.to = m.to;
         u.captured = this.board.get(m.to) || null;
         u.wasMoved = p.moved; u.wasT = p.t;
+        // en passant: the victim stands beside the destination
+        if (m.ep) {
+          u.epVictimSq = pack(upC(m.to), upR(m.from));
+          u.epVictim = this.board.get(u.epVictimSq) || null;
+          this.board.delete(u.epVictimSq);
+        }
         this.board.delete(m.from);
         p.moved = true;
         // promote at edge of world (no cell anywhere ahead in this file)
         if (p.t === PT.pawn && this.atWorldEdge(upC(m.to), upR(m.to), p.col)) p.t = PT.queen;
         this.board.set(m.to, p);
         if (p.t === PT.king || u.wasT === PT.king) this.kings[p.col] = m.to;
+        // a double step opens the window; everything else closes it
+        this.ep = (u.wasT === PT.pawn && Math.abs(upR(m.to) - upR(m.from)) === 2)
+          ? pack(upC(m.from), (upR(m.from) + upR(m.to)) / 2) : -1;
       } else if (m.kind === 'ac') { this.cells.add(m.cell); u.cell = m.cell; this.wildUsed[side]++; }
       else if (m.kind === 'rc') { this.cells.delete(m.cell); u.cell = m.cell; this.wildUsed[side]++; }
       else { this.cells.delete(m.from); this.cells.add(m.to); u.from = m.from; u.to = m.to; this.wildUsed[side]++; }
+      if (m.kind !== 'm') this.ep = -1;
       this.counts[side]++;
       this.turn = side === W ? B : W;
       return u;
@@ -151,10 +163,12 @@
     unmake(u) {
       this.turn = u.side;
       this.counts[u.side]--;
+      this.ep = u.prevEp;
       if (u.kind === 'm') {
         const p = this.board.get(u.to);
         this.board.delete(u.to);
         if (u.captured) this.board.set(u.to, u.captured);
+        if (u.epVictim) this.board.set(u.epVictimSq, u.epVictim);
         p.t = u.wasT; p.moved = u.wasMoved;
         this.board.set(u.from, p);
         if (p.t === PT.king) this.kings[p.col] = u.from;
@@ -191,6 +205,11 @@
               if (!this.has(tk)) continue;
               const t = this.board.get(tk);
               if (t && t.col !== side) out.push({ kind: 'm', from: k, to: tk, cap: this.w.material[t.t] });
+              else if (!t && tk === this.ep) {
+                const victim = this.board.get(pack(c + dc, r));
+                if (victim && victim.t === PT.pawn && victim.col !== side)
+                  out.push({ kind: 'm', from: k, to: tk, cap: this.w.material[PT.pawn], ep: 1 });
+              }
             }
             break;
           }
