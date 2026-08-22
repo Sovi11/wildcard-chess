@@ -121,6 +121,7 @@ boardEl.addEventListener('click', (e) => {
   if (gameOver()) return;
   if (aiThinking) return;
   if (botEnabled() && game.turn === botSide()) return;
+  if (linkMode() && linkPending) return;      // their turn — waiting on their link
   const v = view();
   const rect = boardEl.getBoundingClientRect();
   const c = v.minC + Math.floor(((e.clientX - rect.left) / rect.width) * v.cols);
@@ -148,7 +149,7 @@ boardEl.addEventListener('click', (e) => {
   if (p && p.color === game.turn) { selected = { c, r }; legal = game.legalMoves(c, r); render(); }
 });
 
-function done() { afterMove(); maybeAI(); }
+function done() { afterMove(); updateShare(); maybeAI(); }
 
 function afterMove() {
   selected = null; legal = []; hintMove = null;
@@ -164,6 +165,8 @@ const botLevelEl = document.getElementById('botLevel');
 const botBlurbEl = document.getElementById('botBlurb');
 let aiThinking = false;
 
+const linkMode = () => oppModeEl && oppModeEl.value === 'link';
+let linkPending = false;          // true after your move: waiting on your friend
 const botEnabled = () => oppModeEl && oppModeEl.value === 'bot';
 const botSide = () => (botSideEl ? botSideEl.value : 'black');
 function gameOver() { return !!game.winner || ['stalemate', 'repetition'].includes(game.status); }
@@ -203,7 +206,7 @@ function maybeAI() {
   }, 30);
 }
 
-if (oppModeEl) oppModeEl.addEventListener('change', () => { refreshBotUI(); maybeAI(); });
+if (oppModeEl) oppModeEl.addEventListener('change', () => { refreshBotUI(); refreshShareUI(); maybeAI(); });
 if (botSideEl) botSideEl.addEventListener('change', () => { refreshBotUI(); maybeAI(); });
 if (botLevelEl) botLevelEl.addEventListener('change', refreshBotUI);
 
@@ -307,6 +310,67 @@ if (hintBtn) hintBtn.addEventListener('click', () => {
 if (anaOnEl) anaOnEl.addEventListener('change', () => { anaKey = null; runAnalysis(); });
 if (anaDepthEl) anaDepthEl.addEventListener('change', () => { anaKey = null; runAnalysis(); });
 
+// ---- play by link ---------------------------------------------------------
+const sharePanelEl = document.getElementById('sharePanel');
+const shareLinkEl = document.getElementById('shareLink');
+const shareMsgEl = document.getElementById('shareMsg');
+const copyLinkBtn = document.getElementById('copyLink');
+
+function refreshShareUI() {
+  if (!sharePanelEl) return;
+  sharePanelEl.style.display = linkMode() ? 'block' : 'none';
+  if (!linkMode()) { linkPending = false; return; }
+  if (!linkPending) {
+    shareMsgEl.textContent = gameOver() ? 'Game over — send the final position.' : 'Your turn. Move, then send the link.';
+    if (!shareLinkEl.value) shareLinkEl.placeholder = 'link appears after your move';
+  }
+}
+
+// Called after a move: in link mode, mint the link and hand the turn over.
+function updateShare() {
+  if (!linkMode()) return;
+  try {
+    const url = WCSHARE.linkFor(game);
+    shareLinkEl.value = url;
+    history.replaceState(null, '', '#g=' + WCSHARE.encode(game));
+    linkPending = true;
+    shareMsgEl.textContent = gameOver()
+      ? 'Game over — send this link so they can see it.'
+      : "Sent? Now it's their move. Paste their reply link in the address bar.";
+  } catch (e) {
+    shareMsgEl.textContent = 'Could not build a link: ' + e.message;
+  }
+}
+
+if (copyLinkBtn) copyLinkBtn.addEventListener('click', async () => {
+  if (!shareLinkEl.value) { shareLinkEl.value = WCSHARE.linkFor(game); }
+  try {
+    await navigator.clipboard.writeText(shareLinkEl.value);
+    copyLinkBtn.textContent = 'Copied';
+  } catch (e) {
+    shareLinkEl.select();                       // clipboard blocked: let them Ctrl+C
+    copyLinkBtn.textContent = 'Press Ctrl+C';
+  }
+  setTimeout(() => { copyLinkBtn.textContent = 'Copy link'; }, 1800);
+});
+
+// Pasting a friend's link into the address bar changes only the hash — no reload
+// fires, so pick it up here.
+window.addEventListener('hashchange', () => {
+  try {
+    if (!WCSHARE.fromLocation(game)) return;
+    selected = null; legal = []; hintMove = null;
+    quality.length = 0; anaKey = null; linkPending = false;
+    if (oppModeEl) oppModeEl.value = 'link';
+    ui.banner.classList.remove('show');
+    runAnalysis(); sync(); render(); refreshBotUI(); refreshShareUI();
+    if (shareMsgEl) shareMsgEl.textContent = "Your friend's move is loaded. Your turn.";
+    if (shareLinkEl) shareLinkEl.value = '';
+  } catch (e) {
+    alert('That game link could not be read: ' + e.message);
+  }
+});
+
 // ---- modes ----------------------------------------------------------------
 const HINTS = {
   addcell: 'ADD SQUARE: click a dashed spot to attach a new square to the board.',
@@ -334,8 +398,11 @@ document.getElementById('newGame').addEventListener('click', () => {
   quality.length = 0; anaKey = null;
   setMode('normal');
   ui.banner.classList.remove('show');
+  linkPending = false;
+  if (shareLinkEl) shareLinkEl.value = '';
+  history.replaceState(null, '', location.pathname + location.search);
   runAnalysis(); sync(); render();
-  refreshBotUI(); maybeAI();
+  refreshBotUI(); refreshShareUI(); maybeAI();
 });
 
 // ---- ui sync --------------------------------------------------------------
@@ -379,8 +446,22 @@ function sync() {
   }
 }
 
+// Boot: a #g=… link means a friend just sent us a position — load it and play.
+let bootedFromLink = false;
+try {
+  if (WCSHARE.fromLocation(game)) {
+    bootedFromLink = true;
+    if (oppModeEl) oppModeEl.value = 'link';
+  }
+} catch (e) {
+  console.warn('bad game link:', e.message);
+  alert('That game link could not be read — starting a new game instead.');
+}
+
 runAnalysis();
 sync();
 render();
 refreshBotUI();
-maybeAI();
+refreshShareUI();
+if (bootedFromLink && shareMsgEl) shareMsgEl.textContent = "Your friend's move is loaded. Your turn.";
+if (!bootedFromLink) maybeAI();

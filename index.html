@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wildcard Chess</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
   <div class="app">
@@ -68,8 +68,9 @@
           <div class="wild-label">Opponent</div>
           <div class="opp-row">
             <select id="oppMode" aria-label="Opponent type">
-              <option value="human">Human (hotseat)</option>
               <option value="bot" selected>Bot</option>
+              <option value="human">Friend — same screen</option>
+              <option value="link">Friend — by link</option>
             </select>
             <select id="botSide" aria-label="Which side the bot plays">
               <option value="black" selected>Bot: Black</option>
@@ -86,6 +87,12 @@
             </select>
           </div>
           <p id="botBlurb" class="blurb"></p>
+
+          <div id="sharePanel" class="share-panel">
+            <div id="shareMsg" class="share-msg">Make your move, then send the link.</div>
+            <input id="shareLink" class="share-input" readonly placeholder="link appears after your move" />
+            <button id="copyLink" class="share-btn">Copy link</button>
+          </div>
         </div>
 
         <button id="newGame" class="new-game">↻ New game</button>
@@ -106,10 +113,11 @@
     </main>
   </div>
 
-  <script src="js/engine.js?v=7"></script>
-  <script src="js/pieces.js?v=7"></script>
-  <script src="js/ai.js?v=7"></script>
-  <script src="js/analysis.js?v=7"></script>
-  <script src="js/main.js?v=7"></script>
+  <script src="js/engine.js?v=8"></script>
+  <script src="js/pieces.js?v=8"></script>
+  <script src="js/ai.js?v=8"></script>
+  <script src="js/share.js?v=8"></script>
+  <script src="js/analysis.js?v=8"></script>
+  <script src="js/main.js?v=8"></script>
 </body>
 </html>
