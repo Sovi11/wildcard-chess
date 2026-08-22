@@ -192,6 +192,19 @@ class Game {
   findKing(color) { for (const [k, p] of this.board) if (p.type === PIECE.K && p.color === color) return parseKey(k); return null; }
   inCheck(color) { const kp = this.findKing(color); return kp ? this.isAttacked(kp.c, kp.r, opp(color)) : false; }
 
+  // A pawn is at the edge of the world when NO cell exists anywhere ahead of it
+  // in its own file. A lone hole directly ahead is not the edge — the board may
+  // continue past it — otherwise any interior hole would mint free queens.
+  _atWorldEdge(c, r, color) {
+    const dir = color === WHITE ? 1 : -1;
+    if (this.hasCell(c, r + dir)) return false;          // fast path: floor ahead
+    const b = this.bounds();
+    for (let y = r + 2 * dir; y >= b.minR && y <= b.maxR; y += dir) {
+      if (this.hasCell(c, y)) return false;              // board resumes past the gap
+    }
+    return true;
+  }
+
   makeMove(fc, fr, tc, tr) {
     const p = this.get(fc, fr);
     if (!p || p.color !== this.turn || this.winner) return false;
@@ -201,8 +214,7 @@ class Game {
     p.hasMoved = true;
     this.board.set(key(tc, tr), p);
     // Promotion: the pawn reached the edge of the world in its file.
-    const dir = p.color === WHITE ? 1 : -1;
-    if (p.type === PIECE.P && !this.hasCell(tc, tr + dir)) p.type = PIECE.Q;
+    if (p.type === PIECE.P && this._atWorldEdge(tc, tr, p.color)) p.type = PIECE.Q;
     this.lastAction = { kind: 'move', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
     this._record(`${L(p.type)} ${sq(fc, fr)}${target ? 'x' : '–'}${sq(tc, tr)}`);
     this._endTurn();

@@ -112,6 +112,18 @@
     }
     inCheck(col) { return this.attacked(this.kings[col], col === W ? B : W); }
 
+    // A pawn promotes only at the true frontier: no cell anywhere ahead in its
+    // file. A single interior hole is not the edge, or holes would mint queens.
+    atWorldEdge(c, r, col) {
+      const dir = col === W ? 1 : -1;
+      if (this.has(pack(c, r + dir))) return false;        // fast path
+      for (let i = 2; i <= 40; i++) {
+        const y = r + i * dir;
+        if (this.has(pack(c, y))) return false;            // board resumes past the gap
+      }
+      return true;
+    }
+
     // ---- make / unmake ----------------------------------------------------
     // move: {kind:'m',from,to} | {kind:'ac',cell} | {kind:'rc',cell} | {kind:'mc',from,to}
     make(m) {
@@ -124,11 +136,8 @@
         u.wasMoved = p.moved; u.wasT = p.t;
         this.board.delete(m.from);
         p.moved = true;
-        // promote at edge of world
-        if (p.t === PT.pawn) {
-          const dir = p.col === W ? 1 : -1;
-          if (!this.has(pack(upC(m.to), upR(m.to) + dir))) p.t = PT.queen;
-        }
+        // promote at edge of world (no cell anywhere ahead in this file)
+        if (p.t === PT.pawn && this.atWorldEdge(upC(m.to), upR(m.to), p.col)) p.t = PT.queen;
         this.board.set(m.to, p);
         if (p.t === PT.king || u.wasT === PT.king) this.kings[p.col] = m.to;
       } else if (m.kind === 'ac') { this.cells.add(m.cell); u.cell = m.cell; this.wildUsed[side]++; }

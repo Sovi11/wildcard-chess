@@ -11,7 +11,7 @@ Standard chess — but **the board itself is fair game**. Every second move, ins
   - **Move square** — pick up any **empty** square and re-attach it anywhere touching the rest of the board.
 - **Holes block sliding pieces** (rook/bishop/queen lines stop at missing squares). Knights jump over holes but must land on an existing square. Square colour is just position parity — a moved square may change colour.
 - **Win by checkmate.** Full legality: no moving into check, pins are real. On a wildcard turn, board actions count as escapes — e.g. removing a square to sever the attacker's line. It's only mate if nothing (moves *or* board actions) saves you.
-- **Pawns promote at the edge of the world**: a pawn promotes when there is no square in front of it. Extend the board above the 8th rank and the pawn must march further.
+- **Pawns promote at the edge of the world**: a pawn promotes only when there is no square anywhere ahead of it in its file. A lone hole directly in front is *not* the edge — the board may resume past it. Extend the board above the 8th rank and the pawn must march further.
 - Castling / en-passant omitted in v1.
 
 ## Play it (dev)
