@@ -15,7 +15,13 @@
     <main>
       <section class="board-wrap">
         <div id="banner" class="banner"><span id="bannerText"></span></div>
-        <svg id="board" viewBox="0 0 8 8" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision"></svg>
+        <div class="board-row">
+          <div class="evalbar" title="Evaluation (White at the bottom)">
+            <div class="evalbar-fill" id="evalFill"></div>
+            <span class="evalbar-num" id="evalNum">0.0</span>
+          </div>
+          <svg id="board" viewBox="0 0 8 8" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision"></svg>
+        </div>
       </section>
 
       <aside class="panel">
@@ -33,6 +39,23 @@
             <button class="wild-btn" data-mode="movecell" disabled>➤ Move square</button>
           </div>
           <p id="hint" class="hint">Make your move.</p>
+        </div>
+
+        <div class="tutor-group">
+          <div class="wild-label">Tutor</div>
+          <div class="tutor-row">
+            <label class="chk"><input type="checkbox" id="anaOn" checked /> Analysis</label>
+            <select id="anaDepth" aria-label="Analysis depth">
+              <option value="2">Fast</option>
+              <option value="3" selected>Normal</option>
+              <option value="4">Deep</option>
+            </select>
+            <button id="hintBtn" class="hint-btn" title="Show the engine's best action">Best move</button>
+          </div>
+          <div id="anaLine" class="ana-line">—</div>
+          <div id="anaWhy" class="ana-why"></div>
+          <div id="lastQuality" class="quality-line"></div>
+          <div id="accuracy" class="accuracy-line"></div>
         </div>
 
         <div class="log-wrap">
@@ -82,9 +105,10 @@
     </main>
   </div>
 
-  <script src="js/engine.js?v=5"></script>
-  <script src="js/pieces.js?v=5"></script>
-  <script src="js/ai.js?v=5"></script>
-  <script src="js/main.js?v=5"></script>
+  <script src="js/engine.js?v=6"></script>
+  <script src="js/pieces.js?v=6"></script>
+  <script src="js/ai.js?v=6"></script>
+  <script src="js/analysis.js?v=6"></script>
+  <script src="js/main.js?v=6"></script>
 </body>
 </html>

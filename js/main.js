@@ -1,4 +1,4 @@
-// Wildcard Chess — SVG rendering + interaction (board-reshaping wildcards).
+// Wildcard Chess — SVG rendering, interaction, bot, and tutor wiring.
 const game = new Game();
 const boardEl = document.getElementById('board');
 const ui = {
@@ -9,11 +9,18 @@ const ui = {
   log: document.getElementById('log'),
   banner: document.getElementById('banner'),
   bannerText: document.getElementById('bannerText'),
+  evalFill: document.getElementById('evalFill'),
+  evalNum: document.getElementById('evalNum'),
+  anaLine: document.getElementById('anaLine'),
+  anaWhy: document.getElementById('anaWhy'),
+  lastQuality: document.getElementById('lastQuality'),
+  accuracy: document.getElementById('accuracy'),
 };
 
 let mode = 'normal';        // normal | addcell | removecell | movecell
-let selected = null;        // piece square (normal) or source cell (movecell)
+let selected = null;
 let legal = [];
+let hintMove = null;        // best-action overlay, cleared on the next move
 
 const SYM = { pawn: 'pc-pawn', knight: 'pc-knight', bishop: 'pc-bishop', rook: 'pc-rook', queen: 'pc-queen', king: 'pc-king' };
 const mod2 = (n) => ((n % 2) + 2) % 2;
@@ -31,20 +38,18 @@ function render() {
   const X = (c) => c - v.minC;
   const Y = (r) => v.maxR - r;
   let svg = pieceDefs();
+  svg += `<defs><marker id="hintHead" viewBox="0 0 10 10" refX="7.5" refY="5" markerWidth="3.6" markerHeight="3.6" orient="auto-start-reverse"><path d="M1 1L9 5L1 9Z" fill="#e7c14a"/></marker></defs>`;
 
-  // existing cells
   for (const k of game.cells) {
     const { c, r } = parseKeyJS(k);
     const light = mod2(c + r) === 1;
     svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" class="sq ${light ? 'lt' : 'dk'}"/>`;
   }
 
-  // last action tint
   if (game.lastAction) for (const s of [game.lastAction.from, game.lastAction.to]) {
     if (s && game.hasCell(s.c, s.r)) svg += `<rect x="${X(s.c)}" y="${Y(s.r)}" width="1" height="1" class="last"/>`;
   }
 
-  // mode guides
   if (mode === 'addcell' || (mode === 'movecell' && selected)) {
     const targets = mode === 'addcell'
       ? game.addTargets()
@@ -60,13 +65,10 @@ function render() {
     }
   }
 
-  // selection
   if (selected) {
-    const cls = mode === 'movecell' ? 'selcell' : 'sel';
-    svg += `<rect x="${X(selected.c)}" y="${Y(selected.r)}" width="1" height="1" class="${cls}"/>`;
+    svg += `<rect x="${X(selected.c)}" y="${Y(selected.r)}" width="1" height="1" class="${mode === 'movecell' ? 'selcell' : 'sel'}"/>`;
   }
 
-  // check / mate ring
   const dangerColors = game.status === 'checkmate' ? [game.winner === 'white' ? 'black' : 'white']
     : (game.status === 'check' ? [game.turn] : []);
   for (const col of dangerColors) {
@@ -74,19 +76,34 @@ function render() {
     if (kp) svg += `<rect x="${X(kp.c) + 0.04}" y="${Y(kp.r) + 0.04}" width="0.92" height="0.92" rx="0.1" class="danger"/>`;
   }
 
-  // pieces
   for (const [k, p] of game.board) {
     const { c, r } = parseKeyJS(k);
     svg += `<use href="#${SYM[p.type]}" x="${X(c)}" y="${Y(r)}" width="1" height="1" class="pc ${p.color === 'white' ? 'w' : 'b'}"/>`;
   }
 
-  // legal move markers
   for (const m of legal) {
     if (m.capture) svg += `<rect x="${X(m.c) + 0.06}" y="${Y(m.r) + 0.06}" width="0.88" height="0.88" rx="0.12" class="capdot"/>`;
     else svg += `<circle cx="${X(m.c) + 0.5}" cy="${Y(m.r) + 0.5}" r="0.15" class="movedot"/>`;
   }
 
-  // coordinate labels along current edges
+  // tutor: best-action overlay
+  if (hintMove) {
+    const gm = WCAI.moveToGame(hintMove);
+    if (gm.kind === 'm' || gm.kind === 'mc') {
+      const fx = X(gm.from.c) + 0.5, fy = Y(gm.from.r) + 0.5;
+      const tx = X(gm.to.c) + 0.5, ty = Y(gm.to.r) + 0.5;
+      const dx = tx - fx, dy = ty - fy, len = Math.hypot(dx, dy) || 1;
+      const x1 = fx + (dx / len) * 0.30, y1 = fy + (dy / len) * 0.30;
+      const x2 = tx - (dx / len) * 0.30, y2 = ty - (dy / len) * 0.30;
+      svg += `<rect x="${X(gm.from.c) + 0.04}" y="${Y(gm.from.r) + 0.04}" width="0.92" height="0.92" rx="0.1" class="hintcell"/>`;
+      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="hintarrow" marker-end="url(#hintHead)"/>`;
+    } else {
+      const cc = gm.cell;
+      svg += `<rect x="${X(cc.c) + 0.04}" y="${Y(cc.r) + 0.04}" width="0.92" height="0.92" rx="0.1" class="hintcell"/>`;
+      svg += `<text x="${X(cc.c) + 0.5}" y="${Y(cc.r) + 0.66}" class="hintmark">${gm.kind === 'ac' ? '+' : '×'}</text>`;
+    }
+  }
+
   const b = game.bounds();
   for (let c = b.minC; c <= b.maxC; c++)
     svg += `<text x="${X(c) + 0.5}" y="${v.rows - 0.18}" class="lbl edge">${fileLabel(c)}</text>`;
@@ -101,9 +118,9 @@ function parseKeyJS(k) { const [c, r] = k.split(',').map(Number); return { c, r 
 
 // ---- interaction ----------------------------------------------------------
 boardEl.addEventListener('click', (e) => {
-  if (game.winner || ['stalemate', 'repetition'].includes(game.status)) return;
-  if (aiThinking) return;                                   // bot is on the clock
-  if (botEnabled() && game.turn === botSide()) return;       // not your turn
+  if (gameOver()) return;
+  if (aiThinking) return;
+  if (botEnabled() && game.turn === botSide()) return;
   const v = view();
   const rect = boardEl.getBoundingClientRect();
   const c = v.minC + Math.floor(((e.clientX - rect.left) / rect.width) * v.cols);
@@ -119,11 +136,10 @@ boardEl.addEventListener('click', (e) => {
       return;
     }
     if (game.wildcardMoveCell(selected.c, selected.r, c, r)) { done(); return; }
-    if (game.hasCell(c, r) && !game.get(c, r)) { selected = { c, r }; render(); }   // reselect
+    if (game.hasCell(c, r) && !game.get(c, r)) { selected = { c, r }; render(); }
     return;
   }
 
-  // normal chess
   if (selected) {
     if (game.makeMove(selected.c, selected.r, c, r)) { done(); return; }
     if (p && p.color === game.turn) { selected = { c, r }; legal = game.legalMoves(c, r); render(); return; }
@@ -132,7 +148,14 @@ boardEl.addEventListener('click', (e) => {
   if (p && p.color === game.turn) { selected = { c, r }; legal = game.legalMoves(c, r); render(); }
 });
 
-function done() { selected = null; legal = []; setMode('normal'); sync(); render(); maybeAI(); }
+function done() { afterMove(); maybeAI(); }
+
+function afterMove() {
+  selected = null; legal = []; hintMove = null;
+  setMode('normal');
+  runAnalysis();
+  sync(); render();
+}
 
 // ---- bot opponent ---------------------------------------------------------
 const oppModeEl = document.getElementById('oppMode');
@@ -143,6 +166,7 @@ let aiThinking = false;
 
 const botEnabled = () => oppModeEl && oppModeEl.value === 'bot';
 const botSide = () => (botSideEl ? botSideEl.value : 'black');
+function gameOver() { return !!game.winner || ['stalemate', 'repetition'].includes(game.status); }
 
 function refreshBotUI() {
   const on = botEnabled();
@@ -153,8 +177,6 @@ function refreshBotUI() {
     botBlurbEl.textContent = on ? `${lv.name} — ${lv.blurb}` : 'Two players, one screen.';
   }
 }
-
-function gameOver() { return !!game.winner || ['stalemate', 'repetition'].includes(game.status); }
 
 function maybeAI() {
   if (!botEnabled() || aiThinking || gameOver()) return;
@@ -167,7 +189,6 @@ function maybeAI() {
       const pos = WCAI.Pos.fromGame(game);
       const res = WCAI.chooseMove(pos, lv.id);
       if (!WCAI.applyToGame(game, WCAI.moveToGame(res.move))) {
-        // fallback: any legal piece move (keeps the game alive if search whiffs)
         outer: for (const [k, p] of game.board) {
           if (p.color !== game.turn) continue;
           const [c, r] = k.split(',').map(Number);
@@ -176,8 +197,8 @@ function maybeAI() {
       }
     } finally {
       aiThinking = false;
-      selected = null; legal = []; setMode('normal'); sync(); render();
-      maybeAI();   // bot may also own the next turn (e.g. after a wildcard)
+      afterMove();
+      maybeAI();
     }
   }, 30);
 }
@@ -185,6 +206,106 @@ function maybeAI() {
 if (oppModeEl) oppModeEl.addEventListener('change', () => { refreshBotUI(); maybeAI(); });
 if (botSideEl) botSideEl.addEventListener('change', () => { refreshBotUI(); maybeAI(); });
 if (botLevelEl) botLevelEl.addEventListener('change', refreshBotUI);
+
+// ---- tutor ----------------------------------------------------------------
+const anaOnEl = document.getElementById('anaOn');
+const anaDepthEl = document.getElementById('anaDepth');
+const hintBtn = document.getElementById('hintBtn');
+
+let anaKey = null;          // ply count the cached analysis describes
+let anaStm = 0;             // side-to-move score at that position
+let anaBest = null;         // best action there
+const quality = [];         // quality[i] grades history[i]
+
+const anaOn = () => !anaOnEl || anaOnEl.checked;
+const anaDepth = () => (anaDepthEl ? +anaDepthEl.value : 3);
+
+// One search per ply: evaluates the new position AND grades the move that
+// produced it, using the cached eval of the position before it.
+function runAnalysis() {
+  if (!anaOn()) { anaKey = null; paintEval(null); return; }
+  const key = game.history.length;
+  if (gameOver()) {
+    // the move that ended the game was, by definition, not a mistake
+    if (key - 1 >= 0 && anaKey === key - 1) quality[key - 1] = WCAN.classify(0);
+    const finalWhite = game.status === 'checkmate' ? (game.winner === 'white' ? WCAN.MATE : -WCAN.MATE) : 0;
+    anaKey = key; anaStm = 0; anaBest = null;
+    paintEval({ whiteScore: finalWhite, best: null, depth: 0 });
+    return;
+  }
+  const res = WCAN.analyse(game, anaDepth(), 900);
+  gradePrevious(key, res.stmScore);
+  anaKey = key; anaStm = res.stmScore; anaBest = res.best;
+  paintEval(res);
+}
+
+// Grade history[key-1] from the side-to-move score at the position after it.
+function gradePrevious(key, newStmScore) {
+  const idx = key - 1;
+  if (idx < 0 || anaKey !== idx) return;         // no cached "before" eval
+  const before = WCAN.clamp(anaStm);             // mover POV: best available
+  const after = WCAN.clamp(-newStmScore);        // mover POV: what they got
+  quality[idx] = WCAN.classify(before - after);
+}
+
+function paintEval(res) {
+  if (!res) {
+    if (ui.evalFill) ui.evalFill.style.height = '50%';
+    if (ui.evalNum) { ui.evalNum.textContent = '–'; ui.evalNum.className = 'evalbar-num'; }
+    if (ui.anaLine) ui.anaLine.textContent = 'Analysis off';
+    if (ui.anaWhy) ui.anaWhy.textContent = '';
+    if (ui.lastQuality) ui.lastQuality.innerHTML = '';
+    if (ui.accuracy) ui.accuracy.textContent = '';
+    return;
+  }
+  const pct = WCAN.evalToPct(res.whiteScore);
+  if (ui.evalFill) ui.evalFill.style.height = pct + '%';
+  if (ui.evalNum) {
+    ui.evalNum.textContent = WCAN.fmtScore(res.whiteScore);
+    ui.evalNum.className = 'evalbar-num ' + (res.whiteScore >= 0 ? 'pos' : 'neg');
+  }
+  if (ui.anaLine) {
+    ui.anaLine.textContent = res.best
+      ? `Best: ${WCAN.describe(WCAI.moveToGame(res.best), game)}   ·   depth ${res.depth}`
+      : (gameOver() ? 'Game over' : '—');
+  }
+  if (ui.anaWhy) ui.anaWhy.textContent = res.best ? WCAN.explain(WCAI.moveToGame(res.best), game) : '';
+
+  const lastIdx = game.history.length - 1;
+  if (ui.lastQuality) {
+    const q = quality[lastIdx];
+    const who = lastIdx >= 0 && game.history[lastIdx] ? (game.history[lastIdx].color === 'white' ? 'White' : 'Black') : '';
+    ui.lastQuality.innerHTML = q
+      ? `<span class="q q-${q.key}">${q.mark} ${q.label}</span><span class="q-meta">${who}${q.loss > 12 ? ` · −${(q.loss / 100).toFixed(2)}` : ''}</span>`
+      : '';
+  }
+  if (ui.accuracy) {
+    const lw = [], lb = [];
+    game.history.forEach((h, i) => {
+      const q = quality[i]; if (!q) return;
+      (h.color === 'white' ? lw : lb).push(q.loss);
+    });
+    const aw = WCAN.accuracy(lw), ab = WCAN.accuracy(lb);
+    ui.accuracy.textContent = (aw != null || ab != null)
+      ? `Accuracy · White ${aw != null ? aw + '%' : '–'} · Black ${ab != null ? ab + '%' : '–'}` : '';
+  }
+}
+
+if (hintBtn) hintBtn.addEventListener('click', () => {
+  if (gameOver()) return;
+  if (hintMove) { hintMove = null; render(); return; }          // toggle off
+  let best = (anaKey === game.history.length) ? anaBest : null;
+  if (!best) {
+    const res = WCAN.analyse(game, anaDepth(), 900);
+    best = res.best;
+    anaKey = game.history.length; anaStm = res.stmScore; anaBest = best;
+    paintEval(res);
+  }
+  hintMove = best;
+  render();
+});
+if (anaOnEl) anaOnEl.addEventListener('change', () => { anaKey = null; runAnalysis(); });
+if (anaDepthEl) anaDepthEl.addEventListener('change', () => { anaKey = null; runAnalysis(); });
 
 // ---- modes ----------------------------------------------------------------
 const HINTS = {
@@ -208,12 +329,29 @@ document.querySelectorAll('.wild-btn').forEach(b => b.addEventListener('click', 
 }));
 
 document.getElementById('newGame').addEventListener('click', () => {
-  game.reset(); selected = null; legal = []; setMode('normal');
-  ui.banner.classList.remove('show'); sync(); render();
+  game.reset();
+  selected = null; legal = []; hintMove = null;
+  quality.length = 0; anaKey = null;
+  setMode('normal');
+  ui.banner.classList.remove('show');
+  runAnalysis(); sync(); render();
   refreshBotUI(); maybeAI();
 });
 
 // ---- ui sync --------------------------------------------------------------
+function renderLog() {
+  ui.log.innerHTML = '';
+  game.history.forEach((h, i) => {
+    const d = document.createElement('div');
+    d.className = 'logline ' + h.color;
+    const q = quality[i];
+    d.innerHTML = `<span class="ln">${i + 1}.</span> <span class="mv">${h.text}</span>` +
+      (q ? ` <span class="q q-${q.key}" title="${q.label} (−${(q.loss / 100).toFixed(2)})">${q.mark}</span>` : '');
+    ui.log.appendChild(d);
+  });
+  ui.log.scrollTop = ui.log.scrollHeight;
+}
+
 function sync() {
   const side = game.turn === 'white' ? 'White' : 'Black';
   ui.turn.textContent = `${side} to move`;
@@ -227,15 +365,7 @@ function sync() {
   ui.state.style.display = game.status === 'check' ? 'inline-flex' : 'none';
 
   setMode('normal');
-
-  ui.log.innerHTML = '';
-  game.history.forEach((h, i) => {
-    const d = document.createElement('div');
-    d.className = 'logline ' + h.color;
-    d.textContent = `${i + 1}. ${h.text}`;
-    ui.log.appendChild(d);
-  });
-  ui.log.scrollTop = ui.log.scrollHeight;
+  renderLog();
 
   if (game.status === 'checkmate') {
     ui.bannerText.textContent = `Checkmate — ${game.winner === 'white' ? 'White' : 'Black'} wins`;
@@ -249,6 +379,7 @@ function sync() {
   }
 }
 
+runAnalysis();
 sync();
 render();
 refreshBotUI();

@@ -66,6 +66,21 @@ Pick **Opponent → Bot**, choose which side it plays, and set a level:
 
 Verified ladder (colours swapped each game): Medium beat Beginner 8–0 and Casual 5.5–0.5, all wins by checkmate.
 
+## Tutor / analysis
+
+A chess.com-style coach runs alongside play:
+
+- **Eval bar** beside the board, White at the bottom, with a numeric score (`+1.2`, `-0.4`, `+M3`).
+- **Best move** button draws a gold arrow for piece moves, or marks the square for board actions.
+- **Move grading** — every ply is graded by centipawn loss against the engine's best:
+  Best `*`, Excellent, Good, Inaccuracy `?!`, Mistake `?`, Blunder `??`. Badges appear inline in the move log.
+- **Accuracy %** per side, derived from average centipawn loss.
+- Depth selector: Fast (2) / Normal (3) / Deep (4). One search per ply serves double duty —
+  it evaluates the new position *and* grades the move that produced it.
+
+Board wildcards are graded and suggested exactly like piece moves, which matters because nobody has
+intuition for terrain tactics yet.
+
 ## Engine architecture
 
 ```
