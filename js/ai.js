@@ -137,6 +137,15 @@
         u.captured = this.board.get(m.to) || null;
         u.wasMoved = p.moved; u.wasT = p.t;
         // en passant: the victim stands beside the destination
+        if (m.castle) {
+          u.rookFrom = m.rookFrom;
+          u.rookTo = pack(upC(m.from) + m.castle, upR(m.from));
+          const rk = this.board.get(m.rookFrom);
+          u.rookWasMoved = rk.moved;
+          this.board.delete(m.rookFrom);
+          rk.moved = true;
+          this.board.set(u.rookTo, rk);
+        }
         if (m.ep) {
           u.epVictimSq = pack(upC(m.to), upR(m.from));
           u.epVictim = this.board.get(u.epVictimSq) || null;
@@ -169,6 +178,12 @@
         this.board.delete(u.to);
         if (u.captured) this.board.set(u.to, u.captured);
         if (u.epVictim) this.board.set(u.epVictimSq, u.epVictim);
+        if (u.rookFrom !== undefined) {
+          const rk = this.board.get(u.rookTo);
+          this.board.delete(u.rookTo);
+          rk.moved = u.rookWasMoved;
+          this.board.set(u.rookFrom, rk);
+        }
         p.t = u.wasT; p.moved = u.wasMoved;
         this.board.set(u.from, p);
         if (p.t === PT.king) this.kings[p.col] = u.from;
@@ -216,9 +231,25 @@
           case PT.knight:
             for (const [dc, dr] of KNIGHT) { const x = c + dc, y = r + dr; if (this.has(pack(x, y))) emit(x, y); }
             break;
-          case PT.king:
+          case PT.king: {
             for (const [dc, dr] of N8) { const x = c + dc, y = r + dr; if (this.has(pack(x, y))) emit(x, y); }
+            // castling — path between king and rook must exist and be empty
+            const foe = side === W ? B : W;
+            if (!onlyCaptures && !p.moved && !this.attacked(k, foe)) {
+              for (const dc of [1, -1]) {
+                let x = c + dc;
+                while (this.has(pack(x, r)) && !this.board.get(pack(x, r))) x += dc;
+                if (!this.has(pack(x, r))) continue;                 // hole: path broken
+                const rook = this.board.get(pack(x, r));
+                if (!rook || rook.col !== side || rook.t !== PT.rook || rook.moved) continue;
+                if (Math.abs(x - c) < 3) continue;
+                if (this.attacked(pack(c + dc, r), foe)) continue;
+                if (this.attacked(pack(c + 2 * dc, r), foe)) continue;
+                out.push({ kind: 'm', from: k, to: pack(c + 2 * dc, r), cap: 0, castle: dc, rookFrom: pack(x, r) });
+              }
+            }
             break;
+          }
           default: {
             const dirs = p.t === PT.bishop ? DIAG : p.t === PT.rook ? ORTHO : N8;
             for (const [dc, dr] of dirs) {

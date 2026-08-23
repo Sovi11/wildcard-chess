@@ -152,7 +152,27 @@ class Game {
       case PIECE.B: slide(DIAG); break;
       case PIECE.R: slide(ORTHO); break;
       case PIECE.Q: slide([...DIAG, ...ORTHO]); break;
-      case PIECE.K: step([...DIAG, ...ORTHO]); break;
+      case PIECE.K: {
+        step([...DIAG, ...ORTHO]);
+        // Castling. Variant rule: the path between king and rook must be COMPLETE —
+        // every square in between has to exist and be empty. A hole torn anywhere
+        // along that path denies castling on that side, permanently if never refilled.
+        const foe = opp(p.color);
+        if (!p.hasMoved && !this.isAttacked(c, r, foe)) {
+          for (const dc of [1, -1]) {
+            let x = c + dc;
+            while (this.hasCell(x, r) && !this.get(x, r)) x += dc;   // walk existing empty squares
+            if (!this.hasCell(x, r)) continue;                       // hit a hole: path broken
+            const rook = this.get(x, r);
+            if (!rook || rook.color !== p.color || rook.type !== PIECE.R || rook.hasMoved) continue;
+            if (Math.abs(x - c) < 3) continue;                       // no room for a 2-square king move
+            if (this.isAttacked(c + dc, r, foe)) continue;           // cannot pass through check
+            if (this.isAttacked(c + 2 * dc, r, foe)) continue;       // cannot land in check
+            out.push({ c: c + 2 * dc, r, capture: false, castle: dc, rookFrom: x });
+          }
+        }
+        break;
+      }
     }
     return out;
   }
@@ -164,6 +184,10 @@ class Game {
       this.board.delete(key(c, r));
       // en passant: the captured pawn sits beside the destination, not on it
       if (p.type === PIECE.P && m.c !== c && !this.get(m.c, m.r)) this.board.delete(key(m.c, r));
+      if (m.castle) {
+        const rk = this.get(m.rookFrom, r);
+        if (rk) { this.board.delete(key(m.rookFrom, r)); this.board.set(key(c + m.castle, r), { ...rk, hasMoved: true }); }
+      }
       this.board.set(key(m.c, m.r), { ...p, hasMoved: true });
     }));
   }
@@ -217,13 +241,18 @@ class Game {
   makeMove(fc, fr, tc, tr) {
     const p = this.get(fc, fr);
     if (!p || p.color !== this.turn || this.winner) return false;
-    if (!this.legalMoves(fc, fr).some(m => m.c === tc && m.r === tr)) return false;
+    const mv = this.legalMoves(fc, fr).find(m => m.c === tc && m.r === tr);
+    if (!mv) return false;
     const target = this.get(tc, tr);
     // en passant: diagonal pawn move onto an empty square takes the passed pawn
     let epCaptured = null;
     if (p.type === PIECE.P && tc !== fc && !target) {
       epCaptured = this.get(tc, fr) || null;
       this.board.delete(key(tc, fr));
+    }
+    if (mv.castle) {
+      const rk = this.get(mv.rookFrom, fr);
+      if (rk) { this.board.delete(key(mv.rookFrom, fr)); rk.hasMoved = true; this.board.set(key(fc + mv.castle, fr), rk); }
     }
     this.board.delete(key(fc, fr));
     p.hasMoved = true;
@@ -234,7 +263,9 @@ class Game {
     // Promotion: the pawn reached the edge of the world in its file.
     if (p.type === PIECE.P && this._atWorldEdge(tc, tr, p.color)) p.type = PIECE.Q;
     this.lastAction = { kind: 'move', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
-    this._record(`${L(p.type)} ${sq(fc, fr)}${(target || epCaptured) ? 'x' : '–'}${sq(tc, tr)}${epCaptured ? ' e.p.' : ''}`);
+    this._record(mv.castle
+      ? (mv.castle > 0 ? 'O-O' : 'O-O-O')
+      : `${L(p.type)} ${sq(fc, fr)}${(target || epCaptured) ? 'x' : '–'}${sq(tc, tr)}${epCaptured ? ' e.p.' : ''}`);
     this._endTurn();
     return true;
   }
