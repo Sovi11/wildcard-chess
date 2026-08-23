@@ -63,19 +63,39 @@ wildcard-chess/
   electron-main.js    # desktop wrapper
 ```
 
-## Playing the bot
+## Ranked play and matchmaking
 
-Pick **Opponent → Bot**, choose which side it plays, and set a level:
+You start at **500**. Hit **Find a match** and you are queued: the search opens a rating
+band around you and pairs you with the closest available opponent.
 
-| Level | Depth | Behaviour |
+The pool is stocked with resident bots so the queue is never empty. You do not pick them —
+they are matched to you like any other player, weighted toward your rating, with the
+opponent you just played damped so you are not fed the same one twice. **Their ratings move
+too**, by the same Elo maths (smaller K, since they play far more games), so the pool stays
+honest as you climb.
+
+`js/matchmaking.js` prefers a human whenever a backend is registered via
+`WCMATCH.setBackend(...)`; with none registered every match resolves to the pool.
+
+Ratings were calibrated by bot-vs-bot self-play (`node harness/calibrate.js`), not guessed.
+
+### Who is in the pool
+
+Personalities are evaluation weights, not just search depth — a root-only bias per board
+action steers style without corrupting the search:
+
+| Player | Seed | Style |
 |---|---|---|
-| 1 Beginner | 1 | Sees one move ahead, 30% random moves. Hangs pieces. |
-| 2 Casual | 2 | Spots simple captures and threats. |
-| 3 Medium | 3 | Plans ahead, uses board wildcards with purpose. **Default.** |
-| 4 Strong | 4 | Punishes mistakes, real terrain tactics. |
-| 5 Brutal | 6 | Deepest search the clock allows (~3.5s/move). |
-
-Verified ladder (colours swapped each game): Medium beat Beginner 8–0 and Casual 5.5–0.5, all wins by checkmate.
+| Pawnsy | 300 | Beginner, barely notices the board can change |
+| Rusty Rook | 420 | Overvalues rooks, trades anything for one |
+| The Vandal | 520 | Tears squares out; expect holes everywhere |
+| Sir Castle | 600 | Defensive, hoards floor around his king |
+| Gambit | 700 | Aggressive, sacrifices happily |
+| Chaos Kate | 760 | Terrain shuffler, wildly inconsistent |
+| The Architect | 820 | Grows new ground and marches pawns across it |
+| Iron Ivan | 1020 | Pure chess, ignores the wildcards entirely |
+| Grandmaster Vex | 1200 | Strong all-round |
+| THE VOID | 1450 | Terrain master; you run out of floor first |
 
 ## Tutor / analysis
 

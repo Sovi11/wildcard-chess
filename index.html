@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wildcard Chess</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
   <div id="lobby" class="lobby">
     <div class="lobby-inner">
       <header class="lobby-head">
         <div>
-          <h2 class="lobby-title">Choose your opponent</h2>
-          <p class="lobby-sub">Rated games move your Elo. Everything else is casual.</p>
+          <h2 class="lobby-title">Ranked play</h2>
+          <p class="lobby-sub">Queue up and you will be matched with someone near your rating.</p>
         </div>
         <div class="you-card">
           <div class="you-elo" id="youElo">500</div>
@@ -24,21 +24,47 @@
         </div>
       </header>
 
+      <div class="queue-box">
+        <button id="findMatch" class="find-btn">
+          <span class="find-title">Find a match</span>
+          <span class="find-sub">Ranked · you are placed against someone near your rating</span>
+        </button>
+        <div id="searchState" class="search-state">
+          <div class="search-spin"></div>
+          <div class="search-text">
+            <div id="searchLine" class="search-line">Searching for an opponent…</div>
+            <div id="searchBand" class="search-band"></div>
+          </div>
+          <button id="cancelSearch" class="ghost-btn">Cancel</button>
+        </div>
+        <div id="matchFound" class="match-found">
+          <span id="mfIco" class="mf-ico"></span>
+          <span class="mf-body">
+            <span id="mfName" class="mf-name"></span>
+            <span id="mfMeta" class="mf-meta"></span>
+          </span>
+          <span id="mfElo" class="mf-elo"></span>
+        </div>
+      </div>
+
+      <div class="lobby-label">Or play a friend <span class="lobby-hint">unrated</span></div>
       <div class="lobby-modes">
         <button class="mode-card" data-lobbymode="hotseat">
           <span class="mode-ico">👥</span>
           <span class="mode-name">2 players, one screen</span>
-          <span class="mode-desc">Offline hotseat. Pass the mouse. Unrated.</span>
+          <span class="mode-desc">Offline hotseat. Pass the mouse.</span>
         </button>
         <button class="mode-card" data-lobbymode="link">
           <span class="mode-ico">🔗</span>
           <span class="mode-name">Friend, by link</span>
-          <span class="mode-desc">Send a link after each move. Works anywhere. Unrated.</span>
+          <span class="mode-desc">Send a link after each move. Works anywhere.</span>
         </button>
       </div>
 
-      <div class="lobby-label">Ranked ladder <span class="lobby-hint">sorted by how close they are to you</span></div>
-      <div id="botList" class="bot-list"></div>
+      <details class="pool-peek">
+        <summary>Who is in the pool? <span id="poolCount"></span></summary>
+        <div id="botList" class="bot-list"></div>
+      </details>
 
       <div class="lobby-foot">
         <button id="resetElo" class="ghost-btn">Reset my rating</button>
@@ -157,12 +183,13 @@
     </main>
   </div>
 
-  <script src="js/engine.js?v=10"></script>
-  <script src="js/pieces.js?v=10"></script>
-  <script src="js/ai.js?v=10"></script>
-  <script src="js/ladder.js?v=10"></script>
-  <script src="js/share.js?v=10"></script>
-  <script src="js/analysis.js?v=10"></script>
-  <script src="js/main.js?v=10"></script>
+  <script src="js/engine.js?v=11"></script>
+  <script src="js/pieces.js?v=11"></script>
+  <script src="js/ai.js?v=11"></script>
+  <script src="js/ladder.js?v=11"></script>
+  <script src="js/matchmaking.js?v=11"></script>
+  <script src="js/share.js?v=11"></script>
+  <script src="js/analysis.js?v=11"></script>
+  <script src="js/main.js?v=11"></script>
 </body>
 </html>

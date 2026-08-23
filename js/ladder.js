@@ -8,6 +8,7 @@
   'use strict';
 
   const KEY = 'wildcardchess.profile.v1';
+  const BOTKEY = 'wildcardchess.pool.v1';
   const START_ELO = 500;
 
   const base = () => (window.WCAI ? window.WCAI.DEFAULT_WEIGHTS : {});
@@ -90,8 +91,40 @@
   ];
 
   const byId = (id) => BOTS.find(b => b.id === id) || null;
+
+  // ---- the pool ------------------------------------------------------------
+  // Bots are treated as players sitting in the queue: their ratings drift with
+  // results the same way yours does, so the pool stays honest over time.
+  function poolRatings() {
+    try {
+      const raw = localStorage.getItem(BOTKEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function savePool(map) {
+    try { localStorage.setItem(BOTKEY, JSON.stringify(map)); } catch (e) { /* storage blocked */ }
+  }
+  // Live rating for a bot: its drifted value if it has one, else its seed.
+  function botElo(id) {
+    const seeded = byId(id);
+    if (!seeded) return null;
+    const v = poolRatings()[id];
+    return (typeof v === 'number' && isFinite(v)) ? v : seeded.elo;
+  }
+  function setBotElo(id, elo) {
+    const m = poolRatings();
+    m[id] = Math.max(100, Math.round(elo));
+    savePool(m);
+    return m[id];
+  }
+  // A bot with its CURRENT rating (what the rest of the app should use).
+  function liveBot(id) {
+    const b = byId(id);
+    return b ? Object.assign({}, b, { elo: botElo(id), seedElo: b.elo }) : null;
+  }
+  const livePool = () => BOTS.map(b => liveBot(b.id));
   // Full weight set for a bot (its overrides merged onto the defaults).
-  const weightsFor = (bot) => Object.assign({}, base(), bot.weights || {});
+  const weightsFor = (bot) => Object.assign({}, base(), (bot && bot.weights) || {});
 
   // ---- Elo ----------------------------------------------------------------
   const expected = (a, b) => 1 / (1 + Math.pow(10, (b - a) / 400));
@@ -123,7 +156,7 @@
 
   // score: 1 = player won, 0.5 = draw, 0 = player lost
   function recordResult(botId, score) {
-    const bot = byId(botId);
+    const bot = liveBot(botId);
     if (!bot) return null;
     const p = getProfile();
     const before = p.elo;
@@ -135,15 +168,18 @@
     p.log.unshift({ bot: bot.id, botName: bot.name, botElo: bot.elo, score, before, after, at: Date.now() });
     p.log = p.log.slice(0, 50);
     saveProfile(p);
-    return { before, after, delta: after - before, expected: exp, bot };
+    // the opponent's rating moves too — smaller K, they play far more games
+    const botBefore = bot.elo;
+    const botAfter = setBotElo(botId, botBefore + 12 * ((1 - score) - (1 - exp)));
+    return { before, after, delta: after - before, expected: exp, bot, botBefore, botAfter };
   }
 
-  function resetProfile() { return saveProfile(blankProfile()); }
+  function resetProfile() { savePool({}); return saveProfile(blankProfile()); }
 
   // Roster sorted by how close each bot is to your rating (fair fights first).
   function ranked() {
     const p = getProfile();
-    return BOTS.map(b => ({
+    return livePool().map(b => ({
       ...b,
       gap: b.elo - p.elo,
       winChance: Math.round(expected(p.elo, b.elo) * 100),
@@ -152,7 +188,7 @@
 
   // What one game would be worth, before you play it.
   function stakes(botId) {
-    const bot = byId(botId);
+    const bot = liveBot(botId);
     if (!bot) return null;
     const p = getProfile();
     const k = kFactor(games(p));
@@ -166,7 +202,8 @@
   }
 
   window.WCLADDER = {
-    BOTS, byId, weightsFor, getProfile, saveProfile, recordResult,
-    resetProfile, ranked, stakes, expected, kFactor, games, START_ELO,
+    BOTS, byId, liveBot, livePool, botElo, setBotElo, weightsFor,
+    getProfile, saveProfile, recordResult, resetProfile, ranked, stakes,
+    expected, kFactor, games, START_ELO,
   };
 })();

@@ -356,7 +356,7 @@ function renderLobby() {
     const tag = Math.abs(b.gap) <= 120 ? 'even' : (b.gap > 0 ? 'harder' : 'easier');
     const tagText = tag === 'even' ? 'fair fight'
       : (b.gap > 0 ? ('+' + b.gap + ' above you') : (b.gap + ' below you'));
-    return '<button class="bot-row" data-bot="' + b.id + '">' +
+    return '<div class="bot-row static">' +
       '<span class="br-ico">' + b.emoji + '</span>' +
       '<span class="br-main">' +
         '<span class="br-top"><span class="br-name">' + b.name + '</span>' +
@@ -368,16 +368,77 @@ function renderLobby() {
         '<span class="br-elo">' + b.elo + '</span>' +
         '<span class="br-odds">' + b.winChance + '% win</span>' +
         '<span class="br-stake">+' + st.win + ' / ' + st.loss + '</span>' +
-      '</span></button>';
+      '</span></div>';
   }).join('');
+  const count = document.getElementById('poolCount');
+  if (count) count.textContent = '(' + rows.length + ' rated players)';
 }
 
-function openLobby() { renderLobby(); lobbyEl.classList.add('show'); }
-function closeLobby() { lobbyEl.classList.remove('show'); }
+function openLobby() { renderLobby(); resetQueueUI(); lobbyEl.classList.add('show'); }
+
+// ---- queue ----------------------------------------------------------------
+const findBtn = document.getElementById('findMatch');
+const searchStateEl = document.getElementById('searchState');
+const searchLineEl = document.getElementById('searchLine');
+const searchBandEl = document.getElementById('searchBand');
+const cancelSearchBtn = document.getElementById('cancelSearch');
+const matchFoundEl = document.getElementById('matchFound');
+let cancelSearch = null;
+
+function resetQueueUI() {
+  if (findBtn) findBtn.style.display = '';
+  if (searchStateEl) searchStateEl.classList.remove('show');
+  if (matchFoundEl) matchFoundEl.classList.remove('show');
+  if (cancelSearch) { cancelSearch(); cancelSearch = null; }
+}
+
+function beginSearch() {
+  if (cancelSearch) return;
+  const elo = WCLADDER.getProfile().elo;
+  if (findBtn) findBtn.style.display = 'none';
+  if (matchFoundEl) matchFoundEl.classList.remove('show');
+  if (searchStateEl) searchStateEl.classList.add('show');
+  if (searchLineEl) searchLineEl.textContent = 'Searching for an opponent\u2026';
+  if (searchBandEl) searchBandEl.textContent = 'Looking near ' + elo;
+
+  cancelSearch = WCMATCH.find(elo, {
+    onTick: function (st) {
+      if (searchBandEl) {
+        searchBandEl.textContent = 'Rating range ' + Math.max(100, elo - st.band) + '\u2013' + (elo + st.band);
+      }
+      if (searchLineEl && st.ticks >= 3) {
+        searchLineEl.textContent = WCMATCH.hasHumans()
+          ? 'Still searching\u2026 widening the range'
+          : 'Widening the range\u2026';
+      }
+    },
+    onFound: function (opp, isHuman) {
+      cancelSearch = null;
+      showFound(opp, isHuman);
+    },
+  });
+}
+
+function showFound(opp, isHuman) {
+  if (searchStateEl) searchStateEl.classList.remove('show');
+  if (matchFoundEl) {
+    document.getElementById('mfIco').textContent = opp.emoji || '\u265f';
+    document.getElementById('mfName').textContent = opp.name;
+    document.getElementById('mfMeta').textContent = isHuman ? 'online player' : opp.style;
+    document.getElementById('mfElo').textContent = opp.elo;
+    matchFoundEl.classList.add('show');
+  }
+  // short beat so the match-found card is actually readable
+  setTimeout(function () { startMatch(opp.id); }, 900);
+}
+
+if (findBtn) findBtn.addEventListener('click', beginSearch);
+if (cancelSearchBtn) cancelSearchBtn.addEventListener('click', resetQueueUI);
+function closeLobby() { if (cancelSearch) { cancelSearch(); cancelSearch = null; } lobbyEl.classList.remove('show'); }
 
 // Start a fresh rated game against a ladder bot. You are White, the bot is Black.
 function startMatch(botId) {
-  activeBot = WCLADDER.byId(botId);
+  activeBot = WCLADDER.liveBot(botId);
   ratedGame = !!activeBot;
   resultRecorded = false;
   if (oppModeEl) oppModeEl.value = 'bot';
@@ -433,10 +494,6 @@ if (resetEloBtn) resetEloBtn.addEventListener('click', function () {
   if (confirm('Reset your rating to 500 and clear your record?')) {
     WCLADDER.resetProfile(); renderLobby(); paintProfile();
   }
-});
-if (botListEl) botListEl.addEventListener('click', function (e) {
-  const row = e.target.closest('.bot-row');
-  if (row) startMatch(row.dataset.bot);
 });
 document.querySelectorAll('.mode-card').forEach(function (el) {
   el.addEventListener('click', function () { startCasual(el.dataset.lobbymode); });
