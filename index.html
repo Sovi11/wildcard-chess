@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wildcard Chess</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="styles.css?v=16" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -14,6 +14,10 @@
         <div>
           <h2 class="lobby-title">Ranked play</h2>
           <p class="lobby-sub">Queue up and you will be matched with someone near your rating.</p>
+        </div>
+        <div class="acct-col">
+          <button id="authBtn" class="auth-btn">Sign in with Google</button>
+          <div id="authState" class="auth-state"></div>
         </div>
         <div class="you-card">
           <div class="you-elo" id="youElo">500</div>
@@ -226,15 +230,18 @@
     </main>
   </div>
 
-  <script src="js/engine.js?v=15"></script>
-  <script src="js/pieces.js?v=15"></script>
-  <script src="js/ai.js?v=15"></script>
-  <script src="js/ladder.js?v=15"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js?v=16"></script>
+  <script src="js/cloud.js?v=16"></script>
+  <script src="js/engine.js?v=16"></script>
+  <script src="js/pieces.js?v=16"></script>
+  <script src="js/ai.js?v=16"></script>
+  <script src="js/ladder.js?v=16"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=15"></script>
-  <script src="js/net.js?v=15"></script>
-  <script src="js/share.js?v=15"></script>
-  <script src="js/analysis.js?v=15"></script>
-  <script src="js/main.js?v=15"></script>
+  <script src="js/matchmaking.js?v=16"></script>
+  <script src="js/net.js?v=16"></script>
+  <script src="js/share.js?v=16"></script>
+  <script src="js/analysis.js?v=16"></script>
+  <script src="js/main.js?v=16"></script>
 </body>
 </html>

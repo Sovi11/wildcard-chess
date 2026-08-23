@@ -29,6 +29,18 @@ to the resident pool so you are never left staring at an empty queue.
 - *Correspondence* (tucked away) — trade a fresh link after every move. Slow, but it works
   when you are never online at the same time.
 
+### Accounts and cloud ratings (optional)
+
+Paste Supabase keys into `js/config.js` and you get Google sign-in, a rating that follows
+you between devices, a global leaderboard, and a matchmaking queue that persists for two
+minutes instead of needing both players inside the same ten seconds. Full walkthrough in
+[SUPABASE_SETUP.md](SUPABASE_SETUP.md), about 15 minutes.
+
+Leave `config.js` empty and none of it activates: ratings stay in local storage, the
+sign-in button hides itself, and matchmaking stays peer-to-peer. Even with the backend on,
+**no moves go through the server** — the queue only exchanges a PeerJS id, and the game
+still runs browser-to-browser.
+
 ### How online works without a server
 
 Moves travel over a direct WebRTC data channel between the two browsers. A free public

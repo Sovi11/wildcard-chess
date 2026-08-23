@@ -432,6 +432,7 @@ if (youNameEl) youNameEl.addEventListener('change', function () {
   WCLADDER.saveProfile(p);
   youNameEl.value = p.name;
   renderLeaderboard();
+  syncProfileUp();
 });
 
 function myName() {
@@ -496,6 +497,20 @@ function openLobby() { renderLobby(); renderLeaderboard(); resetQueueUI(); lobby
 function renderLeaderboard() {
   const el = document.getElementById('leaderboard');
   if (!el) return;
+  if (WCCLOUD.enabled()) {
+    WCCLOUD.leaderboard(25).then(function (rows) {
+      if (!rows || !rows.length) return;            // fall back to what is drawn below
+      const me = WCLADDER.getProfile();
+      el.innerHTML = rows.map(function (r, i) {
+        const mine = r.name === me.name;
+        return '<div class="lb-row' + (mine ? ' you' : '') + '">' +
+          '<span class="lb-rank">' + (i + 1) + '</span>' +
+          '<span class="lb-ico">\u2605</span>' +
+          '<span class="lb-name">' + esc(r.name) + '</span>' +
+          '<span class="lb-elo">' + r.elo + '</span></div>';
+      }).join('');
+    }).catch(function () {});
+  }
   const me = WCLADDER.getProfile();
   const rows = WCLADDER.livePool()
     .map(function (b) { return { name: b.name, elo: b.elo, emoji: b.emoji, you: false }; })
@@ -688,6 +703,77 @@ if (cancelRoomBtn) cancelRoomBtn.addEventListener('click', function () {
   netSession = null; hideRoomBox();
 });
 
+// ---- accounts and cloud sync ----------------------------------------------
+// All optional. With no Supabase keys configured every call here is a no-op and
+// the game keeps using local ratings and peer-to-peer matchmaking.
+const authBtn = document.getElementById('authBtn');
+const authStateEl = document.getElementById('authState');
+let cloudReady = false;
+
+function paintAuth() {
+  if (!authBtn) return;
+  if (!WCCLOUD.configured()) {          // no backend deployed
+    authBtn.style.display = 'none';
+    if (authStateEl) authStateEl.textContent = '';
+    return;
+  }
+  authBtn.style.display = '';
+  const u = WCCLOUD.currentUser();
+  if (u) {
+    authBtn.textContent = 'Sign out';
+    if (authStateEl) {
+      const who = (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || u.email || 'signed in';
+      authStateEl.textContent = esc(who) + ' \u00b7 rating synced';
+    }
+  } else {
+    authBtn.textContent = 'Sign in with Google';
+    if (authStateEl) authStateEl.textContent = 'Rating is saved on this device only';
+  }
+}
+
+// On sign-in the cloud profile is authoritative; if the account is brand new we
+// seed it from whatever was already on this device.
+async function syncProfileDown() {
+  if (!WCCLOUD.enabled() || !WCCLOUD.currentUser()) return;
+  try {
+    const remote = await WCCLOUD.loadProfile();
+    const local = WCLADDER.getProfile();
+    if (remote) {
+      WCLADDER.saveProfile({
+        name: remote.name || local.name,
+        elo: remote.elo,
+        wins: remote.wins, losses: remote.losses, draws: remote.draws,
+        log: local.log || [],
+      });
+    } else {
+      await WCCLOUD.saveProfile(local);
+    }
+  } catch (e) { console.warn('[cloud] sync down failed:', e && e.message); }
+  paintProfile(); renderLeaderboard();
+}
+
+function syncProfileUp() {
+  if (!WCCLOUD.enabled() || !WCCLOUD.currentUser()) return;
+  WCCLOUD.saveProfile(WCLADDER.getProfile());
+}
+
+if (authBtn) authBtn.addEventListener('click', async function () {
+  if (!WCCLOUD.enabled()) return;
+  if (WCCLOUD.currentUser()) { await WCCLOUD.signOut(); paintAuth(); return; }
+  authBtn.disabled = true;
+  authBtn.textContent = 'Redirecting\u2026';
+  await WCCLOUD.signIn();               // navigates away to Google
+});
+
+(async function bootCloud() {
+  try {
+    cloudReady = await WCCLOUD.init();
+  } catch (e) { cloudReady = false; }
+  WCCLOUD.onChange(function () { paintAuth(); syncProfileDown(); });
+  paintAuth();
+  if (cloudReady && WCCLOUD.currentUser()) syncProfileDown();
+})();
+
 // ---- queue ----------------------------------------------------------------
 const findBtn = document.getElementById('findMatch');
 const searchStateEl = document.getElementById('searchState');
@@ -713,7 +799,15 @@ function beginSearch() {
   if (searchLineEl) searchLineEl.textContent = 'Searching for an opponent\u2026';
   if (searchBandEl) searchBandEl.textContent = 'Looking near ' + elo;
 
-  // Phase 1: look for a real person for 10 seconds.
+  // Phase 0: if there is a backend and we are signed in, use the real queue.
+  // It persists, so an opponent who queued minutes ago is still reachable.
+  if (WCCLOUD.enabled() && WCCLOUD.currentUser() && WCNET.available()) {
+    if (searchLineEl) searchLineEl.textContent = 'Searching the queue\u2026';
+    cloudQueueSearch(elo);
+    return;
+  }
+
+  // Phase 1: no backend, so look for a peer directly for 10 seconds.
   if (WCNET.available()) {
     if (searchLineEl) searchLineEl.textContent = 'Searching for a player\u2026';
     let handedOff = false;
@@ -742,6 +836,49 @@ function beginSearch() {
     return;
   }
   searchPool(elo);
+}
+
+
+// Look through the persistent queue for an opponent; publish ourselves if the
+// queue is empty so the next person to search finds us. Falls through to the
+// local pool if nothing turns up inside the budget.
+async function cloudQueueSearch(elo) {
+  let stopped = false;
+  cancelSearch = function () { stopped = true; WCCLOUD.leaveQueue(); WCNET.destroy(); };
+
+  try {
+    const waiting = await WCCLOUD.findWaiting(elo, 250);
+    if (stopped) return;
+
+    if (waiting && waiting.peer_id) {
+      // Someone is already waiting: connect straight to them.
+      netSession = WCNET.join(waiting.peer_id, netHandlers('Online player'));
+      await WCCLOUD.leaveQueue();
+      return;
+    }
+
+    // Nobody waiting. Advertise ourselves and hold the slot.
+    const mySession = WCNET.host(Object.assign(netHandlers('Online player'), {
+      onOpen: async function (info) {
+        if (stopped) return;
+        await WCCLOUD.joinQueue(elo, 'wcxr-' + info.code);
+        if (searchBandEl) searchBandEl.textContent = 'Waiting in the queue\u2026';
+      },
+    }));
+    netSession = mySession;
+
+    setTimeout(async function () {
+      if (stopped || onlineActive) return;
+      await WCCLOUD.leaveQueue();
+      if (mySession && mySession.cancel) mySession.cancel();
+      netSession = null;
+      if (searchLineEl) searchLineEl.textContent = 'No one in the queue \u2014 finding you an opponent\u2026';
+      searchPool(elo);
+    }, 10000);
+  } catch (e) {
+    console.warn('[cloud] queue search failed:', e && e.message);
+    if (!stopped) searchPool(elo);
+  }
 }
 
 // Phase 2: fall back to the resident pool.
@@ -838,6 +975,7 @@ function settleResult() {
   const score = game.winner === youColor ? 1 : (game.winner === botColor ? 0 : 0.5);
   const r = WCLADDER.recordResult(activeBot.id, score);
   paintProfile(); paintOppCard(); renderLeaderboard();
+  syncProfileUp();
   return r;
 }
 
