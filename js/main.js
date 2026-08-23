@@ -186,11 +186,15 @@ function maybeAI() {
   if (game.turn !== botSide()) return;
   aiThinking = true;
   const lv = WCAI.levelById(botLevelEl ? botLevelEl.value : 3);
-  ui.hint.textContent = `${lv.name} is thinking…`;
+  ui.hint.textContent = `${activeBot ? activeBot.name : lv.name} is thinking…`;
   setTimeout(() => {
     try {
-      const pos = WCAI.Pos.fromGame(game);
-      const res = WCAI.chooseMove(pos, lv.id);
+      const pos = activeBot
+        ? WCAI.Pos.fromGame(game, WCLADDER.weightsFor(activeBot))
+        : WCAI.Pos.fromGame(game);
+      const res = activeBot
+        ? WCAI.chooseMoveFor(pos, activeBot.search)
+        : WCAI.chooseMove(pos, lv.id);
       if (!WCAI.applyToGame(game, WCAI.moveToGame(res.move))) {
         outer: for (const [k, p] of game.board) {
           if (p.color !== game.turn) continue;
@@ -309,6 +313,135 @@ if (hintBtn) hintBtn.addEventListener('click', () => {
 });
 if (anaOnEl) anaOnEl.addEventListener('change', () => { anaKey = null; runAnalysis(); });
 if (anaDepthEl) anaDepthEl.addEventListener('change', () => { anaKey = null; runAnalysis(); });
+
+// ---- ladder, lobby and ratings --------------------------------------------
+const lobbyEl = document.getElementById('lobby');
+const botListEl = document.getElementById('botList');
+const oppCardEl = document.getElementById('oppCard');
+const eloChipEl = document.getElementById('eloChip');
+
+let activeBot = null;        // ladder bot currently being played, or null
+let ratedGame = false;       // does this game move your Elo?
+let resultRecorded = false;  // guard: score each game exactly once
+
+function paintProfile() {
+  const p = WCLADDER.getProfile();
+  if (eloChipEl) eloChipEl.textContent = '\u2605 ' + p.elo;
+  const youElo = document.getElementById('youElo');
+  const youRec = document.getElementById('youRecord');
+  if (youElo) youElo.textContent = p.elo;
+  if (youRec) youRec.textContent = p.wins + 'W \u00b7 ' + p.losses + 'L \u00b7 ' + p.draws + 'D';
+}
+
+function paintOppCard() {
+  if (!oppCardEl) return;
+  if (!activeBot) { oppCardEl.innerHTML = ''; oppCardEl.style.display = 'none'; return; }
+  oppCardEl.style.display = 'flex';
+  const st = WCLADDER.stakes(activeBot.id);
+  const stakeText = ratedGame ? ('Rated \u00b7 win +' + st.win + ' / lose ' + st.loss) : 'Casual';
+  oppCardEl.innerHTML =
+    '<span class="oc-ico">' + activeBot.emoji + '</span>' +
+    '<span class="oc-body"><span class="oc-name">' + activeBot.name +
+    '<span class="oc-elo">' + activeBot.elo + '</span></span>' +
+    '<span class="oc-style">' + activeBot.style + '</span>' +
+    '<span class="oc-stakes">' + stakeText + '</span></span>';
+}
+
+function renderLobby() {
+  paintProfile();
+  if (!botListEl) return;
+  const rows = WCLADDER.ranked();
+  botListEl.innerHTML = rows.map(function (b) {
+    const st = WCLADDER.stakes(b.id);
+    const tag = Math.abs(b.gap) <= 120 ? 'even' : (b.gap > 0 ? 'harder' : 'easier');
+    const tagText = tag === 'even' ? 'fair fight'
+      : (b.gap > 0 ? ('+' + b.gap + ' above you') : (b.gap + ' below you'));
+    return '<button class="bot-row" data-bot="' + b.id + '">' +
+      '<span class="br-ico">' + b.emoji + '</span>' +
+      '<span class="br-main">' +
+        '<span class="br-top"><span class="br-name">' + b.name + '</span>' +
+        '<span class="br-tag ' + tag + '">' + tagText + '</span></span>' +
+        '<span class="br-style">' + b.style + '</span>' +
+        '<span class="br-blurb">' + b.blurb + '</span>' +
+      '</span>' +
+      '<span class="br-right">' +
+        '<span class="br-elo">' + b.elo + '</span>' +
+        '<span class="br-odds">' + b.winChance + '% win</span>' +
+        '<span class="br-stake">+' + st.win + ' / ' + st.loss + '</span>' +
+      '</span></button>';
+  }).join('');
+}
+
+function openLobby() { renderLobby(); lobbyEl.classList.add('show'); }
+function closeLobby() { lobbyEl.classList.remove('show'); }
+
+// Start a fresh rated game against a ladder bot. You are White, the bot is Black.
+function startMatch(botId) {
+  activeBot = WCLADDER.byId(botId);
+  ratedGame = !!activeBot;
+  resultRecorded = false;
+  if (oppModeEl) oppModeEl.value = 'bot';
+  if (botSideEl) botSideEl.value = 'black';
+  resetGameState();
+  closeLobby();
+  paintOppCard();
+  refreshBotUI(); refreshShareUI();
+  runAnalysis(); sync(); render();
+  maybeAI();
+}
+
+// Start an unrated mode: 'hotseat' (same screen) or 'link' (send a link).
+function startCasual(kind) {
+  activeBot = null; ratedGame = false; resultRecorded = false;
+  if (oppModeEl) oppModeEl.value = (kind === 'hotseat') ? 'human' : 'link';
+  resetGameState();
+  closeLobby();
+  paintOppCard();
+  refreshBotUI(); refreshShareUI();
+  runAnalysis(); sync(); render();
+}
+
+function resetGameState() {
+  game.reset();
+  selected = null; legal = []; hintMove = null;
+  quality.length = 0; anaKey = null; linkPending = false;
+  if (shareLinkEl) shareLinkEl.value = '';
+  history.replaceState(null, '', location.pathname + location.search);
+  ui.banner.classList.remove('show');
+  setMode('normal');
+}
+
+// Score a finished rated game exactly once and return the rating change.
+function settleResult() {
+  if (!ratedGame || resultRecorded || !activeBot) return null;
+  if (!gameOver()) return null;
+  resultRecorded = true;
+  const botColor = botSide();
+  const youColor = botColor === 'white' ? 'black' : 'white';
+  const score = game.winner === youColor ? 1 : (game.winner === botColor ? 0 : 0.5);
+  const r = WCLADDER.recordResult(activeBot.id, score);
+  paintProfile(); paintOppCard();
+  return r;
+}
+
+const openLobbyBtn = document.getElementById('openLobby');
+const closeLobbyBtn = document.getElementById('closeLobby');
+const resetEloBtn = document.getElementById('resetElo');
+if (openLobbyBtn) openLobbyBtn.addEventListener('click', openLobby);
+if (closeLobbyBtn) closeLobbyBtn.addEventListener('click', closeLobby);
+if (resetEloBtn) resetEloBtn.addEventListener('click', function () {
+  if (confirm('Reset your rating to 500 and clear your record?')) {
+    WCLADDER.resetProfile(); renderLobby(); paintProfile();
+  }
+});
+if (botListEl) botListEl.addEventListener('click', function (e) {
+  const row = e.target.closest('.bot-row');
+  if (row) startMatch(row.dataset.bot);
+});
+document.querySelectorAll('.mode-card').forEach(function (el) {
+  el.addEventListener('click', function () { startCasual(el.dataset.lobbymode); });
+});
+if (lobbyEl) lobbyEl.addEventListener('click', function (e) { if (e.target === lobbyEl) closeLobby(); });
 
 // ---- play by link ---------------------------------------------------------
 const sharePanelEl = document.getElementById('sharePanel');
@@ -434,14 +567,16 @@ function sync() {
   setMode('normal');
   renderLog();
 
-  if (game.status === 'checkmate') {
-    ui.bannerText.textContent = `Checkmate — ${game.winner === 'white' ? 'White' : 'Black'} wins`;
-    ui.banner.classList.add('show');
-  } else if (game.status === 'stalemate') {
-    ui.bannerText.textContent = 'Stalemate — draw';
-    ui.banner.classList.add('show');
-  } else if (game.status === 'repetition') {
-    ui.bannerText.textContent = 'Draw by repetition';
+  if (gameOver()) {
+    const r = settleResult();
+    let text = game.status === 'checkmate'
+      ? ('Checkmate \u2014 ' + (game.winner === 'white' ? 'White' : 'Black') + ' wins')
+      : (game.status === 'repetition' ? 'Draw by repetition' : 'Stalemate \u2014 draw');
+    if (r) {
+      const sign = r.delta >= 0 ? '+' : '';
+      text += '  \u00b7  ' + r.before + ' \u2192 ' + r.after + ' (' + sign + r.delta + ')';
+    }
+    ui.bannerText.textContent = text;
     ui.banner.classList.add('show');
   }
 }
@@ -458,10 +593,13 @@ try {
   alert('That game link could not be read — starting a new game instead.');
 }
 
+paintProfile();
+paintOppCard();
 runAnalysis();
 sync();
 render();
 refreshBotUI();
 refreshShareUI();
+if (!bootedFromLink) openLobby();
 if (bootedFromLink && shareMsgEl) shareMsgEl.textContent = "Your friend's move is loaded. Your turn.";
 if (!bootedFromLink) maybeAI();

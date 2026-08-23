@@ -29,6 +29,9 @@
     pawnAdv: 5,                               // cp per step of pawn advancement toward its edge
     frozenPawn: -18,                          // pawn with a hole directly ahead
     tempo: 8,
+    // Personality. Root-only nudge (cp) toward or away from each board action;
+    // deep eval is untouched, so a biased bot is still tactically sound.
+    kindBias: { ac: 0, rc: 0, mc: 0 },
   };
 
   // deterministic RNG (mulberry32) for root jitter / experiments
@@ -467,17 +470,21 @@
       const rootMoves = this.genAll(K);
       if (!rootMoves.length) return { move: null, score: this.inCheck(side) ? -MATE : 0, depth: 0, nodes: 0 };
 
+      const kb = this.w.kindBias || {};
+      const adjFor = (m) => (m.kind === 'm' ? 0 : (kb[m.kind] || 0));
       let bestMove = rootMoves[0], bestScore = -Infinity, lastDepth = 0;
       for (let d = 1; d <= maxDepth; d++) {
         let curBest = null, curScore = -Infinity;
         try {
           const scored = [];
+          let curRaw = -Infinity;
           for (const m of rootMoves) {
             const u = this.make(m);
             const s = -this.negamax(d - 1, -Infinity, Infinity, -colorSign, 1, K, deadline);
             this.unmake(u);
-            scored.push({ m, s });
-            if (s > curScore) { curScore = s; curBest = m; }
+            const sAdj = s + adjFor(m);
+            scored.push({ m, s: sAdj, raw: s });
+            if (sAdj > curScore) { curScore = sAdj; curBest = m; curRaw = s; }
           }
           // root jitter: pick among near-best for self-play variety
           if (jitter > 0) {
@@ -485,7 +492,7 @@
             const pick = near[Math.floor(rand() * near.length)];
             curBest = pick.m; curScore = pick.s;
           }
-          bestMove = curBest; bestScore = curScore; lastDepth = d;
+          bestMove = curBest; bestScore = curRaw; lastDepth = d;
           // order root moves by score for next iteration
           scored.sort((a, b) => b.s - a.s);
           rootMoves.length = 0; rootMoves.push(...scored.map(x => x.m));
@@ -548,7 +555,23 @@
     return res;
   }
 
-  const API = { Pos, moveToGame, applyToGame, DEFAULT_WEIGHTS, PT, PT_NAME, MATE, LEVELS, levelById, chooseMove };
+  // Pick an action for a persona: {depth,K,movetime,jitter,blunder,weights}.
+  function chooseMoveFor(pos, persona, seed) {
+    const rand = seed != null ? rng(seed) : Math.random;
+    if (persona.blunder > 0 && rand() < persona.blunder) {
+      const all = pos.genAll(persona.K || 10);
+      if (all.length) return { move: all[Math.floor(rand() * all.length)], score: 0, depth: 0, nodes: 0, blundered: true };
+    }
+    const res = pos.search({
+      depth: persona.depth || 3, K: persona.K || 10,
+      movetime: persona.movetime || 1200, jitter: persona.jitter || 0,
+      seed: seed != null ? seed : (Math.random() * 1e9) | 0,
+    });
+    res.blundered = false;
+    return res;
+  }
+
+  const API = { Pos, moveToGame, applyToGame, DEFAULT_WEIGHTS, PT, PT_NAME, MATE, LEVELS, levelById, chooseMove, chooseMoveFor };
   if (typeof module !== 'undefined') module.exports = API;
   if (typeof window !== 'undefined') window.WCAI = API;
 })();

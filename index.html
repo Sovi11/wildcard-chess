@@ -5,12 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wildcard Chess</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=10" />
 </head>
 <body>
+  <div id="lobby" class="lobby">
+    <div class="lobby-inner">
+      <header class="lobby-head">
+        <div>
+          <h2 class="lobby-title">Choose your opponent</h2>
+          <p class="lobby-sub">Rated games move your Elo. Everything else is casual.</p>
+        </div>
+        <div class="you-card">
+          <div class="you-elo" id="youElo">500</div>
+          <div class="you-meta">
+            <div class="you-name">Your rating</div>
+            <div class="you-rec" id="youRecord">0W · 0L · 0D</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="lobby-modes">
+        <button class="mode-card" data-lobbymode="hotseat">
+          <span class="mode-ico">👥</span>
+          <span class="mode-name">2 players, one screen</span>
+          <span class="mode-desc">Offline hotseat. Pass the mouse. Unrated.</span>
+        </button>
+        <button class="mode-card" data-lobbymode="link">
+          <span class="mode-ico">🔗</span>
+          <span class="mode-name">Friend, by link</span>
+          <span class="mode-desc">Send a link after each move. Works anywhere. Unrated.</span>
+        </button>
+      </div>
+
+      <div class="lobby-label">Ranked ladder <span class="lobby-hint">sorted by how close they are to you</span></div>
+      <div id="botList" class="bot-list"></div>
+
+      <div class="lobby-foot">
+        <button id="resetElo" class="ghost-btn">Reset my rating</button>
+        <button id="closeLobby" class="ghost-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div class="app">
     <header>
       <h1>Wildcard&nbsp;Chess <span class="sub">every 2nd move bends the rules</span></h1>
+      <div class="head-right">
+        <span class="elo-chip" id="eloChip" title="Your rating">★ 500</span>
+        <button id="openLobby" class="lobby-btn">⚔ New match</button>
+      </div>
     </header>
 
     <main>
@@ -86,6 +129,7 @@
               <option value="5">5 · Brutal</option>
             </select>
           </div>
+          <div id="oppCard" class="opp-card"></div>
           <p id="botBlurb" class="blurb"></p>
 
           <div id="sharePanel" class="share-panel">
@@ -113,11 +157,12 @@
     </main>
   </div>
 
-  <script src="js/engine.js?v=9"></script>
-  <script src="js/pieces.js?v=9"></script>
-  <script src="js/ai.js?v=9"></script>
-  <script src="js/share.js?v=9"></script>
-  <script src="js/analysis.js?v=9"></script>
-  <script src="js/main.js?v=9"></script>
+  <script src="js/engine.js?v=10"></script>
+  <script src="js/pieces.js?v=10"></script>
+  <script src="js/ai.js?v=10"></script>
+  <script src="js/ladder.js?v=10"></script>
+  <script src="js/share.js?v=10"></script>
+  <script src="js/analysis.js?v=10"></script>
+  <script src="js/main.js?v=10"></script>
 </body>
 </html>

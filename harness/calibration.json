@@ -1,0 +1,92 @@
+[
+  {
+    "hi": "Rusty Rook",
+    "lo": "Pawnsy",
+    "sa": 3,
+    "pct": 0.75,
+    "implied": 191,
+    "stated": 120,
+    "mates": 2,
+    "illegal": 0
+  },
+  {
+    "hi": "The Vandal",
+    "lo": "Rusty Rook",
+    "sa": 2,
+    "pct": 0.5,
+    "implied": 0,
+    "stated": 100,
+    "mates": 2,
+    "illegal": 0
+  },
+  {
+    "hi": "Sir Castle",
+    "lo": "The Vandal",
+    "sa": 2,
+    "pct": 0.5,
+    "implied": 0,
+    "stated": 80,
+    "mates": 0,
+    "illegal": 0
+  },
+  {
+    "hi": "Gambit",
+    "lo": "Sir Castle",
+    "sa": 2,
+    "pct": 0.5,
+    "implied": 0,
+    "stated": 100,
+    "mates": 2,
+    "illegal": 0
+  },
+  {
+    "hi": "The Architect",
+    "lo": "Gambit",
+    "sa": 2,
+    "pct": 0.5,
+    "implied": 0,
+    "stated": 120,
+    "mates": 0,
+    "illegal": 0
+  },
+  {
+    "hi": "Chaos Kate",
+    "lo": "The Architect",
+    "sa": 1.5,
+    "pct": 0.375,
+    "implied": -89,
+    "stated": 80,
+    "mates": 1,
+    "illegal": 0
+  },
+  {
+    "hi": "Iron Ivan",
+    "lo": "Chaos Kate",
+    "sa": 3,
+    "pct": 0.75,
+    "implied": 191,
+    "stated": 120,
+    "mates": 2,
+    "illegal": 0
+  },
+  {
+    "hi": "Grandmaster Vex",
+    "lo": "Iron Ivan",
+    "sa": 3,
+    "pct": 0.75,
+    "implied": 191,
+    "stated": 180,
+    "mates": 2,
+    "illegal": 0
+  },
+  {
+    "hi": "THE VOID",
+    "lo": "Grandmaster Vex",
+    "sa": 3.5,
+    "pct": 0.875,
+    "implied": 338,
+    "stated": 250,
+    "mates": 3,
+    "illegal": 0
+  }
+]
