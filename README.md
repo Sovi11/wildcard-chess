@@ -19,13 +19,29 @@ Standard chess — but **the board itself is fair game**. Every second move, ins
 
 **Online:** https://sovi11.github.io/wildcard-chess/
 
-**Ranked:** hit *Find a match* and you are queued against someone near your rating.
+**Ranked:** hit *Find a match*. It looks for a real player for 10 seconds, then falls back
+to the resident pool so you are never left staring at an empty queue.
 
-**With a friend, two ways:**
+**With a friend:**
+- *Online, live* — send **one** link. Once they open it you both play in real time; moves
+  stream straight between the two browsers.
 - *2 players, one screen* — offline hotseat, pass the mouse.
-- *Friend, by link* — after each move you get a link; send it however you like (WhatsApp,
-  Discord). Your friend opens it, sees the exact position, plays, and sends one back. The
-  link is the whole save file (~180 characters) — no server, no accounts, no sign-up.
+- *Correspondence* (tucked away) — trade a fresh link after every move. Slow, but it works
+  when you are never online at the same time.
+
+### How online works without a server
+
+Moves travel over a direct WebRTC data channel between the two browsers. A free public
+PeerJS broker is used only to introduce the peers and never sees a move.
+
+Matchmaking has no backend either. A player who finds nobody waiting parks on a predictable
+"lobby slot" id inside their rating bucket; the next player to queue probes those slots and
+connects. The budget is split deliberately — about a third spent looking, the rest spent
+waiting — because if every client only probed, nobody would ever be waiting to be found.
+
+Two caveats worth knowing: the public broker is best-effort (it can rate-limit), and with a
+small player base two people have to queue inside the same ~10 second window to meet. A real
+backend fixes both, and `WCNET`/`WCMATCH` are structured to accept one.
 
 ## Play it (dev)
 

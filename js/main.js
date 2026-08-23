@@ -122,34 +122,39 @@ boardEl.addEventListener('click', (e) => {
   if (aiThinking) return;
   if (botEnabled() && game.turn === botSide()) return;
   if (linkMode() && linkPending) return;      // their turn — waiting on their link
+  if (onlineActive && game.turn !== myColor) return;   // their move, over the wire
   const v = view();
   const rect = boardEl.getBoundingClientRect();
   const c = v.minC + Math.floor(((e.clientX - rect.left) / rect.width) * v.cols);
   const r = v.maxR - Math.floor(((e.clientY - rect.top) / rect.height) * v.rows);
   const p = game.hasCell(c, r) ? game.get(c, r) : null;
 
-  if (mode === 'addcell') { if (game.wildcardAddCell(c, r)) done(); return; }
-  if (mode === 'removecell') { if (game.wildcardRemoveCell(c, r)) done(); return; }
+  if (mode === 'addcell') { if (game.wildcardAddCell(c, r)) done({ kind: 'ac', cell: { c: c, r: r } }); return; }
+  if (mode === 'removecell') { if (game.wildcardRemoveCell(c, r)) done({ kind: 'rc', cell: { c: c, r: r } }); return; }
 
   if (mode === 'movecell') {
     if (!selected) {
       if (game.hasCell(c, r) && !game.get(c, r)) { selected = { c, r }; render(); }
       return;
     }
-    if (game.wildcardMoveCell(selected.c, selected.r, c, r)) { done(); return; }
+    if (game.wildcardMoveCell(selected.c, selected.r, c, r)) {
+      done({ kind: 'mc', from: { c: selected.c, r: selected.r }, to: { c: c, r: r } }); return;
+    }
     if (game.hasCell(c, r) && !game.get(c, r)) { selected = { c, r }; render(); }
     return;
   }
 
   if (selected) {
-    if (game.makeMove(selected.c, selected.r, c, r)) { done(); return; }
+    if (game.makeMove(selected.c, selected.r, c, r)) {
+      done({ kind: 'm', from: { c: selected.c, r: selected.r }, to: { c: c, r: r } }); return;
+    }
     if (p && p.color === game.turn) { selected = { c, r }; legal = game.legalMoves(c, r); render(); return; }
     selected = null; legal = []; render(); return;
   }
   if (p && p.color === game.turn) { selected = { c, r }; legal = game.legalMoves(c, r); render(); }
 });
 
-function done() { afterMove(); updateShare(); maybeAI(); }
+function done(gm) { afterMove(); updateShare(); netBroadcast(gm); paintNetCard(); maybeAI(); }
 
 function afterMove() {
   selected = null; legal = []; hintMove = null;
@@ -376,6 +381,151 @@ function renderLobby() {
 
 function openLobby() { renderLobby(); resetQueueUI(); lobbyEl.classList.add('show'); }
 
+// ---- online play (real-time, peer to peer) ---------------------------------
+const roomBoxEl = document.getElementById('roomBox');
+const roomStateEl = document.getElementById('roomState');
+const roomLinkEl = document.getElementById('roomLink');
+const joinCodeEl = document.getElementById('joinCode');
+const netCardEl = document.getElementById('netCard');
+
+let netSession = null;      // { cancel } for the active host/join/search
+let onlineActive = false;   // a live game is running over the wire
+let myColor = null;         // which side this browser controls
+let oppLabel = null;        // what to show for the person on the other end
+
+function netOnline() { return onlineActive && WCNET.connected(); }
+
+function paintNetCard() {
+  if (!netCardEl) return;
+  if (!onlineActive) { netCardEl.style.display = 'none'; netCardEl.innerHTML = ''; return; }
+  const live = WCNET.connected();
+  const yourTurn = game.turn === myColor;
+  netCardEl.style.display = 'flex';
+  netCardEl.innerHTML =
+    '<span class="nc-dot ' + (live ? 'live' : 'dead') + '"></span>' +
+    '<span class="nc-body">' +
+      '<span class="nc-name">' + (oppLabel || 'Opponent') + '</span>' +
+      '<span class="nc-meta">' + (live
+        ? ('You are ' + myColor + ' \u00b7 ' + (yourTurn ? 'your move' : 'their move'))
+        : 'disconnected') + '</span>' +
+    '</span>';
+}
+
+function showRoomBox(msg, link) {
+  if (!roomBoxEl) return;
+  roomBoxEl.classList.add('show');
+  if (roomStateEl) roomStateEl.textContent = msg;
+  if (roomLinkEl && link !== undefined) roomLinkEl.value = link;
+}
+function hideRoomBox() { if (roomBoxEl) roomBoxEl.classList.remove('show'); }
+
+// Begin a networked game once the two peers are connected.
+function startOnlineGame(isHost, label) {
+  if (netSession && netSession.cancel && netSession.settled !== true) netSession.settled = true;
+  onlineActive = true;
+  activeBot = null;
+  ratedGame = false;              // human games are unrated until there is a server
+  resultRecorded = false;
+  myColor = isHost ? 'white' : 'black';
+  oppLabel = label || 'Online opponent';
+  if (oppModeEl) oppModeEl.value = 'human';   // no local bot should ever move
+  resetGameState();
+  hideRoomBox();
+  closeLobby();
+  paintOppCard(); paintNetCard();
+  refreshBotUI(); refreshShareUI();
+  runAnalysis(); sync(); render();
+  // the host owns the opening position and states it explicitly
+  if (isHost) WCNET.send({ t: 'start', state: WCSHARE.encode(game) });
+}
+
+// Push the move we just played to the other side.
+function netBroadcast(gm) {
+  if (!netOnline() || !gm) return;
+  WCNET.send({ t: 'act', gm: gm, state: WCSHARE.encode(game) });
+}
+
+// Apply what the opponent sent. Trust their action, but verify against the
+// position they claim to be in; on any mismatch, take their position as truth.
+function netApply(msg) {
+  if (!msg || !msg.t) return;
+  if (msg.t === 'start') {
+    try { WCSHARE.decode(msg.state, game); } catch (e) {}
+    quality.length = 0; anaKey = null;
+    runAnalysis(); sync(); render(); paintNetCard();
+    return;
+  }
+  if (msg.t === 'act') {
+    let ok = false;
+    try { ok = WCAI.applyToGame(game, msg.gm); } catch (e) { ok = false; }
+    if (ok && msg.state && WCSHARE.encode(game) !== msg.state) ok = false;
+    if (!ok) {
+      try { WCSHARE.decode(msg.state, game); quality.length = 0; anaKey = null; }
+      catch (e) { return; }
+    }
+    selected = null; legal = []; hintMove = null;
+    setMode('normal');
+    runAnalysis(); sync(); render(); paintNetCard();
+    return;
+  }
+  if (msg.t === 'resign') {
+    game.winner = myColor; game.status = 'checkmate';
+    sync(); render();
+  }
+}
+
+function netHandlers(labelWhenJoined) {
+  return {
+    onOpen: function (info) {
+      showRoomBox('Room open \u2014 send this link to your friend. Waiting for them to join\u2026', info.link);
+    },
+    onPeer: function (info) { startOnlineGame(info.host, labelWhenJoined); },
+    onData: netApply,
+    onClose: function () {
+      onlineActive = false; paintNetCard();
+      ui.hint.textContent = 'Your opponent disconnected.';
+    },
+    onError: function (e) {
+      showRoomBox('Could not connect: ' + (e && e.message ? e.message : 'unknown error') +
+                  '. Check the code, or try again.', roomLinkEl ? roomLinkEl.value : '');
+    },
+  };
+}
+
+function hostRoom() {
+  if (!WCNET.available()) {
+    showRoomBox('Online play needs the network library, which failed to load. Check your connection and reload.', '');
+    return;
+  }
+  if (netSession && netSession.cancel) netSession.cancel();
+  showRoomBox('Opening a room\u2026', '');
+  netSession = WCNET.host(netHandlers('Your friend'));
+}
+
+function joinRoom(code) {
+  if (!WCNET.available() || !code) return;
+  if (netSession && netSession.cancel) netSession.cancel();
+  showRoomBox('Connecting to ' + code + '\u2026', '');
+  netSession = WCNET.join(code, netHandlers('Your friend'));
+}
+
+const copyRoomBtn = document.getElementById('copyRoom');
+const joinRoomBtn = document.getElementById('joinRoom');
+const cancelRoomBtn = document.getElementById('cancelRoom');
+if (copyRoomBtn) copyRoomBtn.addEventListener('click', async function () {
+  if (!roomLinkEl || !roomLinkEl.value) return;
+  try { await navigator.clipboard.writeText(roomLinkEl.value); copyRoomBtn.textContent = 'Copied'; }
+  catch (e) { roomLinkEl.select(); copyRoomBtn.textContent = 'Ctrl+C'; }
+  setTimeout(function () { copyRoomBtn.textContent = 'Copy'; }, 1600);
+});
+if (joinRoomBtn) joinRoomBtn.addEventListener('click', function () {
+  joinRoom((joinCodeEl.value || '').trim().toLowerCase());
+});
+if (cancelRoomBtn) cancelRoomBtn.addEventListener('click', function () {
+  if (netSession && netSession.cancel) netSession.cancel();
+  netSession = null; hideRoomBox();
+});
+
 // ---- queue ----------------------------------------------------------------
 const findBtn = document.getElementById('findMatch');
 const searchStateEl = document.getElementById('searchState');
@@ -401,6 +551,39 @@ function beginSearch() {
   if (searchLineEl) searchLineEl.textContent = 'Searching for an opponent\u2026';
   if (searchBandEl) searchBandEl.textContent = 'Looking near ' + elo;
 
+  // Phase 1: look for a real person for 10 seconds.
+  if (WCNET.available()) {
+    if (searchLineEl) searchLineEl.textContent = 'Searching for a player\u2026';
+    let handedOff = false;
+    netSession = WCNET.findHuman(elo, 10000, {
+      onTick: function (st) {
+        if (!searchBandEl) return;
+        searchBandEl.textContent = st.phase === 'waiting'
+          ? 'Waiting in the ' + st.bucket + '+ queue\u2026'
+          : 'Checking the ' + st.bucket + '+ queue\u2026';
+      },
+      onPeer: function (info) {
+        if (handedOff) return;
+        handedOff = true;
+        cancelSearch = null;
+        startOnlineGame(info.host, 'Online player');
+      },
+      onNoHuman: function () {
+        if (handedOff) return;
+        handedOff = true;
+        netSession = null;
+        if (searchLineEl) searchLineEl.textContent = 'No one online right now \u2014 finding you an opponent\u2026';
+        searchPool(elo);
+      },
+    });
+    cancelSearch = function () { if (netSession && netSession.cancel) netSession.cancel(); netSession = null; };
+    return;
+  }
+  searchPool(elo);
+}
+
+// Phase 2: fall back to the resident pool.
+function searchPool(elo) {
   cancelSearch = WCMATCH.find(elo, {
     onTick: function (st) {
       if (searchBandEl) {
@@ -438,6 +621,8 @@ function closeLobby() { if (cancelSearch) { cancelSearch(); cancelSearch = null;
 
 // Start a fresh rated game against a ladder bot. You are White, the bot is Black.
 function startMatch(botId) {
+  if (netSession && netSession.cancel) { netSession.cancel(); netSession = null; }
+  WCNET.destroy(); onlineActive = false; myColor = null;
   activeBot = WCLADDER.liveBot(botId);
   ratedGame = !!activeBot;
   resultRecorded = false;
@@ -453,6 +638,8 @@ function startMatch(botId) {
 
 // Start an unrated mode: 'hotseat' (same screen) or 'link' (send a link).
 function startCasual(kind) {
+  if (netSession && netSession.cancel) { netSession.cancel(); netSession = null; }
+  WCNET.destroy(); onlineActive = false; myColor = null;
   activeBot = null; ratedGame = false; resultRecorded = false;
   if (oppModeEl) oppModeEl.value = (kind === 'hotseat') ? 'human' : 'link';
   resetGameState();
@@ -464,6 +651,7 @@ function startCasual(kind) {
 
 function resetGameState() {
   game.reset();
+  paintNetCard();
   selected = null; legal = []; hintMove = null;
   quality.length = 0; anaKey = null; linkPending = false;
   if (shareLinkEl) shareLinkEl.value = '';
@@ -496,7 +684,11 @@ if (resetEloBtn) resetEloBtn.addEventListener('click', function () {
   }
 });
 document.querySelectorAll('.mode-card').forEach(function (el) {
-  el.addEventListener('click', function () { startCasual(el.dataset.lobbymode); });
+  el.addEventListener('click', function () {
+    const kind = el.dataset.lobbymode;
+    if (kind === 'online') { hostRoom(); return; }
+    startCasual(kind);
+  });
 });
 if (lobbyEl) lobbyEl.addEventListener('click', function (e) { if (e.target === lobbyEl) closeLobby(); });
 
@@ -657,6 +849,12 @@ sync();
 render();
 refreshBotUI();
 refreshShareUI();
-if (!bootedFromLink) openLobby();
+const bootRoom = (typeof WCNET !== 'undefined' && WCNET.roomFromLocation) ? WCNET.roomFromLocation() : null;
+if (bootRoom) {
+  openLobby();
+  joinRoom(bootRoom);
+} else if (!bootedFromLink) {
+  openLobby();
+}
 if (bootedFromLink && shareMsgEl) shareMsgEl.textContent = "Your friend's move is loaded. Your turn.";
 if (!bootedFromLink) maybeAI();

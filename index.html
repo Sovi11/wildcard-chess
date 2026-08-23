@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wildcard Chess</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=11" />
+  <link rel="stylesheet" href="styles.css?v=13" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -47,23 +47,46 @@
         </div>
       </div>
 
-      <div class="lobby-label">Or play a friend <span class="lobby-hint">unrated</span></div>
+      <div class="lobby-label">Or play a friend directly</div>
       <div class="lobby-modes">
+        <button class="mode-card" data-lobbymode="online">
+          <span class="mode-ico">🌐</span>
+          <span class="mode-name">Online, live</span>
+          <span class="mode-desc">Send one link. You both play in real time.</span>
+        </button>
         <button class="mode-card" data-lobbymode="hotseat">
           <span class="mode-ico">👥</span>
           <span class="mode-name">2 players, one screen</span>
           <span class="mode-desc">Offline hotseat. Pass the mouse.</span>
         </button>
-        <button class="mode-card" data-lobbymode="link">
-          <span class="mode-ico">🔗</span>
-          <span class="mode-name">Friend, by link</span>
-          <span class="mode-desc">Send a link after each move. Works anywhere.</span>
-        </button>
+      </div>
+
+      <div id="roomBox" class="room-box">
+        <div id="roomState" class="room-state">Opening a room…</div>
+        <div class="room-linkrow">
+          <input id="roomLink" class="share-input" readonly placeholder="link appears here" />
+          <button id="copyRoom" class="share-btn room-copy">Copy</button>
+        </div>
+        <div class="room-joinrow">
+          <input id="joinCode" class="share-input" placeholder="or type a friend's code" maxlength="8" />
+          <button id="joinRoom" class="ghost-btn">Join</button>
+        </div>
+        <button id="cancelRoom" class="ghost-btn room-cancel">Cancel</button>
       </div>
 
       <details class="pool-peek">
         <summary>Who is in the pool? <span id="poolCount"></span></summary>
         <div id="botList" class="bot-list"></div>
+      </details>
+
+      <details class="pool-peek">
+        <summary>Correspondence mode</summary>
+        <p class="corr-note">Friend not online right now? Play by link instead — you send a
+          fresh link after each move and they reply with theirs. Slower, but it works even if
+          you are never online at the same time.</p>
+        <button class="mode-card corr-card" data-lobbymode="link">
+          <span class="mode-name">🔗 Play by link (correspondence)</span>
+        </button>
       </details>
 
       <div class="lobby-foot">
@@ -155,6 +178,7 @@
               <option value="5">5 · Brutal</option>
             </select>
           </div>
+          <div id="netCard" class="net-card"></div>
           <div id="oppCard" class="opp-card"></div>
           <p id="botBlurb" class="blurb"></p>
 
@@ -183,13 +207,15 @@
     </main>
   </div>
 
-  <script src="js/engine.js?v=11"></script>
-  <script src="js/pieces.js?v=11"></script>
-  <script src="js/ai.js?v=11"></script>
-  <script src="js/ladder.js?v=11"></script>
-  <script src="js/matchmaking.js?v=11"></script>
-  <script src="js/share.js?v=11"></script>
-  <script src="js/analysis.js?v=11"></script>
-  <script src="js/main.js?v=11"></script>
+  <script src="js/engine.js?v=13"></script>
+  <script src="js/pieces.js?v=13"></script>
+  <script src="js/ai.js?v=13"></script>
+  <script src="js/ladder.js?v=13"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="js/matchmaking.js?v=13"></script>
+  <script src="js/net.js?v=13"></script>
+  <script src="js/share.js?v=13"></script>
+  <script src="js/analysis.js?v=13"></script>
+  <script src="js/main.js?v=13"></script>
 </body>
 </html>
