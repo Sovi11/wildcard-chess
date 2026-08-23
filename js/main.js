@@ -115,6 +115,14 @@ function render() {
   boardEl.innerHTML = svg;
 }
 
+// Anything that reaches innerHTML goes through this. Player names come from a
+// text box and, online, from the other machine — neither is trustworthy markup.
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function keyJS(c, r) { return c + ',' + r; }
 function parseKeyJS(k) { const [c, r] = k.split(',').map(Number); return { c, r }; }
 
@@ -417,8 +425,23 @@ let activeBot = null;        // ladder bot currently being played, or null
 let ratedGame = false;       // does this game move your Elo?
 let resultRecorded = false;  // guard: score each game exactly once
 
+const youNameEl = document.getElementById('youName');
+if (youNameEl) youNameEl.addEventListener('change', function () {
+  const p = WCLADDER.getProfile();
+  p.name = (youNameEl.value || '').trim().slice(0, 16) || 'You';
+  WCLADDER.saveProfile(p);
+  youNameEl.value = p.name;
+  renderLeaderboard();
+});
+
+function myName() {
+  const n = WCLADDER.getProfile().name;
+  return (n && n !== 'You') ? n : 'Anonymous';
+}
+
 function paintProfile() {
   const p = WCLADDER.getProfile();
+  if (youNameEl && document.activeElement !== youNameEl) youNameEl.value = p.name === 'You' ? '' : p.name;
   if (eloChipEl) eloChipEl.textContent = '\u2605 ' + p.elo;
   const youElo = document.getElementById('youElo');
   const youRec = document.getElementById('youRecord');
@@ -434,7 +457,7 @@ function paintOppCard() {
   const stakeText = ratedGame ? ('Rated \u00b7 win +' + st.win + ' / lose ' + st.loss) : 'Casual';
   oppCardEl.innerHTML =
     '<span class="oc-ico">' + activeBot.emoji + '</span>' +
-    '<span class="oc-body"><span class="oc-name">' + activeBot.name +
+    '<span class="oc-body"><span class="oc-name">' + esc(activeBot.name) +
     '<span class="oc-elo">' + activeBot.elo + '</span></span>' +
     '<span class="oc-style">' + activeBot.style + '</span>' +
     '<span class="oc-stakes">' + stakeText + '</span></span>';
@@ -452,10 +475,10 @@ function renderLobby() {
     return '<div class="bot-row static">' +
       '<span class="br-ico">' + b.emoji + '</span>' +
       '<span class="br-main">' +
-        '<span class="br-top"><span class="br-name">' + b.name + '</span>' +
+        '<span class="br-top"><span class="br-name">' + esc(b.name) + '</span>' +
         '<span class="br-tag ' + tag + '">' + tagText + '</span></span>' +
-        '<span class="br-style">' + b.style + '</span>' +
-        '<span class="br-blurb">' + b.blurb + '</span>' +
+        '<span class="br-style">' + esc(b.style) + '</span>' +
+        '<span class="br-blurb">' + esc(b.blurb) + '</span>' +
       '</span>' +
       '<span class="br-right">' +
         '<span class="br-elo">' + b.elo + '</span>' +
@@ -476,13 +499,13 @@ function renderLeaderboard() {
   const me = WCLADDER.getProfile();
   const rows = WCLADDER.livePool()
     .map(function (b) { return { name: b.name, elo: b.elo, emoji: b.emoji, you: false }; })
-    .concat([{ name: 'You', elo: me.elo, emoji: '★', you: true }])
+    .concat([{ name: (me.name && me.name !== 'You') ? me.name : 'You', elo: me.elo, emoji: '★', you: true }])
     .sort(function (a, b) { return b.elo - a.elo; });
   el.innerHTML = rows.map(function (r, i) {
     return '<div class="lb-row' + (r.you ? ' you' : '') + '">' +
       '<span class="lb-rank">' + (i + 1) + '</span>' +
       '<span class="lb-ico">' + r.emoji + '</span>' +
-      '<span class="lb-name">' + r.name + '</span>' +
+      '<span class="lb-name">' + esc(r.name) + '</span>' +
       '<span class="lb-elo">' + r.elo + '</span></div>';
   }).join('');
 }
@@ -510,7 +533,7 @@ function paintNetCard() {
   netCardEl.innerHTML =
     '<span class="nc-dot ' + (live ? 'live' : 'dead') + '"></span>' +
     '<span class="nc-body">' +
-      '<span class="nc-name">' + (oppLabel || 'Opponent') + '</span>' +
+      '<span class="nc-name">' + esc(oppLabel || 'Opponent') + '</span>' +
       '<span class="nc-meta">' + (live
         ? ('You are ' + myColor + ' \u00b7 ' + (yourTurn ? 'your move' : 'their move'))
         : 'disconnected') + '</span>' +
@@ -544,6 +567,7 @@ function startOnlineGame(isHost, label, forcedColor) {
   applyTutorVisibility();
   runAnalysis(); sync(); render();
   // The host owns the opening position and tells the guest which side they got.
+  WCNET.send({ t: 'hello', name: myName(), elo: WCLADDER.getProfile().elo });
   if (isHost) {
     WCNET.send({ t: 'start', state: WCSHARE.encode(game), youAre: myColor === 'white' ? 'black' : 'white' });
   }
@@ -559,6 +583,13 @@ function netBroadcast(gm) {
 // position they claim to be in; on any mismatch, take their position as truth.
 function netApply(msg) {
   if (!msg || !msg.t) return;
+  if (msg.t === 'hello') {
+    const nm = String(msg.name || '').slice(0, 16).replace(/[<>&]/g, '');
+    oppLabel = nm || 'Anonymous';
+    if (typeof msg.elo === 'number' && isFinite(msg.elo)) oppLabel += ' (' + Math.round(msg.elo) + ')';
+    paintNetCard();
+    return;
+  }
   if (msg.t === 'start') {
     try { WCSHARE.decode(msg.state, game); } catch (e) {}
     if (msg.youAre === 'white' || msg.youAre === 'black') myColor = msg.youAre;
@@ -737,7 +768,7 @@ function showFound(opp, isHuman) {
   if (searchStateEl) searchStateEl.classList.remove('show');
   if (matchFoundEl) {
     document.getElementById('mfIco').textContent = opp.emoji || '\u265f';
-    document.getElementById('mfName').textContent = opp.name;
+    document.getElementById('mfName').textContent = opp.name;   // textContent: safe
     document.getElementById('mfMeta').textContent = isHuman ? 'online player' : opp.style;
     document.getElementById('mfElo').textContent = opp.elo;
     matchFoundEl.classList.add('show');

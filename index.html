@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wildcard Chess</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=14" />
+  <link rel="stylesheet" href="styles.css?v=15" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -18,7 +18,8 @@
         <div class="you-card">
           <div class="you-elo" id="youElo">500</div>
           <div class="you-meta">
-            <div class="you-name">Your rating</div>
+            <input id="youName" class="you-nameinput" maxlength="16" spellcheck="false"
+                   aria-label="Your display name" placeholder="Your name" />
             <div class="you-rec" id="youRecord">0W · 0L · 0D</div>
           </div>
         </div>
@@ -225,15 +226,15 @@
     </main>
   </div>
 
-  <script src="js/engine.js?v=14"></script>
-  <script src="js/pieces.js?v=14"></script>
-  <script src="js/ai.js?v=14"></script>
-  <script src="js/ladder.js?v=14"></script>
+  <script src="js/engine.js?v=15"></script>
+  <script src="js/pieces.js?v=15"></script>
+  <script src="js/ai.js?v=15"></script>
+  <script src="js/ladder.js?v=15"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=14"></script>
-  <script src="js/net.js?v=14"></script>
-  <script src="js/share.js?v=14"></script>
-  <script src="js/analysis.js?v=14"></script>
-  <script src="js/main.js?v=14"></script>
+  <script src="js/matchmaking.js?v=15"></script>
+  <script src="js/net.js?v=15"></script>
+  <script src="js/share.js?v=15"></script>
+  <script src="js/analysis.js?v=15"></script>
+  <script src="js/main.js?v=15"></script>
 </body>
 </html>

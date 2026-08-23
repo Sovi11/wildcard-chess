@@ -409,3 +409,11 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .lb-name { flex: 1; font-weight: 600; }
 .lb-row.you .lb-name { color: var(--accent); }
 .lb-elo { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.you-nameinput {
+  background: transparent; border: none; border-bottom: 1px dashed var(--line);
+  color: var(--ink); font-family: inherit; font-size: 13px; font-weight: 700;
+  padding: 1px 0 2px; width: 110px; outline: none;
+}
+.you-nameinput:focus { border-bottom-color: var(--accent); }
+.you-nameinput::placeholder { color: var(--muted); font-weight: 500; }
