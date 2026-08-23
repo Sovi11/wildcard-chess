@@ -21,6 +21,7 @@ let mode = 'normal';        // normal | addcell | removecell | movecell
 let selected = null;
 let legal = [];
 let hintMove = null;        // best-action overlay, cleared on the next move
+let flipped = false;        // true when the board is drawn from Black's side
 
 const SYM = { pawn: 'pc-pawn', knight: 'pc-knight', bishop: 'pc-bishop', rook: 'pc-rook', queen: 'pc-queen', king: 'pc-king' };
 const mod2 = (n) => ((n % 2) + 2) % 2;
@@ -35,8 +36,9 @@ function view() {
 function render() {
   const v = view();
   boardEl.setAttribute('viewBox', `0 0 ${v.cols} ${v.rows}`);
-  const X = (c) => c - v.minC;
-  const Y = (r) => v.maxR - r;
+  // Flipping swaps both axes so the side you play always sits at the bottom.
+  const X = flipped ? (c) => v.maxC - c : (c) => c - v.minC;
+  const Y = flipped ? (r) => r - v.minR : (r) => v.maxR - r;
   let svg = pieceDefs();
   svg += `<defs><marker id="hintHead" viewBox="0 0 10 10" refX="7.5" refY="5" markerWidth="3.6" markerHeight="3.6" orient="auto-start-reverse"><path d="M1 1L9 5L1 9Z" fill="#e7c14a"/></marker></defs>`;
 
@@ -125,8 +127,10 @@ boardEl.addEventListener('click', (e) => {
   if (onlineActive && game.turn !== myColor) return;   // their move, over the wire
   const v = view();
   const rect = boardEl.getBoundingClientRect();
-  const c = v.minC + Math.floor(((e.clientX - rect.left) / rect.width) * v.cols);
-  const r = v.maxR - Math.floor(((e.clientY - rect.top) / rect.height) * v.rows);
+  const fx = Math.floor(((e.clientX - rect.left) / rect.width) * v.cols);
+  const fy = Math.floor(((e.clientY - rect.top) / rect.height) * v.rows);
+  const c = flipped ? v.maxC - fx : v.minC + fx;
+  const r = flipped ? v.minR + fy : v.maxR - fy;
   const p = game.hasCell(c, r) ? game.get(c, r) : null;
 
   if (mode === 'addcell') { if (game.wildcardAddCell(c, r)) done({ kind: 'ac', cell: { c: c, r: r } }); return; }
@@ -319,6 +323,90 @@ if (hintBtn) hintBtn.addEventListener('click', () => {
 if (anaOnEl) anaOnEl.addEventListener('change', () => { anaKey = null; runAnalysis(); });
 if (anaDepthEl) anaDepthEl.addEventListener('change', () => { anaKey = null; runAnalysis(); });
 
+// ---- orientation, resign, draw, dev mode ----------------------------------
+const flipBtn = document.getElementById('flipBtn');
+const drawBtn = document.getElementById('drawBtn');
+const resignBtn = document.getElementById('resignBtn');
+const devModeEl = document.getElementById('devMode');
+const evalBarEl = document.querySelector('.evalbar');
+
+// Point the board at whoever the local player is.
+function orientFor(color) {
+  flipped = (color === 'black');
+  render();
+}
+
+// Dev mode shows the engine while you play. Off, analysis is still computed
+// but stays hidden until the game ends, so it cannot be used as a crutch.
+const devOn = () => !!(devModeEl && devModeEl.checked);
+function analysisVisible() { return devOn() || gameOver(); }
+
+function applyTutorVisibility() {
+  const show = analysisVisible();
+  if (evalBarEl) evalBarEl.style.visibility = show ? '' : 'hidden';
+  if (hintBtn) { hintBtn.disabled = !show; hintBtn.style.opacity = show ? '' : '.4'; }
+  if (ui.anaLine) ui.anaLine.style.display = show ? '' : 'none';
+  if (ui.anaWhy) ui.anaWhy.style.display = show ? '' : 'none';
+  if (ui.lastQuality) ui.lastQuality.style.display = show ? '' : 'none';
+  if (ui.accuracy) ui.accuracy.style.display = show ? '' : 'none';
+  if (!show && hintMove) { hintMove = null; render(); }
+  const log = document.getElementById('log');
+  if (log) log.classList.toggle('hide-grades', !show);
+}
+
+if (devModeEl) {
+  try { devModeEl.checked = localStorage.getItem('wildcardchess.dev') === '1'
+    || /[?&]dev=1/.test(location.search); } catch (e) {}
+  devModeEl.addEventListener('change', function () {
+    try { localStorage.setItem('wildcardchess.dev', devModeEl.checked ? '1' : '0'); } catch (e) {}
+    applyTutorVisibility();
+    renderLog();
+  });
+}
+
+if (flipBtn) flipBtn.addEventListener('click', function () { flipped = !flipped; render(); });
+
+// Which colour does the person at this keyboard control?
+function localColor() {
+  if (onlineActive) return myColor;
+  if (botEnabled()) return botSide() === 'white' ? 'black' : 'white';
+  return game.turn;                       // hotseat: whoever is to move
+}
+
+function endGame(winner, reason) {
+  game.winner = winner;
+  game.status = winner ? 'checkmate' : 'stalemate';
+  game.endReason = reason || null;
+  sync(); render();
+}
+
+if (resignBtn) resignBtn.addEventListener('click', function () {
+  if (gameOver()) return;
+  const me = localColor();
+  if (!confirm('Resign this game?')) return;
+  if (netOnline()) WCNET.send({ t: 'resign' });
+  endGame(me === 'white' ? 'black' : 'white', 'resignation');
+});
+
+if (drawBtn) drawBtn.addEventListener('click', function () {
+  if (gameOver()) return;
+  if (netOnline()) {
+    WCNET.send({ t: 'drawoffer' });
+    ui.hint.textContent = 'Draw offered \u2014 waiting for their answer.';
+    return;
+  }
+  if (activeBot) {
+    // The bot accepts only when the position is not going its way.
+    const res = WCAN.analyse(game, 3, 700);
+    const botColor = botSide();
+    const botScore = botColor === 'white' ? res.whiteScore : -res.whiteScore;
+    if (botScore < -60) { endGame(null, 'agreement'); }
+    else { ui.hint.textContent = activeBot.name + ' declines the draw.'; }
+    return;
+  }
+  if (confirm('Both players agree to a draw?')) endGame(null, 'agreement');
+});
+
 // ---- ladder, lobby and ratings --------------------------------------------
 const lobbyEl = document.getElementById('lobby');
 const botListEl = document.getElementById('botList');
@@ -379,7 +467,25 @@ function renderLobby() {
   if (count) count.textContent = '(' + rows.length + ' rated players)';
 }
 
-function openLobby() { renderLobby(); resetQueueUI(); lobbyEl.classList.add('show'); }
+function openLobby() { renderLobby(); renderLeaderboard(); resetQueueUI(); lobbyEl.classList.add('show'); }
+
+// Everyone in the pool plus you, ranked. Bot ratings drift, so this moves.
+function renderLeaderboard() {
+  const el = document.getElementById('leaderboard');
+  if (!el) return;
+  const me = WCLADDER.getProfile();
+  const rows = WCLADDER.livePool()
+    .map(function (b) { return { name: b.name, elo: b.elo, emoji: b.emoji, you: false }; })
+    .concat([{ name: 'You', elo: me.elo, emoji: '★', you: true }])
+    .sort(function (a, b) { return b.elo - a.elo; });
+  el.innerHTML = rows.map(function (r, i) {
+    return '<div class="lb-row' + (r.you ? ' you' : '') + '">' +
+      '<span class="lb-rank">' + (i + 1) + '</span>' +
+      '<span class="lb-ico">' + r.emoji + '</span>' +
+      '<span class="lb-name">' + r.name + '</span>' +
+      '<span class="lb-elo">' + r.elo + '</span></div>';
+  }).join('');
+}
 
 // ---- online play (real-time, peer to peer) ---------------------------------
 const roomBoxEl = document.getElementById('roomBox');
@@ -420,13 +526,13 @@ function showRoomBox(msg, link) {
 function hideRoomBox() { if (roomBoxEl) roomBoxEl.classList.remove('show'); }
 
 // Begin a networked game once the two peers are connected.
-function startOnlineGame(isHost, label) {
+function startOnlineGame(isHost, label, forcedColor) {
   if (netSession && netSession.cancel && netSession.settled !== true) netSession.settled = true;
   onlineActive = true;
   activeBot = null;
-  ratedGame = false;              // human games are unrated until there is a server
+  ratedGame = false;              // friendlies never touch your rating
   resultRecorded = false;
-  myColor = isHost ? 'white' : 'black';
+  myColor = forcedColor || (isHost ? 'white' : 'black');
   oppLabel = label || 'Online opponent';
   if (oppModeEl) oppModeEl.value = 'human';   // no local bot should ever move
   resetGameState();
@@ -434,9 +540,13 @@ function startOnlineGame(isHost, label) {
   closeLobby();
   paintOppCard(); paintNetCard();
   refreshBotUI(); refreshShareUI();
+  orientFor(myColor);
+  applyTutorVisibility();
   runAnalysis(); sync(); render();
-  // the host owns the opening position and states it explicitly
-  if (isHost) WCNET.send({ t: 'start', state: WCSHARE.encode(game) });
+  // The host owns the opening position and tells the guest which side they got.
+  if (isHost) {
+    WCNET.send({ t: 'start', state: WCSHARE.encode(game), youAre: myColor === 'white' ? 'black' : 'white' });
+  }
 }
 
 // Push the move we just played to the other side.
@@ -451,7 +561,9 @@ function netApply(msg) {
   if (!msg || !msg.t) return;
   if (msg.t === 'start') {
     try { WCSHARE.decode(msg.state, game); } catch (e) {}
+    if (msg.youAre === 'white' || msg.youAre === 'black') myColor = msg.youAre;
     quality.length = 0; anaKey = null;
+    orientFor(myColor);
     runAnalysis(); sync(); render(); paintNetCard();
     return;
   }
@@ -469,9 +581,20 @@ function netApply(msg) {
     return;
   }
   if (msg.t === 'resign') {
-    game.winner = myColor; game.status = 'checkmate';
-    sync(); render();
+    endGame(myColor, 'resignation');
+    return;
   }
+  if (msg.t === 'drawoffer') {
+    if (confirm('Your opponent offers a draw. Accept?')) {
+      WCNET.send({ t: 'drawaccept' });
+      endGame(null, 'agreement');
+    } else {
+      WCNET.send({ t: 'drawdecline' });
+    }
+    return;
+  }
+  if (msg.t === 'drawaccept') { endGame(null, 'agreement'); return; }
+  if (msg.t === 'drawdecline') { ui.hint.textContent = 'Draw declined.'; return; }
 }
 
 function netHandlers(labelWhenJoined) {
@@ -479,7 +602,15 @@ function netHandlers(labelWhenJoined) {
     onOpen: function (info) {
       showRoomBox('Room open \u2014 send this link to your friend. Waiting for them to join\u2026', info.link);
     },
-    onPeer: function (info) { startOnlineGame(info.host, labelWhenJoined); },
+    onPeer: function (info) {
+      let color;
+      if (info.host) {
+        const pick = document.getElementById('roomSide');
+        const want = pick ? pick.value : 'random';
+        color = want === 'random' ? (Math.random() < 0.5 ? 'white' : 'black') : want;
+      }
+      startOnlineGame(info.host, labelWhenJoined, color);
+    },
     onData: netApply,
     onClose: function () {
       onlineActive = false; paintNetCard();
@@ -627,10 +758,13 @@ function startMatch(botId) {
   ratedGame = !!activeBot;
   resultRecorded = false;
   if (oppModeEl) oppModeEl.value = 'bot';
-  if (botSideEl) botSideEl.value = 'black';
+  // Ranked games assign colours like a real pairing would, so you play both sides.
+  if (botSideEl) botSideEl.value = Math.random() < 0.5 ? 'black' : 'white';
   resetGameState();
   closeLobby();
   paintOppCard();
+  orientFor(botSide() === 'white' ? 'black' : 'white');
+  applyTutorVisibility();
   refreshBotUI(); refreshShareUI();
   runAnalysis(); sync(); render();
   maybeAI();
@@ -645,12 +779,15 @@ function startCasual(kind) {
   resetGameState();
   closeLobby();
   paintOppCard();
+  flipped = false;
+  applyTutorVisibility();
   refreshBotUI(); refreshShareUI();
   runAnalysis(); sync(); render();
 }
 
 function resetGameState() {
   game.reset();
+  game.endReason = null;
   paintNetCard();
   selected = null; legal = []; hintMove = null;
   quality.length = 0; anaKey = null; linkPending = false;
@@ -669,7 +806,7 @@ function settleResult() {
   const youColor = botColor === 'white' ? 'black' : 'white';
   const score = game.winner === youColor ? 1 : (game.winner === botColor ? 0 : 0.5);
   const r = WCLADDER.recordResult(activeBot.id, score);
-  paintProfile(); paintOppCard();
+  paintProfile(); paintOppCard(); renderLeaderboard();
   return r;
 }
 
@@ -815,12 +952,24 @@ function sync() {
 
   setMode('normal');
   renderLog();
+  const over = gameOver();
+  if (resignBtn) resignBtn.disabled = over;
+  if (drawBtn) drawBtn.disabled = over;
 
   if (gameOver()) {
+    applyTutorVisibility();
     const r = settleResult();
-    let text = game.status === 'checkmate'
-      ? ('Checkmate \u2014 ' + (game.winner === 'white' ? 'White' : 'Black') + ' wins')
-      : (game.status === 'repetition' ? 'Draw by repetition' : 'Stalemate \u2014 draw');
+    const reason = game.endReason;
+    let text;
+    if (reason === 'resignation') {
+      text = (game.winner === 'white' ? 'White' : 'Black') + ' wins by resignation';
+    } else if (reason === 'agreement') {
+      text = 'Draw agreed';
+    } else {
+      text = game.status === 'checkmate'
+        ? ('Checkmate \u2014 ' + (game.winner === 'white' ? 'White' : 'Black') + ' wins')
+        : (game.status === 'repetition' ? 'Draw by repetition' : 'Stalemate \u2014 draw');
+    }
     if (r) {
       const sign = r.delta >= 0 ? '+' : '';
       text += '  \u00b7  ' + r.before + ' \u2192 ' + r.after + ' (' + sign + r.delta + ')';
@@ -844,6 +993,7 @@ try {
 
 paintProfile();
 paintOppCard();
+applyTutorVisibility();
 runAnalysis();
 sync();
 render();
