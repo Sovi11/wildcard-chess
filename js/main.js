@@ -719,6 +719,7 @@ function paintAuth() {
   }
   authBtn.style.display = '';
   const u = WCCLOUD.currentUser();
+  if (!u && !WCCLOUD.hasGoogle()) authBtn.textContent = 'Sign in with email';
   if (u) {
     authBtn.textContent = 'Sign out';
     if (authStateEl) {
@@ -726,7 +727,7 @@ function paintAuth() {
       authStateEl.textContent = esc(who) + ' \u00b7 rating synced';
     }
   } else {
-    authBtn.textContent = 'Sign in with Google';
+    authBtn.textContent = WCCLOUD.hasGoogle() ? 'Sign in with Google' : 'Sign in with email';
     if (authStateEl) authStateEl.textContent = 'Rating is saved on this device only';
   }
 }

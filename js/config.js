@@ -12,5 +12,5 @@
 
 window.WCCONFIG = {
   supabaseUrl: 'https://ykmenwvniegyhxzxsvod.supabase.co',
-  supabaseKey: '',      // <-- still needed: Project Settings > API Keys > anon/publishable
+  supabaseKey: 'sb_publishable_9NxzkNF1Yw4PApU78NKWbg_s_WX0aXk',
 };

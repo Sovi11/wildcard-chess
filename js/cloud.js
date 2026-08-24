@@ -19,6 +19,7 @@
   let client = null;
   let user = null;
   let ready = false;
+  let providers = [];             // which sign-in methods the project actually has
   const listeners = [];
 
   const configured = () => !!(cfg.supabaseUrl && cfg.supabaseKey);
@@ -37,6 +38,13 @@
     }
     try {
       client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+      // Ask the project which providers are switched on, so the UI can offer
+      // Google when it exists and fall back to an email link when it does not.
+      try {
+        const r = await fetch(cfg.supabaseUrl + '/auth/v1/settings', { headers: { apikey: cfg.supabaseKey } });
+        const j = await r.json();
+        providers = (j && j.external) ? Object.keys(j.external).filter(k => j.external[k]) : [];
+      } catch (e) { providers = []; }
       const { data } = await client.auth.getSession();
       user = (data && data.session && data.session.user) || null;
       client.auth.onAuthStateChange(function (_event, session) {
@@ -50,6 +58,22 @@
       client = null;
       return false;
     }
+  }
+
+  const hasGoogle = () => providers.indexOf('google') >= 0;
+  const providerList = () => providers.slice();
+
+  // Passwordless email link. Works with no provider setup at all, so accounts
+  // are usable before Google OAuth has been wired up.
+  async function signInWithEmail(email) {
+    if (!client) return { ok: false, error: 'cloud off' };
+    const redirectTo = location.origin + location.pathname;
+    const { error } = await client.auth.signInWithOtp({
+      email: String(email || '').trim(),
+      options: { emailRedirectTo: redirectTo },
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
   }
 
   async function signIn() {
@@ -141,7 +165,8 @@
   }
 
   window.WCCLOUD = {
-    configured, enabled, init, signIn, signOut, currentUser, onChange,
+    configured, enabled, init, signIn, signInWithEmail, hasGoogle, providerList,
+    signOut, currentUser, onChange,
     loadProfile, saveProfile, leaderboard,
     joinQueue, leaveQueue, findWaiting,
   };

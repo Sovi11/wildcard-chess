@@ -64,7 +64,14 @@ create policy "manage own queue row"     on queue for all    using (auth.uid() =
 create index if not exists queue_elo_idx on queue (elo, created_at desc);
 ```
 
-## 3. Turn on Google sign-in
+## 3. Turn on Google sign-in *(optional — email already works)*
+
+Supabase enables **email** sign-in by default, and the game detects that: with no Google
+provider configured the button reads **Sign in with email** and sends a passwordless login
+link. That is fully functional, so you can skip this section entirely and come back to it.
+
+Add Google when you want one-tap sign-in instead of an email round trip.
+
 
 1. In Supabase: **Authentication → Providers → Google**, toggle it on. Leave the page open,
    you need the **Callback URL** it shows you.
