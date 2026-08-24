@@ -11,6 +11,6 @@
 // service_role key here; it bypasses every policy.
 
 window.WCCONFIG = {
-  supabaseUrl: '',      // e.g. 'https://abcdefgh.supabase.co'
-  supabaseKey: '',      // the anon / publishable key
+  supabaseUrl: 'https://ykmenwvniegyhxzxsvod.supabase.co',
+  supabaseKey: '',      // <-- still needed: Project Settings > API Keys > anon/publishable
 };
