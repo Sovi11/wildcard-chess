@@ -869,6 +869,21 @@ WCCLOUD.onChange(function (u) { if (u) closeAuthModal(); });
   WCCLOUD.onChange(function () { paintAuth(); syncProfileDown(); });
   paintAuth();
   if (cloudReady && WCCLOUD.currentUser()) syncProfileDown();
+
+  // First-visit nudge: offer sign-in exactly once, then never again unless
+  // they ask. Never when arriving on a room or game link — nothing should get
+  // between a player and their friend's game. No login wall: the game is
+  // fully playable signed out.
+  const NUDGE = 'wildcardchess.authnudge.v1';
+  const onInvite = /[#&](room|g)=/.test(location.hash || '');
+  let nudged = false;
+  try { nudged = localStorage.getItem(NUDGE) === '1'; } catch (e) {}
+  if (cloudReady && !WCCLOUD.currentUser() && !nudged && !onInvite) {
+    setTimeout(function () {
+      if (!WCCLOUD.currentUser()) openAuthModal();
+      try { localStorage.setItem(NUDGE, '1'); } catch (e) {}
+    }, 900);
+  }
 })();
 
 // ---- queue ----------------------------------------------------------------
