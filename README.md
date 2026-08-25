@@ -127,6 +127,23 @@ action steers style without corrupting the search:
 | Grandmaster Vex | 1200 | Strong all-round |
 | THE VOID | 1450 | Terrain master; you run out of floor first |
 
+## Appearance
+
+Board themes and piece sets mix freely and persist (panel → Appearance):
+
+- **Boards:** Slate (default), **Garden & stone** (moss and paving, holes show bare soil,
+  squares rounded like stones), Parchment, **Neon void** (black pieces trace in cyan).
+- **Pieces:** Classic, or **Garden gnomes** — pawns are small gnomes, rooks are mushroom
+  houses, knights ride snails, bishops carry lanterns, queens wear flower crowns, and the
+  king has the tallest hat. White wears red hats, black wears blue.
+
+## Mobile
+
+Fully playable by touch: tap a piece, tap a square. The layout reorders on narrow screens
+(board first, thumb-sized action buttons beneath), double-tap zoom is suppressed on the
+board, and the site installs as a **PWA** — Add to Home Screen gives a standalone app that
+opens instantly and plays bot games offline.
+
 ## Tutor / analysis
 
 A chess.com-style coach runs alongside play:

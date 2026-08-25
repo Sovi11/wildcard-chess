@@ -1,0 +1,15 @@
+{
+  "name": "Wildcard Chess",
+  "short_name": "Wildcard",
+  "description": "Chess where the board itself is fair game — tear out squares, grow new ground, checkmate anyway.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14161b",
+  "theme_color": "#14161b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

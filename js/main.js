@@ -24,7 +24,10 @@ let hintMove = null;        // best-action overlay, cleared on the next move
 let flipped = false;        // true when the board is drawn from Black's side
 let gameActs = [];          // every action this game, so it can be replayed later
 
-const SYM = { pawn: 'pc-pawn', knight: 'pc-knight', bishop: 'pc-bishop', rook: 'pc-rook', queen: 'pc-queen', king: 'pc-king' };
+// Piece symbols are namespaced by the active set: pc-classic-pawn, pc-gnome-rook…
+WCTHEME.load();
+WCTHEME.apply();
+const symFor = (type) => 'pc-' + WCTHEME.get().pieces + '-' + type;
 const mod2 = (n) => ((n % 2) + 2) % 2;
 
 // ---- view: fit current bounds + 1 ring of expandable space ---------------
@@ -40,7 +43,7 @@ function render() {
   // Flipping swaps both axes so the side you play always sits at the bottom.
   const X = flipped ? (c) => v.maxC - c : (c) => c - v.minC;
   const Y = flipped ? (r) => r - v.minR : (r) => v.maxR - r;
-  let svg = pieceDefs();
+  let svg = pieceDefs(WCTHEME.get().pieces);
   svg += `<defs><marker id="hintHead" viewBox="0 0 10 10" refX="7.5" refY="5" markerWidth="3.6" markerHeight="3.6" orient="auto-start-reverse"><path d="M1 1L9 5L1 9Z" fill="#e7c14a"/></marker></defs>`;
 
   for (const k of game.cells) {
@@ -81,7 +84,7 @@ function render() {
 
   for (const [k, p] of game.board) {
     const { c, r } = parseKeyJS(k);
-    svg += `<use href="#${SYM[p.type]}" x="${X(c)}" y="${Y(r)}" width="1" height="1" class="pc ${p.color === 'white' ? 'w' : 'b'}"/>`;
+    svg += `<use href="#${symFor(p.type)}" x="${X(c)}" y="${Y(r)}" width="1" height="1" class="pc ${p.color === 'white' ? 'w' : 'b'}"/>`;
   }
 
   for (const m of legal) {
@@ -714,6 +717,43 @@ if (cancelRoomBtn) cancelRoomBtn.addEventListener('click', function () {
   netSession = null; hideRoomBox();
 });
 
+
+// ---- appearance -----------------------------------------------------------
+const themeBoardEl = document.getElementById('themeBoard');
+const themePiecesEl = document.getElementById('themePieces');
+const themeHintEl = document.getElementById('themeHint');
+
+function initAppearance() {
+  if (!themeBoardEl || !themePiecesEl) return;
+  const cur = WCTHEME.get();
+  themeBoardEl.innerHTML = Object.entries(WCTHEME.BOARD_THEMES)
+    .map(function (kv) { return '<option value="' + kv[0] + '"' + (kv[0] === cur.board ? ' selected' : '') + '>' + kv[1].name + '</option>'; })
+    .join('');
+  themePiecesEl.innerHTML = Object.entries(PIECE_SETS)
+    .map(function (kv) { return '<option value="' + kv[0] + '"' + (kv[0] === cur.pieces ? ' selected' : '') + '>' + kv[1].name + '</option>'; })
+    .join('');
+  paintThemeHint();
+  themeBoardEl.addEventListener('change', applyAppearance);
+  themePiecesEl.addEventListener('change', applyAppearance);
+}
+
+function paintThemeHint() {
+  if (!themeHintEl) return;
+  const t = WCTHEME.BOARD_THEMES[WCTHEME.get().board];
+  themeHintEl.textContent = t ? t.desc : '';
+}
+
+function applyAppearance() {
+  WCTHEME.apply(themeBoardEl.value, themePiecesEl.value);
+  paintThemeHint();
+  render();
+  if (typeof revActs !== 'undefined' && revActs.length &&
+      profileEl.classList.contains('show') && profReviewEl.classList.contains('show')) {
+    revSeek(revPos);                   // repaint the review board in the new skin
+  }
+}
+initAppearance();
+
 // ---- accounts and cloud sync ----------------------------------------------
 // All optional. With no Supabase keys configured every call here is a no-op and
 // the game keeps using local ratings and peer-to-peer matchmaking.
@@ -769,13 +809,58 @@ function syncProfileUp() {
   WCCLOUD.saveProfile(WCLADDER.getProfile());
 }
 
+// A proper sign-in surface: Google when the project has it, an email
+// magic-link either way. No prompt() dialogs anywhere.
+const authModalEl = document.getElementById('authModal');
+const googleBtn = document.getElementById('googleBtn');
+const emailInput = document.getElementById('emailInput');
+const emailSend = document.getElementById('emailSend');
+const authMsgEl = document.getElementById('authMsg');
+
+function openAuthModal() {
+  if (!authModalEl) return;
+  if (googleBtn) googleBtn.style.display = WCCLOUD.hasGoogle() ? '' : 'none';
+  if (authMsgEl) authMsgEl.textContent = "We'll email you a one-tap sign-in link. No password.";
+  if (emailSend) { emailSend.disabled = false; emailSend.textContent = 'Send link'; }
+  authModalEl.classList.add('show');
+  if (!WCCLOUD.hasGoogle() && emailInput) setTimeout(function () { emailInput.focus(); }, 60);
+}
+function closeAuthModal() { if (authModalEl) authModalEl.classList.remove('show'); }
+
 if (authBtn) authBtn.addEventListener('click', async function () {
   if (!WCCLOUD.enabled()) return;
   if (WCCLOUD.currentUser()) { await WCCLOUD.signOut(); paintAuth(); return; }
-  authBtn.disabled = true;
-  authBtn.textContent = 'Redirecting\u2026';
+  openAuthModal();
+});
+
+if (googleBtn) googleBtn.addEventListener('click', async function () {
+  googleBtn.disabled = true;
   await WCCLOUD.signIn();               // navigates away to Google
 });
+
+async function sendEmailLink() {
+  const email = (emailInput.value || '').trim();
+  if (!email || email.indexOf('@') < 1) {
+    authMsgEl.textContent = 'That does not look like an email address.';
+    emailInput.focus();
+    return;
+  }
+  emailSend.disabled = true; emailSend.textContent = 'Sending\u2026';
+  const r = await WCCLOUD.signInWithEmail(email);
+  if (r.ok) {
+    authMsgEl.textContent = 'Sent. Open the link in your email \u2014 it signs you in right here.';
+    emailSend.textContent = 'Sent \u2713';
+  } else {
+    authMsgEl.textContent = 'Could not send: ' + r.error;
+    emailSend.disabled = false; emailSend.textContent = 'Send link';
+  }
+}
+if (emailSend) emailSend.addEventListener('click', sendEmailLink);
+if (emailInput) emailInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendEmailLink(); });
+const closeAuthBtn = document.getElementById('closeAuth');
+if (closeAuthBtn) closeAuthBtn.addEventListener('click', closeAuthModal);
+if (authModalEl) authModalEl.addEventListener('click', function (e) { if (e.target === authModalEl) closeAuthModal(); });
+WCCLOUD.onChange(function (u) { if (u) closeAuthModal(); });
 
 (async function bootCloud() {
   try {
@@ -1170,7 +1255,7 @@ function drawReviewBoard(g) {
   const cols = maxC - minC + 1, rows = maxR - minR + 1;
   el.setAttribute('viewBox', '0 0 ' + cols + ' ' + rows);
   const X = function (c) { return c - minC; }, Y = function (r) { return maxR - r; };
-  let svg = pieceDefs();
+  let svg = pieceDefs(WCTHEME.get().pieces);
   for (const k of g.cells) {
     const q = k.split(',').map(Number);
     const light = (((q[0] + q[1]) % 2) + 2) % 2 === 1;
@@ -1178,7 +1263,7 @@ function drawReviewBoard(g) {
   }
   for (const [k, pc] of g.board) {
     const q = k.split(',').map(Number);
-    svg += '<use href="#' + SYM[pc.type] + '" x="' + X(q[0]) + '" y="' + Y(q[1]) +
+    svg += '<use href="#' + symFor(pc.type) + '" x="' + X(q[0]) + '" y="' + Y(q[1]) +
            '" width="1" height="1" class="pc ' + (pc.color === 'white' ? 'w' : 'b') + '"/>';
   }
   el.innerHTML = svg;

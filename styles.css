@@ -10,6 +10,10 @@
   --sq-light: #e9e3d6;
   --sq-dark: #6f7d92;
   --grid: rgba(20,22,28,0.16);
+  --board-void: #101218;
+  --lbl-edge: #8a90a0;
+  --pc-hat-w: currentColor;
+  --pc-hat-b: currentColor;
 }
 
 * { box-sizing: border-box; }
@@ -29,7 +33,7 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; al
 .board-wrap { position: relative; }
 #board {
   width: 100%; height: auto; display: block;
-  background: #101218; /* the void — holes and off-board space show as this */
+  background: var(--board-void); /* the void — holes and off-board space show as this */
   border-radius: 14px; padding: 0; overflow: visible;
   border: 1px solid #0d0f13;
   box-shadow: 0 20px 55px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.04);
@@ -55,13 +59,13 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; al
 .danger { fill: none; stroke: #e0483c; stroke-width: 0.05; }
 
 .lbl { font-size: 0.24px; font-weight: 700; }
-.lbl.edge { fill: #8a90a0; opacity: .8; text-anchor: middle; }
+.lbl.edge { fill: var(--lbl-edge); opacity: .8; text-anchor: middle; }
 
 /* ---- pieces (themed via inherited color + stroke) ---- */
 /* applies to the live board and the review board alike */
 #board .pc, #revBoard .pc { stroke-linejoin: round; stroke-linecap: round; stroke: var(--pc-line); stroke-width: 1.0; vector-effect: non-scaling-stroke; }
-#board .pc.w, #revBoard .pc.w { color: #f4f2ea; --pc-line: #3a3f49; }
-#board .pc.b, #revBoard .pc.b { color: #2b3038; --pc-line: #0c0e13; }
+#board .pc.w, #revBoard .pc.w { color: #f4f2ea; --pc-line: #3a3f49; --pc-hat: var(--pc-hat-w); }
+#board .pc.b, #revBoard .pc.b { color: #2b3038; --pc-line: #0c0e13; --pc-hat: var(--pc-hat-b); }
 
 /* ---- panel ---- */
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
@@ -469,7 +473,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .review-eval { width: 22px; }
 #revBoard {
   flex: 1; min-width: 0; width: 100%; height: auto; display: block;
-  background: #101218; border-radius: 10px; border: 1px solid #0d0f13;
+  background: var(--board-void); border-radius: 10px; border: 1px solid #0d0f13;
 }
 .review-side { display: flex; flex-direction: column; gap: 9px; }
 .rev-moveinfo {
@@ -485,3 +489,82 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .rev-log .logline { cursor: pointer; padding: 2px 4px; border-radius: 5px; }
 .rev-log .logline:hover { background: rgba(255,255,255,.05); }
 .rev-log .logline.ahead { opacity: .45; }
+
+/* ============ theme modifiers ============ */
+body.brd-rounded .sq { rx: 0.13; ry: 0.13; }               /* paving stones */
+body.brd-neon #board .pc.b, body.brd-neon #revBoard .pc.b { --pc-line: #5fe0f0; }
+body.brd-neon #board { box-shadow: 0 20px 55px rgba(0,0,0,.6), 0 0 34px rgba(77,208,225,.10), inset 0 0 0 1px rgba(255,255,255,.04); }
+
+/* ============ appearance panel ============ */
+.appearance { margin-top: 14px; }
+.appear-row { display: flex; align-items: center; gap: 10px; margin: 9px 0; }
+.appear-label { font-size: 12px; color: var(--muted); width: 46px; }
+.appear-row select {
+  flex: 1; padding: 8px 9px; border-radius: 8px; cursor: pointer;
+  background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+  font-size: 12.5px; font-family: inherit; font-weight: 600;
+}
+.appear-hint { font-size: 11.5px; color: var(--muted); margin: 4px 0 2px; min-height: 15px; }
+
+/* ============ auth modal ============ */
+.auth-inner { max-width: 420px; }
+.auth-google { margin: 14px 0 18px; }
+.auth-label { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 4px 0 7px; }
+.auth-row { display: flex; gap: 8px; }
+.auth-email { flex: 1; font-size: 14px !important; font-family: inherit !important; padding: 11px 12px; }
+.auth-send { width: auto; padding: 11px 16px; white-space: nowrap; }
+.auth-msg { font-size: 12px; color: var(--muted); margin: 9px 2px 0; line-height: 1.5; min-height: 30px; }
+
+/* ============ touch & mobile ============ */
+#board, .wild-btn, .act-btn, .find-btn, .mode-card, .bot-row, .match-row,
+.lobby-btn, .new-game, .share-btn, .ghost-btn, .hint-btn, .rev-controls .act-btn {
+  touch-action: manipulation;                 /* kills double-tap zoom on the things you tap fast */
+  -webkit-tap-highlight-color: transparent;
+}
+#board { -webkit-user-select: none; user-select: none; }
+.wild-btn:active:not(:disabled), .act-btn:active:not(:disabled),
+.find-btn:active, .mode-card:active { transform: scale(.97); }
+
+@media (max-width: 880px) {
+  .app { padding: 10px 10px 90px; }
+  header { flex-wrap: wrap; gap: 8px; }
+  header h1 { font-size: 19px; margin: 2px 0 6px; }
+  header .sub { display: block; margin: 2px 0 0; font-size: 11px; }
+  .head-right { margin-bottom: 4px; }
+
+  main { grid-template-columns: 1fr; gap: 12px; }
+
+  /* the sidebar reorders around the board: status + actions first, admin last */
+  .panel { display: flex; flex-direction: column; padding: 12px; }
+  .status       { order: 1; }
+  .wild-group   { order: 2; }
+  .game-actions { order: 3; }
+  .tutor-group  { order: 4; }
+  .log-wrap     { order: 5; }
+  .opp-group    { order: 6; }
+  .new-game     { order: 7; }
+  .appearance   { order: 8; }
+  .rules        { order: 9; }
+
+  /* thumb-sized targets */
+  .wild-btn { padding: 13px 6px; font-size: 14px; }
+  .act-btn { padding: 12px 6px; font-size: 13.5px; }
+  .new-game { padding: 14px; }
+  .find-btn { padding: 16px; }
+  .opp-row select, .appear-row select { padding: 11px 9px; font-size: 14px; }
+  .log { height: 150px; }
+  .evalbar { width: 22px; }
+
+  .lobby { padding: 12px 8px; }
+  .lobby-inner { padding: 14px; }
+  .lobby-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .acct-col { align-items: flex-start; }
+  .review-body { grid-template-columns: 1fr; }
+  .banner { font-size: 16px; padding: 12px 18px; white-space: normal; text-align: center; max-width: 88vw; }
+}
+
+/* very small phones */
+@media (max-width: 380px) {
+  .wild-buttons { grid-template-columns: 1fr; }
+  .wild-btn[data-mode="movecell"] { grid-column: auto; }
+}

@@ -2,10 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#14161b" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <title>Wildcard Chess</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=18" />
+  <link rel="stylesheet" href="styles.css?v=19" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -167,6 +172,29 @@
     </div>
   </div>
 
+  <div id="authModal" class="lobby auth-modal">
+    <div class="lobby-inner auth-inner">
+      <h2 class="lobby-title">Save your progress</h2>
+      <p class="lobby-sub">Sign in and your rating, record and past games follow you to any device.</p>
+      <button id="googleBtn" class="find-btn auth-google" style="display:none">
+        <span class="find-title">Continue with Google</span>
+      </button>
+      <div id="emailBlock">
+        <label class="auth-label" for="emailInput">Email</label>
+        <div class="auth-row">
+          <input id="emailInput" class="share-input auth-email" type="email" autocomplete="email"
+                 placeholder="you@example.com" />
+          <button id="emailSend" class="share-btn auth-send">Send link</button>
+        </div>
+        <p id="authMsg" class="auth-msg">We'll email you a one-tap sign-in link. No password.</p>
+      </div>
+      <div class="lobby-foot">
+        <span></span>
+        <button id="closeAuth" class="ghost-btn">Not now</button>
+      </div>
+    </div>
+  </div>
+
   <div class="app">
     <header>
       <h1>Wildcard&nbsp;Chess <span class="sub">every 2nd move bends the rules</span></h1>
@@ -270,6 +298,19 @@
 
         <button id="newGame" class="new-game">↻ New game</button>
 
+        <details class="rules appearance">
+          <summary>Appearance</summary>
+          <div class="appear-row">
+            <label class="appear-label" for="themeBoard">Board</label>
+            <select id="themeBoard" aria-label="Board theme"></select>
+          </div>
+          <div class="appear-row">
+            <label class="appear-label" for="themePieces">Pieces</label>
+            <select id="themePieces" aria-label="Piece set"></select>
+          </div>
+          <p class="appear-hint" id="themeHint"></p>
+        </details>
+
         <details class="rules">
           <summary>Rules</summary>
           <ul>
@@ -287,17 +328,23 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=18"></script>
-  <script src="js/cloud.js?v=18"></script>
-  <script src="js/engine.js?v=18"></script>
-  <script src="js/pieces.js?v=18"></script>
-  <script src="js/ai.js?v=18"></script>
-  <script src="js/ladder.js?v=18"></script>
+  <script src="js/config.js?v=19"></script>
+  <script src="js/cloud.js?v=19"></script>
+  <script src="js/engine.js?v=19"></script>
+  <script src="js/pieces.js?v=19"></script>
+  <script src="js/themes.js?v=19"></script>
+  <script src="js/ai.js?v=19"></script>
+  <script src="js/ladder.js?v=19"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=18"></script>
-  <script src="js/net.js?v=18"></script>
-  <script src="js/share.js?v=18"></script>
-  <script src="js/analysis.js?v=18"></script>
-  <script src="js/main.js?v=18"></script>
+  <script src="js/matchmaking.js?v=19"></script>
+  <script src="js/net.js?v=19"></script>
+  <script src="js/share.js?v=19"></script>
+  <script src="js/analysis.js?v=19"></script>
+  <script src="js/main.js?v=19"></script>
+  <script>
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+      addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+    }
+  </script>
 </body>
 </html>
