@@ -155,7 +155,8 @@
   function games(p) { return p.wins + p.losses + p.draws; }
 
   // score: 1 = player won, 0.5 = draw, 0 = player lost
-  function recordResult(botId, score) {
+  // extra: { acts, youColor, reason, opponentName, opponentElo, rated }
+  function recordResult(botId, score, extra) {
     const bot = liveBot(botId);
     if (!bot) return null;
     const p = getProfile();
@@ -165,13 +166,31 @@
     const after = Math.max(100, Math.round(before + k * (score - exp)));
     p.elo = after;
     if (score === 1) p.wins++; else if (score === 0) p.losses++; else p.draws++;
-    p.log.unshift({ bot: bot.id, botName: bot.name, botElo: bot.elo, score, before, after, at: Date.now() });
-    p.log = p.log.slice(0, 50);
+    p.log.unshift(Object.assign({
+      bot: bot.id, botName: bot.name, botElo: bot.elo,
+      score, before, after, at: Date.now(), rated: true,
+    }, extra || {}));
+    p.log = p.log.slice(0, 40);          // move lists are stored, so keep fewer
     saveProfile(p);
     // the opponent's rating moves too — smaller K, they play far more games
     const botBefore = bot.elo;
     const botAfter = setBotElo(botId, botBefore + 12 * ((1 - score) - (1 - exp)));
     return { before, after, delta: after - before, expected: exp, bot, botBefore, botAfter };
+  }
+
+  // Record a game that does not affect rating (friendlies, hotseat, online).
+  function recordCasual(entry) {
+    const p = getProfile();
+    p.log.unshift(Object.assign({ at: Date.now(), rated: false }, entry || {}));
+    p.log = p.log.slice(0, 40);
+    saveProfile(p);
+    return p;
+  }
+
+  function clearHistory() {
+    const p = getProfile();
+    p.log = [];
+    return saveProfile(p);
   }
 
   function resetProfile() { savePool({}); return saveProfile(blankProfile()); }
@@ -203,7 +222,7 @@
 
   window.WCLADDER = {
     BOTS, byId, liveBot, livePool, botElo, setBotElo, weightsFor,
-    getProfile, saveProfile, recordResult, resetProfile, ranked, stakes,
+    getProfile, saveProfile, recordResult, recordCasual, clearHistory, resetProfile, ranked, stakes,
     expected, kFactor, games, START_ELO,
   };
 })();

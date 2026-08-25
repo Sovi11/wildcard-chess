@@ -22,6 +22,7 @@ let selected = null;
 let legal = [];
 let hintMove = null;        // best-action overlay, cleared on the next move
 let flipped = false;        // true when the board is drawn from Black's side
+let gameActs = [];          // every action this game, so it can be replayed later
 
 const SYM = { pawn: 'pc-pawn', knight: 'pc-knight', bishop: 'pc-bishop', rook: 'pc-rook', queen: 'pc-queen', king: 'pc-king' };
 const mod2 = (n) => ((n % 2) + 2) % 2;
@@ -166,7 +167,10 @@ boardEl.addEventListener('click', (e) => {
   if (p && p.color === game.turn) { selected = { c, r }; legal = game.legalMoves(c, r); render(); }
 });
 
-function done(gm) { afterMove(); updateShare(); netBroadcast(gm); paintNetCard(); maybeAI(); }
+function done(gm) {
+  if (gm) gameActs.push(gm);
+  afterMove(); updateShare(); netBroadcast(gm); paintNetCard(); maybeAI();
+}
 
 function afterMove() {
   selected = null; legal = []; hintMove = null;
@@ -212,11 +216,17 @@ function maybeAI() {
       const res = activeBot
         ? WCAI.chooseMoveFor(pos, activeBot.search)
         : WCAI.chooseMove(pos, lv.id);
-      if (!WCAI.applyToGame(game, WCAI.moveToGame(res.move))) {
+      const gmBot = WCAI.moveToGame(res.move);
+      if (WCAI.applyToGame(game, gmBot)) {
+        gameActs.push(gmBot);                       // keep the bot's action for replay
+      } else {
         outer: for (const [k, p] of game.board) {
           if (p.color !== game.turn) continue;
           const [c, r] = k.split(',').map(Number);
-          for (const m of game.legalMoves(c, r)) if (game.makeMove(c, r, m.c, m.r)) break outer;
+          for (const m of game.legalMoves(c, r)) if (game.makeMove(c, r, m.c, m.r)) {
+            gameActs.push({ kind: 'm', from: { c: c, r: r }, to: { c: m.c, r: m.r } });
+            break outer;
+          }
         }
       }
     } finally {
@@ -614,6 +624,7 @@ function netApply(msg) {
     return;
   }
   if (msg.t === 'act') {
+    if (msg.gm) gameActs.push(msg.gm);
     let ok = false;
     try { ok = WCAI.applyToGame(game, msg.gm); } catch (e) { ok = false; }
     if (ok && msg.state && WCSHARE.encode(game) !== msg.state) ok = false;
@@ -959,7 +970,7 @@ function resetGameState() {
   game.endReason = null;
   paintNetCard();
   selected = null; legal = []; hintMove = null;
-  quality.length = 0; anaKey = null; linkPending = false;
+  quality.length = 0; anaKey = null; linkPending = false; gameActs = [];
   if (shareLinkEl) shareLinkEl.value = '';
   history.replaceState(null, '', location.pathname + location.search);
   ui.banner.classList.remove('show');
@@ -968,13 +979,31 @@ function resetGameState() {
 
 // Score a finished rated game exactly once and return the rating change.
 function settleResult() {
-  if (!ratedGame || resultRecorded || !activeBot) return null;
-  if (!gameOver()) return null;
+  if (resultRecorded || !gameOver()) return null;
+  if (!ratedGame || !activeBot) {
+    // Friendly: no rating change, but still worth keeping for review.
+    if (gameActs.length) {
+      resultRecorded = true;
+      const me = onlineActive ? myColor : (botEnabled() ? (botSide() === 'white' ? 'black' : 'white') : 'white');
+      WCLADDER.recordCasual({
+        botName: onlineActive ? (oppLabel || 'Online player') : 'Friendly game',
+        score: game.winner === me ? 1 : (game.winner ? 0 : 0.5),
+        acts: gameActs.slice(), youColor: me,
+        reason: game.endReason || game.status, plies: game.history.length,
+      });
+    }
+    return null;
+  }
   resultRecorded = true;
   const botColor = botSide();
   const youColor = botColor === 'white' ? 'black' : 'white';
   const score = game.winner === youColor ? 1 : (game.winner === botColor ? 0 : 0.5);
-  const r = WCLADDER.recordResult(activeBot.id, score);
+  const r = WCLADDER.recordResult(activeBot.id, score, {
+    acts: gameActs.slice(),
+    youColor: youColor,
+    reason: game.endReason || game.status,
+    plies: game.history.length,
+  });
   paintProfile(); paintOppCard(); renderLeaderboard();
   syncProfileUp();
   return r;
@@ -982,14 +1011,9 @@ function settleResult() {
 
 const openLobbyBtn = document.getElementById('openLobby');
 const closeLobbyBtn = document.getElementById('closeLobby');
-const resetEloBtn = document.getElementById('resetElo');
+
 if (openLobbyBtn) openLobbyBtn.addEventListener('click', openLobby);
 if (closeLobbyBtn) closeLobbyBtn.addEventListener('click', closeLobby);
-if (resetEloBtn) resetEloBtn.addEventListener('click', function () {
-  if (confirm('Reset your rating to 500 and clear your record?')) {
-    WCLADDER.resetProfile(); renderLobby(); paintProfile();
-  }
-});
 document.querySelectorAll('.mode-card').forEach(function (el) {
   el.addEventListener('click', function () {
     const kind = el.dataset.lobbymode;
@@ -998,6 +1022,195 @@ document.querySelectorAll('.mode-card').forEach(function (el) {
   });
 });
 if (lobbyEl) lobbyEl.addEventListener('click', function (e) { if (e.target === lobbyEl) closeLobby(); });
+
+
+// ---- profile and game review ----------------------------------------------
+const profileEl = document.getElementById('profile');
+const matchListEl = document.getElementById('matchList');
+const profListEl = document.getElementById('profList');
+const profReviewEl = document.getElementById('profReview');
+
+function openProfile() { renderProfile(); showMatchList(); profileEl.classList.add('show'); }
+function closeProfile() { profileEl.classList.remove('show'); }
+function showMatchList() { profListEl.style.display = ''; profReviewEl.classList.remove('show'); }
+function showReview() { profListEl.style.display = 'none'; profReviewEl.classList.add('show'); }
+
+function renderProfile() {
+  const p = WCLADDER.getProfile();
+  document.getElementById('profName').textContent = (p.name && p.name !== 'You') ? p.name : 'Your profile';
+  document.getElementById('profElo').textContent = p.elo;
+  const total = p.wins + p.losses + p.draws;
+  const pct = total ? Math.round((p.wins / total) * 100) : 0;
+  document.getElementById('profSummary').textContent =
+    total ? (total + ' games \u00b7 ' + p.wins + 'W ' + p.losses + 'L ' + p.draws + 'D \u00b7 ' + pct + '% won')
+          : 'No games yet \u2014 play one and it will show up here.';
+  const peak = (p.log || []).reduce(function (m, e) { return Math.max(m, e.after || 0); }, p.elo);
+  document.getElementById('profPeak').textContent = 'peak ' + peak;
+
+  if (!matchListEl) return;
+  const log = p.log || [];
+  if (!log.length) {
+    matchListEl.innerHTML = '<div class="match-empty">Nothing here yet.</div>';
+    return;
+  }
+  matchListEl.innerHTML = log.map(function (e, i) {
+    const res = e.score === 1 ? 'win' : (e.score === 0 ? 'loss' : 'draw');
+    const delta = (typeof e.after === 'number' && typeof e.before === 'number')
+      ? (e.after - e.before) : null;
+    const when = new Date(e.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    const canReview = !!(e.acts && e.acts.length);
+    return '<button class="match-row ' + res + '" data-idx="' + i + '"' + (canReview ? '' : ' disabled') + '>' +
+      '<span class="mr-res ' + res + '">' + res.toUpperCase() + '</span>' +
+      '<span class="mr-main">' +
+        '<span class="mr-opp">' + esc(e.botName || 'Opponent') +
+          (e.botElo ? ' <span class="mr-oelo">' + e.botElo + '</span>' : '') + '</span>' +
+        '<span class="mr-meta">' + (e.reason || '') + (e.plies ? ' \u00b7 ' + e.plies + ' plies' : '') +
+          (e.rated === false ? ' \u00b7 friendly' : '') + '</span>' +
+      '</span>' +
+      '<span class="mr-right">' +
+        (delta !== null ? '<span class="mr-delta ' + (delta >= 0 ? 'up' : 'down') + '">' +
+          (delta >= 0 ? '+' : '') + delta + '</span>' : '<span class="mr-delta">\u2014</span>') +
+        '<span class="mr-when">' + when + '</span>' +
+      '</span></button>';
+  }).join('');
+}
+
+// ---- replay -----------------------------------------------------------------
+let revGame = null, revActs = [], revPos = 0, revEvals = [], revQuality = [], revMoves = [];
+
+function reviewMatch(idx) {
+  const p = WCLADDER.getProfile();
+  const entry = (p.log || [])[idx];
+  if (!entry || !entry.acts || !entry.acts.length) return;
+
+  revActs = entry.acts;
+  revPos = 0;
+  revEvals = [];
+  revQuality = [];
+  document.getElementById('reviewTitle').textContent =
+    'vs ' + (entry.botName || 'Opponent') + ' \u00b7 ' +
+    (entry.score === 1 ? 'you won' : entry.score === 0 ? 'you lost' : 'draw');
+
+  // Replay from the start, scoring each position as we go.
+  const g = new Game();
+  const evals = [];
+  let prevStm = null;
+  const first = WCAN.analyse(g, 2, 260);
+  evals.push(first.whiteScore);
+  prevStm = first.stmScore;
+  for (let i = 0; i < revActs.length; i++) {
+    if (!WCAI.applyToGame(g, revActs[i])) break;
+    const res = WCAN.analyse(g, 2, 260);
+    evals.push(res.whiteScore);
+    // grade the move that produced this position
+    revQuality.push(WCAN.classify(WCAN.clamp(prevStm) - WCAN.clamp(-res.stmScore)));
+    prevStm = res.stmScore;
+  }
+  revEvals = evals;
+  revMoves = g.history.map(function (h) { return { text: h.text, color: h.color }; });
+
+  const lw = [], lb = [];
+  g.history.forEach(function (h, i) {
+    const q = revQuality[i]; if (!q) return;
+    (h.color === 'white' ? lw : lb).push(q.loss);
+  });
+  const aw = WCAN.accuracy(lw), ab = WCAN.accuracy(lb);
+  document.getElementById('revAccuracy').textContent =
+    'Accuracy \u00b7 White ' + (aw != null ? aw + '%' : '\u2013') + ' \u00b7 Black ' + (ab != null ? ab + '%' : '\u2013');
+
+  revSeek(0);
+  showReview();
+}
+
+// Rebuild the position at ply n and draw it.
+function revSeek(n) {
+  revPos = Math.max(0, Math.min(revActs.length, n));
+  const g = new Game();
+  for (let i = 0; i < revPos; i++) {
+    if (!WCAI.applyToGame(g, revActs[i])) break;
+  }
+  revGame = g;
+  drawReviewBoard(g);
+
+  const ev = revEvals[revPos];
+  if (typeof ev === 'number') {
+    document.getElementById('revEvalFill').style.height = WCAN.evalToPct(ev) + '%';
+    const numEl = document.getElementById('revEvalNum');
+    numEl.textContent = WCAN.fmtScore(ev);
+    numEl.className = 'evalbar-num ' + (ev >= 0 ? 'pos' : 'neg');
+  }
+
+  const info = document.getElementById('revMoveInfo');
+  if (revPos === 0) {
+    info.innerHTML = 'Start position';
+  } else {
+    const h = revMoves[revPos - 1];
+    const q = revQuality[revPos - 1];
+    info.innerHTML = '<b>' + revPos + '.</b> ' + esc(h ? h.text : '') +
+      (q ? ' <span class="q q-' + q.key + '">' + q.mark + ' ' + q.label + '</span>' : '');
+  }
+
+  const logEl = document.getElementById('revLog');
+  logEl.innerHTML = revMoves.map(function (h, i) {
+    const q = revQuality[i];
+    return '<div class="logline ' + h.color + (i === revPos - 1 ? ' cur' : '') +
+      (i >= revPos ? ' ahead' : '') + '" data-ply="' + (i + 1) + '">' +
+      '<span class="ln">' + (i + 1) + '.</span> <span class="mv">' + esc(h.text) + '</span>' +
+      (q ? ' <span class="q q-' + q.key + '">' + q.mark + '</span>' : '') + '</div>';
+  }).join('');
+  const cur = logEl.querySelector('.cur');
+  if (cur) cur.scrollIntoView({ block: 'nearest' });
+}
+
+// Minimal read-only renderer for the review board.
+function drawReviewBoard(g) {
+  const el = document.getElementById('revBoard');
+  const b = g.bounds();
+  const minC = b.minC - 1, maxC = b.maxC + 1, minR = b.minR - 1, maxR = b.maxR + 1;
+  const cols = maxC - minC + 1, rows = maxR - minR + 1;
+  el.setAttribute('viewBox', '0 0 ' + cols + ' ' + rows);
+  const X = function (c) { return c - minC; }, Y = function (r) { return maxR - r; };
+  let svg = pieceDefs();
+  for (const k of g.cells) {
+    const q = k.split(',').map(Number);
+    const light = (((q[0] + q[1]) % 2) + 2) % 2 === 1;
+    svg += '<rect x="' + X(q[0]) + '" y="' + Y(q[1]) + '" width="1" height="1" class="sq ' + (light ? 'lt' : 'dk') + '"/>';
+  }
+  for (const [k, pc] of g.board) {
+    const q = k.split(',').map(Number);
+    svg += '<use href="#' + SYM[pc.type] + '" x="' + X(q[0]) + '" y="' + Y(q[1]) +
+           '" width="1" height="1" class="pc ' + (pc.color === 'white' ? 'w' : 'b') + '"/>';
+  }
+  el.innerHTML = svg;
+}
+
+if (matchListEl) matchListEl.addEventListener('click', function (e) {
+  const row = e.target.closest('.match-row');
+  if (row && !row.disabled) reviewMatch(+row.dataset.idx);
+});
+const bind = function (id, fn) { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+bind('openProfile', function () { closeLobby(); openProfile(); });
+bind('openProfileTop', openProfile);
+bind('closeProfile', closeProfile);
+bind('reviewBack', showMatchList);
+const revLogEl = document.getElementById('revLog');
+if (revLogEl) revLogEl.addEventListener('click', function (e) {
+  const row = e.target.closest('.logline');
+  if (row && row.dataset.ply) revSeek(+row.dataset.ply);
+});
+bind('revFirst', function () { revSeek(0); });
+bind('revPrev', function () { revSeek(revPos - 1); });
+bind('revNext', function () { revSeek(revPos + 1); });
+bind('revLast', function () { revSeek(revActs.length); });
+bind('clearHistory', function () {
+  if (confirm('Delete your game history? Your rating is kept.')) { WCLADDER.clearHistory(); renderProfile(); }
+});
+if (profileEl) profileEl.addEventListener('click', function (e) { if (e.target === profileEl) closeProfile(); });
+document.addEventListener('keydown', function (e) {
+  if (!profileEl.classList.contains('show') || !profReviewEl.classList.contains('show')) return;
+  if (e.key === 'ArrowLeft') { revSeek(revPos - 1); e.preventDefault(); }
+  if (e.key === 'ArrowRight') { revSeek(revPos + 1); e.preventDefault(); }
+});
 
 // ---- play by link ---------------------------------------------------------
 const sharePanelEl = document.getElementById('sharePanel');
@@ -1046,10 +1259,16 @@ if (copyLinkBtn) copyLinkBtn.addEventListener('click', async () => {
 // Pasting a friend's link into the address bar changes only the hash — no reload
 // fires, so pick it up here.
 window.addEventListener('hashchange', () => {
+  // A room link pasted into an already-open tab only changes the hash, so the
+  // boot-time join never runs. Pick it up here.
+  try {
+    const room = WCNET.roomFromLocation();
+    if (room) { openLobby(); joinRoom(room); return; }
+  } catch (e) {}
   try {
     if (!WCSHARE.fromLocation(game)) return;
     selected = null; legal = []; hintMove = null;
-    quality.length = 0; anaKey = null; linkPending = false;
+    quality.length = 0; anaKey = null; linkPending = false; gameActs = [];
     if (oppModeEl) oppModeEl.value = 'link';
     ui.banner.classList.remove('show');
     runAnalysis(); sync(); render(); refreshBotUI(); refreshShareUI();

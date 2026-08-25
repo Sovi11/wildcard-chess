@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wildcard Chess</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=17" />
+  <link rel="stylesheet" href="styles.css?v=18" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -106,8 +106,63 @@
       </details>
 
       <div class="lobby-foot">
-        <button id="resetElo" class="ghost-btn">Reset my rating</button>
+        <button id="openProfile" class="ghost-btn">My profile &amp; past games</button>
         <button id="closeLobby" class="ghost-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="profile" class="lobby">
+    <div class="lobby-inner profile-inner">
+      <header class="lobby-head">
+        <div>
+          <h2 class="lobby-title" id="profName">Your profile</h2>
+          <p class="lobby-sub" id="profSummary">&nbsp;</p>
+        </div>
+        <div class="you-card">
+          <div class="you-elo" id="profElo">500</div>
+          <div class="you-meta">
+            <div class="you-name">Rating</div>
+            <div class="you-rec" id="profPeak"></div>
+          </div>
+        </div>
+      </header>
+
+      <div id="profReview" class="review">
+        <div class="review-head">
+          <button id="reviewBack" class="ghost-btn">← Back to games</button>
+          <span id="reviewTitle" class="review-title"></span>
+        </div>
+        <div class="review-body">
+          <div class="review-boardwrap">
+            <div class="evalbar review-eval">
+              <div class="evalbar-fill" id="revEvalFill"></div>
+              <span class="evalbar-num" id="revEvalNum">0.0</span>
+            </div>
+            <svg id="revBoard" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+          <div class="review-side">
+            <div id="revMoveInfo" class="rev-moveinfo">Start position</div>
+            <div id="revLog" class="log rev-log"></div>
+            <div class="rev-controls">
+              <button id="revFirst" class="act-btn">⏮</button>
+              <button id="revPrev" class="act-btn">◀</button>
+              <button id="revNext" class="act-btn">▶</button>
+              <button id="revLast" class="act-btn">⏭</button>
+            </div>
+            <div id="revAccuracy" class="accuracy-line"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="profList">
+        <div class="lobby-label">Past games <span class="lobby-hint">click one to review it move by move</span></div>
+        <div id="matchList" class="match-list"></div>
+      </div>
+
+      <div class="lobby-foot">
+        <button id="clearHistory" class="ghost-btn">Clear history</button>
+        <button id="closeProfile" class="ghost-btn">Close</button>
       </div>
     </div>
   </div>
@@ -117,6 +172,7 @@
       <h1>Wildcard&nbsp;Chess <span class="sub">every 2nd move bends the rules</span></h1>
       <div class="head-right">
         <span class="elo-chip" id="eloChip" title="Your rating">★ 500</span>
+        <button id="openProfileTop" class="lobby-btn ghosty">☰ Profile</button>
         <button id="openLobby" class="lobby-btn">⚔ New match</button>
       </div>
     </header>
@@ -231,17 +287,17 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=17"></script>
-  <script src="js/cloud.js?v=17"></script>
-  <script src="js/engine.js?v=17"></script>
-  <script src="js/pieces.js?v=17"></script>
-  <script src="js/ai.js?v=17"></script>
-  <script src="js/ladder.js?v=17"></script>
+  <script src="js/config.js?v=18"></script>
+  <script src="js/cloud.js?v=18"></script>
+  <script src="js/engine.js?v=18"></script>
+  <script src="js/pieces.js?v=18"></script>
+  <script src="js/ai.js?v=18"></script>
+  <script src="js/ladder.js?v=18"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=17"></script>
-  <script src="js/net.js?v=17"></script>
-  <script src="js/share.js?v=17"></script>
-  <script src="js/analysis.js?v=17"></script>
-  <script src="js/main.js?v=17"></script>
+  <script src="js/matchmaking.js?v=18"></script>
+  <script src="js/net.js?v=18"></script>
+  <script src="js/share.js?v=18"></script>
+  <script src="js/analysis.js?v=18"></script>
+  <script src="js/main.js?v=18"></script>
 </body>
 </html>
