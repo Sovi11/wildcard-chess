@@ -1,6 +1,6 @@
 {
-  "name": "Wildcard Chess",
-  "short_name": "Wildcard",
+  "name": "Hollow Chess",
+  "short_name": "Hollow",
   "description": "Chess where the board itself is fair game — tear out squares, grow new ground, checkmate anyway.",
   "start_url": "./",
   "scope": "./",

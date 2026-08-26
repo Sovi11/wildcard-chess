@@ -1,4 +1,4 @@
-# Wildcard Chess
+# Hollow Chess
 
 Standard chess — but **the board itself is fair game**. Every second move, instead of moving a piece, you can reshape the terrain: add a square, remove a square, or move a square. Tear a hole in a bishop's diagonal. Grow a corridor behind the enemy king. The pieces play chess; the players play geography.
 
@@ -18,7 +18,7 @@ Standard chess — but **the board itself is fair game**. Every second move, ins
 
 ## Play
 
-**Online:** https://sovi11.github.io/wildcard-chess/
+**Play:** https://hollowchess.com  (also at https://sovi11.github.io/wildcard-chess/)
 
 **Ranked:** hit *Find a match*. It looks for a real player for 10 seconds, then falls back
 to the resident pool so you are never left staring at an empty queue.

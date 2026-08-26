@@ -1,26 +1,26 @@
-// Wildcard Chess — service worker.
+// Hollow Chess — service worker.
 // Cache-first for our own static files so the app opens instantly and bot games
 // work offline. Everything cross-origin (Supabase, PeerJS broker, CDNs) is left
 // alone: auth and matchmaking must always hit the network.
 
-const CACHE = 'wildcard-chess-v22';
+const CACHE = 'hollow-chess-v23';
 
 const CORE = [
   './',
   './index.html',
-  './styles.css?v=22',
-  './js/config.js?v=22',
-  './js/cloud.js?v=22',
-  './js/engine.js?v=22',
-  './js/pieces.js?v=22',
-  './js/themes.js?v=22',
-  './js/ai.js?v=22',
-  './js/ladder.js?v=22',
-  './js/matchmaking.js?v=22',
-  './js/net.js?v=22',
-  './js/share.js?v=22',
-  './js/analysis.js?v=22',
-  './js/main.js?v=22',
+  './styles.css?v=23',
+  './js/config.js?v=23',
+  './js/cloud.js?v=23',
+  './js/engine.js?v=23',
+  './js/pieces.js?v=23',
+  './js/themes.js?v=23',
+  './js/ai.js?v=23',
+  './js/ladder.js?v=23',
+  './js/matchmaking.js?v=23',
+  './js/net.js?v=23',
+  './js/share.js?v=23',
+  './js/analysis.js?v=23',
+  './js/main.js?v=23',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

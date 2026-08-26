@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://sovi11.github.io/wildcard-chess/sitemap.xml
+Sitemap: https://hollowchess.com/sitemap.xml
