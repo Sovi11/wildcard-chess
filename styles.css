@@ -608,7 +608,9 @@ body.wild-turn .badge { animation: pulse 1.4s ease-in-out infinite; }
 .sound-btn { min-width: 40px; padding-left: 8px; padding-right: 8px; }
 
 /* ============ welcome ============ */
-.welcome { z-index: 40; background: rgba(10,11,14,.86); backdrop-filter: blur(4px); }
+/* stacking: lobby/profile 50 < welcome 55 < tutorial 60 < auth modal 65 */
+.welcome { z-index: 55; background: rgba(10,11,14,.92); backdrop-filter: blur(4px); }
+.auth-modal { z-index: 65; }
 .welcome-inner { max-width: 430px; text-align: center; padding: 34px 28px 26px; }
 .welcome-mark { width: 132px; margin: 0 auto 14px; }
 .welcome-mark svg { width: 100%; display: block; }

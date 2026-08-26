@@ -945,9 +945,12 @@ const tutSeen = function () { try { return localStorage.getItem(TUTKEY) === '1';
 const markTutSeen = function () { try { localStorage.setItem(TUTKEY, '1'); } catch (e) {} };
 
 function closeWelcome() { if (welcomeEl) welcomeEl.classList.remove('show'); }
+// Entering the site — via guest or a completed sign-in — owes first-timers the
+// walkthrough, unskippably queued before anything else. The lobby follows it.
 function enterSite() {
   closeWelcome();
-  if (!tutSeen()) { markTutSeen(); WCTUT.open(); }
+  if (!tutSeen()) { markTutSeen(); WCTUT.open(openLobby); }
+  else openLobby();
 }
 function bindClick(id, fn) { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
 bindClick('welcomeGuest', enterSite);
@@ -959,6 +962,19 @@ WCCLOUD.onChange(function (u) {
   if (u && welcomeEl && welcomeEl.classList.contains('show')) enterSite();
 });
 
+// The welcome screen must be there the instant the page paints — cloud init is
+// an await away, so decide synchronously from supabase-js's cached session in
+// localStorage. bootCloud corrects the guess if it was wrong.
+const bootOnInvite = /[#&](room|g)=/.test(location.hash || '');
+function hasCachedSession() {
+  try {
+    return Object.keys(localStorage).some(function (k) {
+      return k.indexOf('sb-') === 0 && String(localStorage.getItem(k)).indexOf('access_token') >= 0;
+    });
+  } catch (e) { return false; }
+}
+if (!bootOnInvite && welcomeEl && !hasCachedSession()) welcomeEl.classList.add('show');
+
 (async function bootCloud() {
   try {
     cloudReady = await WCCLOUD.init();
@@ -967,14 +983,15 @@ WCCLOUD.onChange(function (u) {
   paintAuth();
   if (cloudReady && WCCLOUD.currentUser()) syncProfileDown();
 
-  const onInvite = /[#&](room|g)=/.test(location.hash || '');
-  if (onInvite) return;
-  if (!WCCLOUD.currentUser() && welcomeEl) {
+  if (bootOnInvite) { closeWelcome(); return; }
+  if (WCCLOUD.currentUser()) {
+    // already signed in: skip the welcome, but first-timers still get the tour
+    closeWelcome();
+    if (!tutSeen()) { markTutSeen(); WCTUT.open(openLobby); }
+  } else if (welcomeEl) {
     const sb = document.getElementById('welcomeSignin');
     if (sb) sb.style.display = cloudReady ? '' : 'none';   // cloud down: guest only
-    welcomeEl.classList.add('show');
-  } else if (!tutSeen()) {
-    markTutSeen(); WCTUT.open();
+    welcomeEl.classList.add('show');                       // cached-session guess was wrong
   }
 })();
 
@@ -1596,7 +1613,9 @@ if (bootRoom) {
   openLobby();
   joinRoom(bootRoom);
 } else if (!bootedFromLink) {
-  openLobby();
+  // the welcome screen owns the first paint; enterSite() opens the lobby after
+  const w = document.getElementById('welcome');
+  if (!w || !w.classList.contains('show')) openLobby();
 }
 if (bootedFromLink && shareMsgEl) shareMsgEl.textContent = "Your friend's move is loaded. Your turn.";
 if (!bootedFromLink) maybeAI();
