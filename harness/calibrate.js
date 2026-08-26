@@ -16,7 +16,7 @@ const MAX = +process.argv[3] || 140;
 
 function play(whiteBot, blackBot, seed) {
   const game = new Game();
-  game.rules = { cadence: 2, budget: Infinity };
+  game.rules = { cadence: 3, budget: Infinity };
   let plies = 0, illegal = 0;
   while (!game.winner && !['stalemate', 'repetition'].includes(game.status) && plies < MAX) {
     const bot = game.turn === 'white' ? whiteBot : blackBot;

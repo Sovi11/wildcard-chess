@@ -1,17 +1,20 @@
 # Hollow Chess
 
-Standard chess — but **the board itself is fair game**. Every second move, instead of moving a piece, you can reshape the terrain: add a square, remove a square, or move a square. Tear a hole in a bishop's diagonal. Grow a corridor behind the enemy king. The pieces play chess; the players play geography.
+Standard chess — but **the board itself is fair game**. On board turns, instead of moving a piece, you can reshape the terrain: pick up an empty square and move it somewhere else. Tear a hole in a bishop's diagonal. Grow a corridor behind the enemy king. The pieces play chess; the players play geography.
 
-## Rules (v3)
+## Rules (v4)
 
-- Standard chess movement, local 2-player hotseat. Board starts 8×8.
-- Each player's **2nd, 4th, 6th… move** is *wildcard-eligible*: make a normal move **or**
-  **move a square** — double-tap any **empty** square to lift it, then tap where to
-  re-attach it (anywhere touching the rest of the board). It leaves a hole behind.
+- Standard chess movement. Board starts 8×8.
+- **Every 3rd ply of the game is a board turn**, staggered `W B✦ W B W✦ B W B✦ …` —
+  Black's 1st/4th/7th move, White's 3rd/6th/9th. (Black's early board turn offsets
+  White's first-move tempo, and no two board turns ever land back to back.)
+  On a board turn you make a normal move **or** **move a square** — click any
+  **empty** square to lift it, then click where to re-attach it (anywhere touching
+  the rest of the board). It leaves a hole behind.
   *(Add and Remove square exist in the engine but are parked as redundant: moving a square
   is a remove and an add in one action. The harness can still enable them for experiments.)*
 - **Holes block sliding pieces** (rook/bishop/queen lines stop at missing squares). Knights jump over holes but must land on an existing square. Square colour is just position parity — a moved square may change colour.
-- **Win by checkmate.** Full legality: no moving into check, pins are real. On a wildcard turn, board actions count as escapes — e.g. removing a square to sever the attacker's line. It's only mate if nothing (moves *or* board actions) saves you.
+- **Win by checkmate.** Full legality: no moving into check, pins are real. On a board turn, board actions count as escapes — e.g. moving a square to sever the attacker's line. It's only mate if nothing (moves *or* board actions) saves you.
 - **Pawns promote at the edge of the world**: a pawn promotes only when there is no square anywhere ahead of it in its file. A lone hole directly in front is *not* the edge — the board may resume past it. Extend the board above the 8th rank and the pawn must march further.
 - **En passant** works as in normal chess: a double-stepped pawn can be taken on the square it skipped, but only on the immediate reply. Spending that reply on a board wildcard forfeits the capture.
 - **Castling** works as in normal chess, with one variant condition: the path between king and rook must be **complete**. A hole anywhere along it denies castling on that side until the square is put back.
@@ -138,6 +141,18 @@ Board themes and piece sets mix freely and persist (panel → Appearance):
   houses, knights ride snails, bishops carry lanterns, queens wear flower crowns, and the
   king has the tallest hat. White wears red hats, black wears blue.
 
+## Feel
+
+- **Sound** — synthesized live with WebAudio (no audio files): wooden thocks for piece
+  moves, a sharper knock for captures, and a low **stone-grind rumble plus a screen
+  quake** when a square of the world moves — a board move should feel like nothing
+  else in the game. Mute toggle in the header, remembered per device.
+- **Board turns glow** — the board pulses gold when a ✦ board turn is available, so
+  you never miss one.
+- **Welcome & walkthrough** — signed-out visitors land on a welcome screen with
+  sign-in / guest; first-timers get a 5-step illustrated tutorial (replayable from
+  Rules → "Replay the walkthrough").
+
 ## Mobile
 
 Fully playable by touch: tap a piece, tap a square. The layout reorders on narrow screens
@@ -200,4 +215,4 @@ node harness/botmatch.js 2 3 6             # level vs level, colours swapped
 - Analysis engine: iterative-deepening alpha-beta + variant-aware eval, candidate pruning for board actions (branching factor of square-moves is huge). Node self-play harness to answer design questions (mate feasibility, piece values on mutable terrain, game length).
 - Play vs AI in the UI (Web Worker), eval bar.
 - Balance passes: action budgets, restrict adds per game, connectivity rules.
-- Sound, animations, promotion choice, capsule art for Steam.
+- Animations, promotion choice, capsule art for Steam.

@@ -19,7 +19,7 @@ const cfg = {
   jitter: args[3] !== undefined ? +args[3] : 15,
   maxPlies: +args[4] || 200,
   setup: flags.setup || 'standard',
-  cadence: +flags.cadence || 2,
+  cadence: +flags.cadence || 3,
   budget: flags.budget !== undefined ? +flags.budget : Infinity,
   // --no=mc,ac  disables those board actions (rule experiments)
   allowActions: flags.no ? Object.fromEntries(String(flags.no).split(',').map(k => [k, false])) : null,

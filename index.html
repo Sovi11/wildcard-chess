@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <title>Hollow Chess — chess where the board itself is fair game</title>
-  <meta name="description" content="Chess with a twist: every second move you can pick up an empty square and move it somewhere else. Holes block bishops and rooks. Play free in your browser — ranked ladder, bots with personalities, or live against a friend with one link." />
+  <meta name="description" content="Chess with a twist: every third turn you can pick up an empty square and move it somewhere else. Holes block bishops and rooks. Play free in your browser — ranked ladder, bots with personalities, or live against a friend with one link." />
   <link rel="canonical" href="https://hollowchess.com/" />
 
   <meta property="og:type" content="website" />
@@ -25,7 +25,7 @@
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=23" />
+  <link rel="stylesheet" href="styles.css?v=24" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -187,6 +187,30 @@
     </div>
   </div>
 
+  <div id="welcome" class="lobby welcome">
+    <div class="lobby-inner welcome-inner">
+      <div class="welcome-mark">
+        <svg viewBox="0 0 4 3" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="0" y="0" width="1" height="1" class="wm-a"/><rect x="1" y="0" width="1" height="1" class="wm-b"/>
+          <rect x="2" y="0" width="1" height="1" class="wm-a"/><rect x="3" y="0" width="1" height="1" class="wm-b"/>
+          <rect x="0" y="1" width="1" height="1" class="wm-b"/><rect x="2" y="1" width="1" height="1" class="wm-b"/>
+          <rect x="3" y="1" width="1" height="1" class="wm-a"/>
+          <rect x="0" y="2" width="1" height="1" class="wm-a"/><rect x="1" y="2" width="1" height="1" class="wm-b"/>
+          <rect x="2" y="2" width="1" height="1" class="wm-a"/>
+          <text x="3.5" y="1.82" class="wm-k" text-anchor="middle">♞</text>
+        </svg>
+      </div>
+      <h2 class="welcome-title">Hollow Chess</h2>
+      <p class="welcome-tag">Chess, except the board itself is fair game. Lift squares, tear holes in your opponent's plans, checkmate anyway.</p>
+      <button id="welcomeSignin" class="find-btn welcome-btn">
+        <span class="find-title">Sign in</span>
+        <span class="find-sub">Your rating and games follow you to any device</span>
+      </button>
+      <button id="welcomeGuest" class="welcome-guest">Play as guest</button>
+      <button id="welcomeHow" class="ghost-btn welcome-how">✦ How to play — 60-second tour</button>
+    </div>
+  </div>
+
   <div id="authModal" class="lobby auth-modal">
     <div class="lobby-inner auth-inner">
       <h2 class="lobby-title">Save your progress</h2>
@@ -215,6 +239,7 @@
       <h1>Hollow&nbsp;Chess <span class="sub">the board itself is fair game</span></h1>
       <div class="head-right">
         <span class="elo-chip" id="eloChip" title="Your rating">★ 500</span>
+        <button id="soundBtn" class="lobby-btn ghosty sound-btn" title="Sound">🔊</button>
         <button id="openProfileTop" class="lobby-btn ghosty">☰ Profile</button>
         <button id="openLobby" class="lobby-btn">⚔ New match</button>
       </div>
@@ -235,14 +260,14 @@
       <aside class="panel">
         <div class="status">
           <span id="turn" class="turn white">White to move</span>
-          <span id="wildBadge" class="badge">★ Wildcard</span>
+          <span id="wildBadge" class="badge">✦ Board turn</span>
           <span id="state" class="state">Check!</span>
         </div>
 
         <div class="wild-group">
-          <div class="wild-label">Wildcard action</div>
+          <div class="wild-label">Board turn</div>
           <div class="wild-buttons one">
-            <button class="wild-btn" data-mode="movecell" disabled>➤ Move a square</button>
+            <button class="wild-btn" data-mode="movecell" disabled>✦ Move a square</button>
           </div>
           <p id="hint" class="hint">Make your move.</p>
         </div>
@@ -327,30 +352,33 @@
           <summary>Rules</summary>
           <ul>
             <li>Standard chess for the pieces — but the <b>board itself</b> is fair game.</li>
-            <li>Your <b>every 2nd move</b> is a wildcard: move a piece normally <i>or</i> <b>move a square</b>.</li>
-            <li><b>Double-tap an empty square</b> to pick it up, then tap where to put it (anywhere touching the board). It leaves a hole, and <b>holes block sliding pieces</b>.</li>
-            <li>Win by <b>checkmate</b> — on a wildcard turn you may escape check by reshaping the board (e.g. cut the attacker's line).</li>
+            <li><b>Every 3rd turn of the game is a board turn</b> (W&nbsp;B✦&nbsp;W&nbsp;B&nbsp;W✦&nbsp;B&nbsp;W&nbsp;B✦&nbsp;…): move a piece normally <i>or</i> <b>move a square</b>.</li>
+            <li><b>Click an empty square</b> to pick it up, then click where to put it (anywhere touching the board). It leaves a hole, and <b>holes block sliding pieces</b>.</li>
+            <li>Win by <b>checkmate</b> — on a board turn you may escape check by reshaping the board (e.g. cut the attacker's line).</li>
             <li>Pawns promote at the board's edge — extend the board and they must march further.</li>
           </ul>
+          <button id="howBtn" class="ghost-btn" style="margin-top:8px">✦ Replay the walkthrough</button>
         </details>
       </aside>
     </main>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=23"></script>
-  <script src="js/cloud.js?v=23"></script>
-  <script src="js/engine.js?v=23"></script>
-  <script src="js/pieces.js?v=23"></script>
-  <script src="js/themes.js?v=23"></script>
-  <script src="js/ai.js?v=23"></script>
-  <script src="js/ladder.js?v=23"></script>
+  <script src="js/config.js?v=24"></script>
+  <script src="js/cloud.js?v=24"></script>
+  <script src="js/engine.js?v=24"></script>
+  <script src="js/pieces.js?v=24"></script>
+  <script src="js/themes.js?v=24"></script>
+  <script src="js/sound.js?v=24"></script>
+  <script src="js/tutorial.js?v=24"></script>
+  <script src="js/ai.js?v=24"></script>
+  <script src="js/ladder.js?v=24"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=23"></script>
-  <script src="js/net.js?v=23"></script>
-  <script src="js/share.js?v=23"></script>
-  <script src="js/analysis.js?v=23"></script>
-  <script src="js/main.js?v=23"></script>
+  <script src="js/matchmaking.js?v=24"></script>
+  <script src="js/net.js?v=24"></script>
+  <script src="js/share.js?v=24"></script>
+  <script src="js/analysis.js?v=24"></script>
+  <script src="js/main.js?v=24"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

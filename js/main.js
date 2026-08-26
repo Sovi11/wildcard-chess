@@ -21,7 +21,6 @@ let mode = 'normal';        // normal | addcell | removecell | movecell
 let selected = null;
 let legal = [];
 let hintMove = null;        // best-action overlay, cleared on the next move
-let lastEmptyTap = null;    // {c, r, t} — double-tap detection for lifting a square
 let flipped = false;        // true when the board is drawn from Black's side
 let gameActs = [];          // every action this game, so it can be replayed later
 
@@ -183,23 +182,6 @@ boardEl.addEventListener('click', (e) => {
     return;
   }
 
-  // Double-tap an empty square on a wildcard turn lifts it — the one terrain
-  // gesture now that Add/Remove are parked. Second tap elsewhere places it.
-  if (mode === 'normal' && game.canWildcard() && game.hasCell(c, r) && !p) {
-    const now = Date.now();
-    if (lastEmptyTap && lastEmptyTap.c === c && lastEmptyTap.r === r && now - lastEmptyTap.t < 420) {
-      lastEmptyTap = null;
-      setMode('movecell');
-      selected = { c, r };
-      ui.hint.textContent = 'Square lifted — tap a dashed spot to place it, or tap it again to cancel.';
-      render();
-      return;
-    }
-    lastEmptyTap = { c, r, t: now };
-  } else if (p) {
-    lastEmptyTap = null;
-  }
-
   if (selected) {
     if (game.makeMove(selected.c, selected.r, c, r)) {
       done({ kind: 'm', from: { c: selected.c, r: selected.r }, to: { c: c, r: r } }); return;
@@ -207,7 +189,17 @@ boardEl.addEventListener('click', (e) => {
     if (p && p.color === game.turn) { selected = { c, r }; legal = game.legalMoves(c, r); render(); return; }
     selected = null; legal = []; render(); return;
   }
-  if (p && p.color === game.turn) { selected = { c, r }; legal = game.legalMoves(c, r); render(); }
+  if (p && p.color === game.turn) { selected = { c, r }; legal = game.legalMoves(c, r); render(); return; }
+
+  // Board turn, nothing selected, empty square: ONE click lifts it. A second
+  // click on a dashed spot places it; clicking it again puts it back down.
+  if (game.canWildcard() && game.hasCell(c, r) && !p) {
+    setMode('movecell');
+    selected = { c, r };
+    WCSOUND.play('lift');
+    ui.hint.textContent = 'Square lifted — click a dashed spot to place it, or click it again to cancel.';
+    render();
+  }
 });
 
 function done(gm) {
@@ -215,9 +207,35 @@ function done(gm) {
   afterMove(); updateShare(); netBroadcast(gm); paintNetCard(); maybeAI();
 }
 
+// Sound + screen-shake for the action that just landed, read off the game
+// state so it covers you, the bot, and the opponent over the wire alike.
+// A board move is meant to FEEL different from a piece move: it gets a low
+// stone-grind rumble and a little quake instead of a wooden thock.
+function actionFX() {
+  const last = game.history[game.history.length - 1];
+  if (!last) return;
+  if (game.lastAction && game.lastAction.kind !== 'move') {
+    WCSOUND.play('terrain');
+    const wrap = document.querySelector('.board-wrap');
+    if (wrap) {
+      wrap.classList.remove('quake');
+      void wrap.offsetWidth;                    // restart the animation
+      wrap.classList.add('quake');
+    }
+  } else if (last.text.indexOf('O-O') === 0) {
+    WCSOUND.play('castle');
+  } else if (last.text.indexOf('x') >= 0) {
+    WCSOUND.play('capture');
+  } else {
+    WCSOUND.play('move');
+  }
+  if (!gameOver() && game.status === 'check') setTimeout(function () { WCSOUND.play('check'); }, 130);
+}
+
 function afterMove() {
   selected = null; legal = []; hintMove = null;
   setMode('normal');
+  actionFX();
   runAnalysis();
   sync(); render();
 }
@@ -229,6 +247,7 @@ const botLevelEl = document.getElementById('botLevel');
 const botBlurbEl = document.getElementById('botBlurb');
 let aiThinking = false;
 let aiGen = 0;              // bumped on every reset; stale bot timers see it and abort
+let endSounded = false;     // play the game-over jingle exactly once per game
 
 const linkMode = () => oppModeEl && oppModeEl.value === 'link';
 let linkPending = false;          // true after your move: waiting on your friend
@@ -427,6 +446,19 @@ function applyTutorVisibility() {
 
 if (flipBtn) flipBtn.addEventListener('click', function () { flipped = !flipped; render(); });
 
+const soundBtn = document.getElementById('soundBtn');
+function paintSound() {
+  if (!soundBtn) return;
+  soundBtn.textContent = WCSOUND.isMuted() ? '🔇' : '🔊';
+  soundBtn.title = WCSOUND.isMuted() ? 'Sound is off' : 'Sound is on';
+}
+if (soundBtn) soundBtn.addEventListener('click', function () {
+  WCSOUND.toggle();
+  paintSound();
+  if (!WCSOUND.isMuted()) WCSOUND.play('move');    // audible confirmation
+});
+paintSound();
+
 // Which colour does the person at this keyboard control?
 function localColor() {
   if (onlineActive) return myColor;
@@ -558,7 +590,6 @@ function renderLeaderboard() {
         const mine = r.name === me.name;
         return '<div class="lb-row' + (mine ? ' you' : '') + '">' +
           '<span class="lb-rank">' + (i + 1) + '</span>' +
-          '<span class="lb-ico">\u2605</span>' +
           '<span class="lb-name">' + esc(r.name) + '</span>' +
           '<span class="lb-elo">' + r.elo + '</span></div>';
       }).join('');
@@ -566,13 +597,12 @@ function renderLeaderboard() {
   }
   const me = WCLADDER.getProfile();
   const rows = WCLADDER.livePool()
-    .map(function (b) { return { name: b.name, elo: b.elo, emoji: b.emoji, you: false }; })
-    .concat([{ name: (me.name && me.name !== 'You') ? me.name : 'You', elo: me.elo, emoji: '★', you: true }])
+    .map(function (b) { return { name: b.name, elo: b.elo, you: false }; })
+    .concat([{ name: (me.name && me.name !== 'You') ? me.name : 'You', elo: me.elo, you: true }])
     .sort(function (a, b) { return b.elo - a.elo; });
   el.innerHTML = rows.map(function (r, i) {
     return '<div class="lb-row' + (r.you ? ' you' : '') + '">' +
       '<span class="lb-rank">' + (i + 1) + '</span>' +
-      '<span class="lb-ico">' + r.emoji + '</span>' +
       '<span class="lb-name">' + esc(r.name) + '</span>' +
       '<span class="lb-elo">' + r.elo + '</span></div>';
   }).join('');
@@ -634,6 +664,7 @@ function startOnlineGame(isHost, label, forcedColor) {
   orientFor(myColor);
   applyTutorVisibility();
   runAnalysis(); sync(); render();
+  WCSOUND.play('notify');
   // The host owns the opening position and tells the guest which side they got.
   WCNET.send({ t: 'hello', name: myName(), elo: WCLADDER.getProfile().elo });
   if (isHost) {
@@ -677,6 +708,7 @@ function netApply(msg) {
     }
     selected = null; legal = []; hintMove = null;
     setMode('normal');
+    actionFX();
     runAnalysis(); sync(); render(); paintNetCard();
     return;
   }
@@ -902,6 +934,31 @@ if (closeAuthBtn) closeAuthBtn.addEventListener('click', closeAuthModal);
 if (authModalEl) authModalEl.addEventListener('click', function (e) { if (e.target === authModalEl) closeAuthModal(); });
 WCCLOUD.onChange(function (u) { if (u) closeAuthModal(); });
 
+// ---- welcome screen and tutorial ------------------------------------------
+// Signed-out visitors land on a welcome screen with a real sign-in button
+// (one tap to skip — no login wall). First-timers then get the walkthrough.
+// Never shown when arriving on a room or game link: nothing gets between a
+// player and their friend's game.
+const welcomeEl = document.getElementById('welcome');
+const TUTKEY = 'wildcardchess.tut.v1';
+const tutSeen = function () { try { return localStorage.getItem(TUTKEY) === '1'; } catch (e) { return true; } };
+const markTutSeen = function () { try { localStorage.setItem(TUTKEY, '1'); } catch (e) {} };
+
+function closeWelcome() { if (welcomeEl) welcomeEl.classList.remove('show'); }
+function enterSite() {
+  closeWelcome();
+  if (!tutSeen()) { markTutSeen(); WCTUT.open(); }
+}
+function bindClick(id, fn) { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
+bindClick('welcomeGuest', enterSite);
+bindClick('welcomeSignin', function () { openAuthModal(); });
+bindClick('welcomeHow', function () { WCTUT.open(); });
+bindClick('howBtn', function () { WCTUT.open(); });
+
+WCCLOUD.onChange(function (u) {
+  if (u && welcomeEl && welcomeEl.classList.contains('show')) enterSite();
+});
+
 (async function bootCloud() {
   try {
     cloudReady = await WCCLOUD.init();
@@ -910,19 +967,14 @@ WCCLOUD.onChange(function (u) { if (u) closeAuthModal(); });
   paintAuth();
   if (cloudReady && WCCLOUD.currentUser()) syncProfileDown();
 
-  // First-visit nudge: offer sign-in exactly once, then never again unless
-  // they ask. Never when arriving on a room or game link — nothing should get
-  // between a player and their friend's game. No login wall: the game is
-  // fully playable signed out.
-  const NUDGE = 'wildcardchess.authnudge.v1';
   const onInvite = /[#&](room|g)=/.test(location.hash || '');
-  let nudged = false;
-  try { nudged = localStorage.getItem(NUDGE) === '1'; } catch (e) {}
-  if (cloudReady && !WCCLOUD.currentUser() && !nudged && !onInvite) {
-    setTimeout(function () {
-      if (!WCCLOUD.currentUser()) openAuthModal();
-      try { localStorage.setItem(NUDGE, '1'); } catch (e) {}
-    }, 900);
+  if (onInvite) return;
+  if (!WCCLOUD.currentUser() && welcomeEl) {
+    const sb = document.getElementById('welcomeSignin');
+    if (sb) sb.style.display = cloudReady ? '' : 'none';   // cloud down: guest only
+    welcomeEl.classList.add('show');
+  } else if (!tutSeen()) {
+    markTutSeen(); WCTUT.open();
   }
 })();
 
@@ -1062,6 +1114,7 @@ function showFound(opp, isHuman) {
     document.getElementById('mfElo').textContent = opp.elo;
     matchFoundEl.classList.add('show');
   }
+  WCSOUND.play('notify');
   // short beat so the match-found card is actually readable
   setTimeout(function () { startMatch(opp.id); }, 900);
 }
@@ -1108,6 +1161,7 @@ function startCasual(kind) {
 function resetGameState() {
   aiGen++;                   // invalidate any bot move still sitting on a timer
   aiThinking = false;
+  endSounded = false;
   game.reset();
   game.endReason = null;
   paintNetCard();
@@ -1423,13 +1477,13 @@ window.addEventListener('hashchange', () => {
 
 // ---- modes ----------------------------------------------------------------
 const HINTS = {
-  movecell: 'Tap an empty square to lift it, then a dashed spot to place it.',
+  movecell: 'Click an empty square to lift it, then a dashed spot to place it.',
 };
 function setMode(m) {
   mode = m; selected = null; legal = [];
   for (const b of document.querySelectorAll('.wild-btn')) b.classList.toggle('active', b.dataset.mode === m);
   if (m === 'normal') ui.hint.textContent = game.canWildcard()
-    ? 'Wildcard turn — move a piece, or double-tap an empty square to move it.'
+    ? '✦ Board turn — move a piece, or click an empty square to lift it.'
     : (game.status === 'check' ? 'You are in check — get out of it.' : 'Make your move.');
   else ui.hint.textContent = HINTS[m];
 }
@@ -1442,6 +1496,7 @@ document.querySelectorAll('.wild-btn').forEach(b => b.addEventListener('click', 
 
 document.getElementById('newGame').addEventListener('click', () => {
   game.reset();
+  endSounded = false;
   selected = null; legal = []; hintMove = null;
   quality.length = 0; anaKey = null;
   setMode('normal');
@@ -1475,6 +1530,8 @@ function sync() {
   const eligible = game.canWildcard();
   ui.badge.style.display = eligible ? 'inline-flex' : 'none';
   for (const b of document.querySelectorAll('.wild-btn')) b.disabled = !eligible;
+  // board turns look different from across the room: the whole board glows
+  document.body.classList.toggle('wild-turn', eligible && !gameOver());
 
   ui.state.textContent = game.status === 'check' ? 'Check!' : '';
   ui.state.style.display = game.status === 'check' ? 'inline-flex' : 'none';
@@ -1487,6 +1544,12 @@ function sync() {
 
   if (gameOver()) {
     applyTutorVisibility();
+    if (!endSounded) {
+      endSounded = true;
+      if (!game.winner) WCSOUND.play('draw');
+      else if (botEnabled() || onlineActive) WCSOUND.play(game.winner === localColor() ? 'win' : 'lose');
+      else WCSOUND.play('win');            // hotseat: somebody at this screen won
+    }
     const r = settleResult();
     const reason = game.endReason;
     let text;

@@ -58,7 +58,7 @@
       }
       this.turn = spec.turn === 'white' ? W : B;
       this.counts = [spec.counts.white, spec.counts.black];
-      this.cadence = (spec.rules && spec.rules.cadence) || 2;
+      this.cadence = (spec.rules && spec.rules.cadence) || 3;
       this.budget = (spec.rules && spec.rules.budget != null) ? spec.rules.budget : Infinity;
       this.wildUsed = spec.wildUsed ? [spec.wildUsed.white, spec.wildUsed.black] : [0, 0];
       this.ep = spec.ep ? pack(spec.ep.c, spec.ep.r) : -1;    // -1 = no en-passant square
@@ -82,8 +82,12 @@
       }, weights);
     }
 
+    // Mirrors engine.js: every Nth PLY is a board turn (W B✦ W B W✦ B …),
+    // keyed off the total move count, not the per-colour one.
     eligible(col) {
-      return this.counts[col] % this.cadence === this.cadence - 1 && this.wildUsed[col] < this.budget;
+      const cad = this.cadence;
+      return (this.counts[0] + this.counts[1]) % cad === ((cad - 2) % cad + cad) % cad
+        && this.wildUsed[col] < this.budget;
     }
     has(k) { return this.cells.has(k); }
 

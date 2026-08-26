@@ -12,7 +12,7 @@ const MAX = +process.argv[5] || 140;
 
 function play(whiteLevel, blackLevel, seed) {
   const game = new Game();
-  game.rules = { cadence: 2, budget: Infinity };
+  game.rules = { cadence: 3, budget: Infinity };
   let plies = 0;
   while (!game.winner && !['stalemate', 'repetition'].includes(game.status) && plies < MAX) {
     const lv = game.turn === 'white' ? whiteLevel : blackLevel;

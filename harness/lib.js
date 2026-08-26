@@ -6,7 +6,7 @@ const { Pos, moveToGame, applyToGame } = require(path.join(__dirname, '..', 'js'
 // cfg: { depth, K, jitter, maxPlies, cadence, budget, setup, seed }
 function playGame(cfg, idx) {
   const game = new Game();
-  game.rules = { cadence: cfg.cadence || 2, budget: cfg.budget != null ? cfg.budget : Infinity };
+  game.rules = { cadence: cfg.cadence || 3, budget: cfg.budget != null ? cfg.budget : Infinity };
 
   if (cfg.setup === 'knight-vs-bishop') {
     for (const k of [...game.board.keys()]) {

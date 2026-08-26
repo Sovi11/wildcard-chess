@@ -29,11 +29,12 @@ class Game {
     this.status = 'playing';          // playing | check | checkmate | stalemate | repetition
     this.lastAction = null;
     this.epTarget = null;             // square a double-stepped pawn skipped over
-    // rule knobs: cadence = wildcard every Nth move; budget = max board actions
-    // per player; actions = which board actions exist at all. Add/Remove are
-    // parked for now (design call: Move subsumes them); an absent `actions`
-    // object means everything is allowed, which the harness relies on.
-    this.rules = this.rules || { cadence: 2, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
+    // rule knobs: cadence = every Nth PLY is a board turn (see _eligibleFor);
+    // budget = max board actions per player; actions = which board actions
+    // exist at all. Add/Remove are parked for now (design call: Move subsumes
+    // them); an absent `actions` object means everything is allowed, which the
+    // harness relies on.
+    this.rules = this.rules || { cadence: 3, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
     this.wildUsed = { white: 0, black: 0 };
     this.repCount = new Map();        // position key -> occurrences (threefold repetition)
     for (let c = 0; c < 8; c++) for (let r = 0; r < 8; r++) this.cells.add(key(c, r));
@@ -48,9 +49,14 @@ class Game {
   _put(c, r, type, color, hasMoved = false) { this.board.set(key(c, r), { type, color, hasMoved }); }
   get(c, r) { return this.board.get(key(c, r)); }
   hasCell(c, r) { return this.cells.has(key(c, r)); }
+  // v4 cadence: every 3rd PLY of the game is a board turn, staggered so it is
+  // never two board turns in a row: W B✦ W B W✦ B W B✦ … — Black's 1st/4th/7th
+  // move, White's 3rd/6th/9th. Black's early one offsets White's tempo.
+  // Whoever is to move on such a ply may reshape the board instead of moving.
   _eligibleFor(color) {
     const cad = this.rules.cadence;
-    return this.moveCount[color] % cad === cad - 1 && this.wildUsed[color] < this.rules.budget;
+    const total = this.moveCount.white + this.moveCount.black;
+    return total % cad === ((cad - 2) % cad + cad) % cad && this.wildUsed[color] < this.rules.budget;
   }
   wildcardEligible() { return this._eligibleFor(this.turn); }
   canWildcard() { return this.wildcardEligible() && !this.winner; }
@@ -349,7 +355,7 @@ class Game {
     const cad = this.rules.cadence;
     const cells = [...this.cells].sort().join(';');
     const pieces = [...this.board.entries()].map(([k, p]) => k + p.type[0] + p.color[0]).sort().join(';');
-    const phase = this.turn + '|' + (this.moveCount.white % cad) + '|' + (this.moveCount.black % cad)
+    const phase = this.turn + '|' + ((this.moveCount.white + this.moveCount.black) % cad)
       + '|' + (this.budgetLeft(WHITE) > 0 ? 1 : 0) + (this.budgetLeft(BLACK) > 0 ? 1 : 0);
     const ep = this.epTarget ? `${this.epTarget.c},${this.epTarget.r}` : '-';
     return phase + '|' + ep + '#' + cells + '#' + pieces;
