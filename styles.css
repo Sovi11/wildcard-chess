@@ -60,6 +60,9 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; al
 
 .lbl { font-size: 0.24px; font-weight: 700; }
 .lbl.edge { fill: var(--lbl-edge); opacity: .8; text-anchor: middle; }
+.lbl.insq { font-size: 0.21px; opacity: .85; pointer-events: none; }
+.lbl.insq.on-lt { fill: var(--sq-dark); }
+.lbl.insq.on-dk { fill: var(--sq-light); }
 
 /* ---- pieces (themed via inherited color + stroke) ---- */
 /* applies to the live board and the review board alike */
@@ -526,7 +529,9 @@ body.brd-neon #board { box-shadow: 0 20px 55px rgba(0,0,0,.6), 0 0 34px rgba(77,
 .find-btn:active, .mode-card:active { transform: scale(.97); }
 
 @media (max-width: 880px) {
-  .app { padding: 10px 10px 90px; }
+  .app { padding: 8px 6px 90px; }
+  .board-row { gap: 6px; }
+  #board { border-radius: 8px; }
   header { flex-wrap: wrap; gap: 8px; }
   header h1 { font-size: 19px; margin: 2px 0 6px; }
   header .sub { display: block; margin: 2px 0 0; font-size: 11px; }

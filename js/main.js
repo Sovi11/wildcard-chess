@@ -31,16 +31,22 @@ WCTHEME.apply();
 const symFor = (type) => 'pc-' + WCTHEME.get().pieces + '-' + type;
 const mod2 = (n) => ((n % 2) + 2) % 2;
 
-// ---- view: fit current bounds + 1 ring of expandable space ---------------
+// ---- view: fit the board tightly; open a ring of expandable space only
+// while a square is lifted (or a board-action hint points off-board), so the
+// squares get the whole canvas the rest of the time.
 function view() {
   const b = game.bounds();
-  const minC = b.minC - 1, maxC = b.maxC + 1, minR = b.minR - 1, maxR = b.maxR + 1;
+  let pad = 0;
+  if (mode === 'movecell' && selected) pad = 1;
+  if (hintMove && hintMove.kind && hintMove.kind !== 'm') pad = 1;
+  const minC = b.minC - pad, maxC = b.maxC + pad, minR = b.minR - pad, maxR = b.maxR + pad;
   return { minC, maxC, minR, maxR, cols: maxC - minC + 1, rows: maxR - minR + 1 };
 }
 
 function render() {
   const v = view();
-  boardEl.setAttribute('viewBox', `0 0 ${v.cols} ${v.rows}`);
+  const M = 0.09;                       // thin frame inside the rounded container
+  boardEl.setAttribute('viewBox', `${-M} ${-M} ${v.cols + 2 * M} ${v.rows + 2 * M}`);
   // Flipping swaps both axes so the side you play always sits at the bottom.
   const X = flipped ? (c) => v.maxC - c : (c) => c - v.minC;
   const Y = flipped ? (r) => r - v.minR : (r) => v.maxR - r;
@@ -111,11 +117,20 @@ function render() {
     }
   }
 
+  // labels live inside the edge squares so no canvas is spent on a gutter;
+  // colour is the opposite square shade for contrast on any theme
   const b = game.bounds();
-  for (let c = b.minC; c <= b.maxC; c++)
-    svg += `<text x="${X(c) + 0.5}" y="${v.rows - 0.18}" class="lbl edge">${fileLabel(c)}</text>`;
-  for (let r = b.minR; r <= b.maxR; r++)
-    svg += `<text x="0.5" y="${Y(r) + 0.62}" class="lbl edge">${rankLabel(r)}</text>`;
+  const parity = (c, r) => (((c + r) % 2) + 2) % 2 === 1 ? 'on-lt' : 'on-dk';
+  const fileRow = flipped ? b.maxR : b.minR;
+  const rankCol = flipped ? b.maxC : b.minC;
+  for (let c = b.minC; c <= b.maxC; c++) {
+    if (!game.hasCell(c, fileRow)) continue;
+    svg += `<text x="${X(c) + 0.92}" y="${Y(fileRow) + 0.94}" class="lbl insq ${parity(c, fileRow)}" text-anchor="end">${fileLabel(c)}</text>`;
+  }
+  for (let r = b.minR; r <= b.maxR; r++) {
+    if (!game.hasCell(rankCol, r)) continue;
+    svg += `<text x="${X(rankCol) + 0.07}" y="${Y(r) + 0.27}" class="lbl insq ${parity(rankCol, r)}">${rankLabel(r)}</text>`;
+  }
 
   boardEl.innerHTML = svg;
 }
@@ -140,8 +155,12 @@ boardEl.addEventListener('click', (e) => {
   if (onlineActive && game.turn !== myColor) return;   // their move, over the wire
   const v = view();
   const rect = boardEl.getBoundingClientRect();
-  const fx = Math.floor(((e.clientX - rect.left) / rect.width) * v.cols);
-  const fy = Math.floor(((e.clientY - rect.top) / rect.height) * v.rows);
+  // invert the viewBox mapping exactly, including the 0.09 frame margin
+  const M = 0.09;
+  const bx = ((e.clientX - rect.left) / rect.width) * (v.cols + 2 * M) - M;
+  const by = ((e.clientY - rect.top) / rect.height) * (v.rows + 2 * M) - M;
+  const fx = Math.floor(bx);
+  const fy = Math.floor(by);
   const c = flipped ? v.maxC - fx : v.minC + fx;
   const r = flipped ? v.minR + fy : v.maxR - fy;
   const p = game.hasCell(c, r) ? game.get(c, r) : null;
@@ -376,7 +395,9 @@ if (anaDepthEl) anaDepthEl.addEventListener('change', () => { anaKey = null; run
 const flipBtn = document.getElementById('flipBtn');
 const drawBtn = document.getElementById('drawBtn');
 const resignBtn = document.getElementById('resignBtn');
-const evalBarEl = document.querySelector('.evalbar');
+// the LIVE board's bar specifically — '.evalbar' alone would match the review
+// board's bar first, since the profile overlay sits earlier in the DOM
+const evalBarEl = document.querySelector('.board-row > .evalbar');
 
 // Point the board at whoever the local player is.
 function orientFor(color) {
@@ -393,7 +414,7 @@ function analysisVisible() { return devOn() || gameOver(); }
 
 function applyTutorVisibility() {
   const show = analysisVisible();
-  if (evalBarEl) evalBarEl.style.visibility = show ? '' : 'hidden';
+  if (evalBarEl) evalBarEl.style.display = show ? '' : 'none';
   if (hintBtn) { hintBtn.disabled = !show; hintBtn.style.opacity = show ? '' : '.4'; }
   if (ui.anaLine) ui.anaLine.style.display = show ? '' : 'none';
   if (ui.anaWhy) ui.anaWhy.style.display = show ? '' : 'none';
@@ -1287,9 +1308,9 @@ function revSeek(n) {
 function drawReviewBoard(g) {
   const el = document.getElementById('revBoard');
   const b = g.bounds();
-  const minC = b.minC - 1, maxC = b.maxC + 1, minR = b.minR - 1, maxR = b.maxR + 1;
+  const minC = b.minC, maxC = b.maxC, minR = b.minR, maxR = b.maxR;
   const cols = maxC - minC + 1, rows = maxR - minR + 1;
-  el.setAttribute('viewBox', '0 0 ' + cols + ' ' + rows);
+  el.setAttribute('viewBox', '-0.09 -0.09 ' + (cols + 0.18) + ' ' + (rows + 0.18));
   const X = function (c) { return c - minC; }, Y = function (r) { return maxR - r; };
   let svg = pieceDefs(WCTHEME.get().pieces);
   for (const k of g.cells) {
