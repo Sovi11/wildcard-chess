@@ -29,8 +29,11 @@ class Game {
     this.status = 'playing';          // playing | check | checkmate | stalemate | repetition
     this.lastAction = null;
     this.epTarget = null;             // square a double-stepped pawn skipped over
-    // rule knobs: cadence = wildcard every Nth move; budget = max board actions per player
-    this.rules = this.rules || { cadence: 2, budget: Infinity };
+    // rule knobs: cadence = wildcard every Nth move; budget = max board actions
+    // per player; actions = which board actions exist at all. Add/Remove are
+    // parked for now (design call: Move subsumes them); an absent `actions`
+    // object means everything is allowed, which the harness relies on.
+    this.rules = this.rules || { cadence: 2, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
     this.wildUsed = { white: 0, black: 0 };
     this.repCount = new Map();        // position key -> occurrences (threefold repetition)
     for (let c = 0; c < 8; c++) for (let r = 0; r < 8; r++) this.cells.add(key(c, r));
@@ -272,7 +275,13 @@ class Game {
 
   // ---- wildcards: reshape the board --------------------------------------
   // Add a square at an empty position touching the board.
+  _actionAllowed(kind) {
+    const a = this.rules.actions;
+    return !a || a[kind] !== false;
+  }
+
   wildcardAddCell(c, r) {
+    if (!this._actionAllowed('ac')) return false;
     if (!this.canWildcard() || this.hasCell(c, r)) return false;
     const touches = NEIGH8.some(([dc, dr]) => this.hasCell(c + dc, r + dr));
     if (!touches) return false;
@@ -288,6 +297,7 @@ class Game {
 
   // Remove an EMPTY square (leaves a hole).
   wildcardRemoveCell(c, r) {
+    if (!this._actionAllowed('rc')) return false;
     if (!this.canWildcard() || !this.hasCell(c, r) || this.get(c, r)) return false;
     if (this.cells.size <= 1) return false;
     if (!this._trial(this.turn, () => this.cells.delete(key(c, r)))) return false;
@@ -302,6 +312,7 @@ class Game {
 
   // Move an EMPTY square: detach it and re-attach touching the remaining board.
   wildcardMoveCell(fc, fr, tc, tr) {
+    if (!this._actionAllowed('mc')) return false;
     if (!this.canWildcard()) return false;
     if (!this.hasCell(fc, fr) || this.get(fc, fr)) return false;      // source must exist & be empty
     if (this.hasCell(tc, tr)) return false;                            // target must be new ground
@@ -361,19 +372,25 @@ class Game {
       if (this.legalMoves(c, r).length) return true;
     }
     if (!eligible) return false;
-    for (const t of this.addTargets()) {
-      if (this._trial(color, () => this.cells.add(key(t.c, t.r)))) return true;
+    if (this._actionAllowed('ac')) {
+      for (const t of this.addTargets()) {
+        if (this._trial(color, () => this.cells.add(key(t.c, t.r)))) return true;
+      }
     }
-    for (const k of this.cells) {
-      if (this.board.has(k)) continue;
-      if (this.cells.size <= 1) break;
-      if (this._trial(color, () => this.cells.delete(k))) return true;
+    if (this._actionAllowed('rc')) {
+      for (const k of this.cells) {
+        if (this.board.has(k)) continue;
+        if (this.cells.size <= 1) break;
+        if (this._trial(color, () => this.cells.delete(k))) return true;
+      }
     }
-    for (const k of this.cells) {
-      if (this.board.has(k)) continue;
-      for (const tk of this._attachTargetsExcluding(k)) {
-        const t = parseKey(tk);
-        if (this._trial(color, () => { this.cells.delete(k); this.cells.add(key(t.c, t.r)); })) return true;
+    if (this._actionAllowed('mc')) {
+      for (const k of this.cells) {
+        if (this.board.has(k)) continue;
+        for (const tk of this._attachTargetsExcluding(k)) {
+          const t = parseKey(tk);
+          if (this._trial(color, () => { this.cells.delete(k); this.cells.add(key(t.c, t.r)); })) return true;
+        }
       }
     }
     return false;

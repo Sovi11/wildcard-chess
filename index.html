@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <title>Wildcard Chess</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=20" />
+  <link rel="stylesheet" href="styles.css?v=21" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -226,10 +226,8 @@
 
         <div class="wild-group">
           <div class="wild-label">Wildcard action</div>
-          <div class="wild-buttons">
-            <button class="wild-btn" data-mode="addcell" disabled>✚ Add square</button>
-            <button class="wild-btn" data-mode="removecell" disabled>✖ Remove square</button>
-            <button class="wild-btn" data-mode="movecell" disabled>➤ Move square</button>
+          <div class="wild-buttons one">
+            <button class="wild-btn" data-mode="movecell" disabled>➤ Move a square</button>
           </div>
           <p id="hint" class="hint">Make your move.</p>
         </div>
@@ -245,7 +243,6 @@
             </select>
             <button id="hintBtn" class="hint-btn" title="Show the engine's best action">Best move</button>
           </div>
-          <label class="chk dev-chk"><input type="checkbox" id="devMode" /> Dev mode — show eval while playing</label>
           <div id="anaLine" class="ana-line">—</div>
           <div id="anaWhy" class="ana-why"></div>
           <div id="lastQuality" class="quality-line"></div>
@@ -315,10 +312,8 @@
           <summary>Rules</summary>
           <ul>
             <li>Standard chess for the pieces — but the <b>board itself</b> is fair game.</li>
-            <li>Your <b>every 2nd move</b> is a wildcard: move a piece normally <i>or</i> reshape the board.</li>
-            <li><b>Add square</b> — attach a new square anywhere touching the board.</li>
-            <li><b>Remove square</b> — delete an <i>empty</i> square. The hole <b>blocks sliding pieces</b>.</li>
-            <li><b>Move square</b> — pick up an <i>empty</i> square and re-attach it elsewhere.</li>
+            <li>Your <b>every 2nd move</b> is a wildcard: move a piece normally <i>or</i> <b>move a square</b>.</li>
+            <li><b>Double-tap an empty square</b> to pick it up, then tap where to put it (anywhere touching the board). It leaves a hole, and <b>holes block sliding pieces</b>.</li>
             <li>Win by <b>checkmate</b> — on a wildcard turn you may escape check by reshaping the board (e.g. cut the attacker's line).</li>
             <li>Pawns promote at the board's edge — extend the board and they must march further.</li>
           </ul>
@@ -328,19 +323,19 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=20"></script>
-  <script src="js/cloud.js?v=20"></script>
-  <script src="js/engine.js?v=20"></script>
-  <script src="js/pieces.js?v=20"></script>
-  <script src="js/themes.js?v=20"></script>
-  <script src="js/ai.js?v=20"></script>
-  <script src="js/ladder.js?v=20"></script>
+  <script src="js/config.js?v=21"></script>
+  <script src="js/cloud.js?v=21"></script>
+  <script src="js/engine.js?v=21"></script>
+  <script src="js/pieces.js?v=21"></script>
+  <script src="js/themes.js?v=21"></script>
+  <script src="js/ai.js?v=21"></script>
+  <script src="js/ladder.js?v=21"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=20"></script>
-  <script src="js/net.js?v=20"></script>
-  <script src="js/share.js?v=20"></script>
-  <script src="js/analysis.js?v=20"></script>
-  <script src="js/main.js?v=20"></script>
+  <script src="js/matchmaking.js?v=21"></script>
+  <script src="js/net.js?v=21"></script>
+  <script src="js/share.js?v=21"></script>
+  <script src="js/analysis.js?v=21"></script>
+  <script src="js/main.js?v=21"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

@@ -21,6 +21,7 @@ let mode = 'normal';        // normal | addcell | removecell | movecell
 let selected = null;
 let legal = [];
 let hintMove = null;        // best-action overlay, cleared on the next move
+let lastEmptyTap = null;    // {c, r, t} — double-tap detection for lifting a square
 let flipped = false;        // true when the board is drawn from Black's side
 let gameActs = [];          // every action this game, so it can be replayed later
 
@@ -153,11 +154,31 @@ boardEl.addEventListener('click', (e) => {
       if (game.hasCell(c, r) && !game.get(c, r)) { selected = { c, r }; render(); }
       return;
     }
+    if (selected.c === c && selected.r === r) {          // tap it again: put it down
+      setMode('normal'); render(); return;
+    }
     if (game.wildcardMoveCell(selected.c, selected.r, c, r)) {
       done({ kind: 'mc', from: { c: selected.c, r: selected.r }, to: { c: c, r: r } }); return;
     }
     if (game.hasCell(c, r) && !game.get(c, r)) { selected = { c, r }; render(); }
     return;
+  }
+
+  // Double-tap an empty square on a wildcard turn lifts it — the one terrain
+  // gesture now that Add/Remove are parked. Second tap elsewhere places it.
+  if (mode === 'normal' && game.canWildcard() && game.hasCell(c, r) && !p) {
+    const now = Date.now();
+    if (lastEmptyTap && lastEmptyTap.c === c && lastEmptyTap.r === r && now - lastEmptyTap.t < 420) {
+      lastEmptyTap = null;
+      setMode('movecell');
+      selected = { c, r };
+      ui.hint.textContent = 'Square lifted — tap a dashed spot to place it, or tap it again to cancel.';
+      render();
+      return;
+    }
+    lastEmptyTap = { c, r, t: now };
+  } else if (p) {
+    lastEmptyTap = null;
   }
 
   if (selected) {
@@ -188,6 +209,7 @@ const botSideEl = document.getElementById('botSide');
 const botLevelEl = document.getElementById('botLevel');
 const botBlurbEl = document.getElementById('botBlurb');
 let aiThinking = false;
+let aiGen = 0;              // bumped on every reset; stale bot timers see it and abort
 
 const linkMode = () => oppModeEl && oppModeEl.value === 'link';
 let linkPending = false;          // true after your move: waiting on your friend
@@ -209,9 +231,15 @@ function maybeAI() {
   if (!botEnabled() || aiThinking || gameOver()) return;
   if (game.turn !== botSide()) return;
   aiThinking = true;
+  const myGen = aiGen;
   const lv = WCAI.levelById(botLevelEl ? botLevelEl.value : 3);
   ui.hint.textContent = `${activeBot ? activeBot.name : lv.name} is thinking…`;
   setTimeout(() => {
+    // The game may have been reset or switched mode while we were queued.
+    if (myGen !== aiGen || !botEnabled() || gameOver() || game.turn !== botSide()) {
+      aiThinking = false;
+      return;
+    }
     try {
       const pos = activeBot
         ? WCAI.Pos.fromGame(game, WCLADDER.weightsFor(activeBot))
@@ -348,7 +376,6 @@ if (anaDepthEl) anaDepthEl.addEventListener('change', () => { anaKey = null; run
 const flipBtn = document.getElementById('flipBtn');
 const drawBtn = document.getElementById('drawBtn');
 const resignBtn = document.getElementById('resignBtn');
-const devModeEl = document.getElementById('devMode');
 const evalBarEl = document.querySelector('.evalbar');
 
 // Point the board at whoever the local player is.
@@ -357,9 +384,11 @@ function orientFor(color) {
   render();
 }
 
-// Dev mode shows the engine while you play. Off, analysis is still computed
-// but stays hidden until the game ends, so it cannot be used as a crutch.
-const devOn = () => !!(devModeEl && devModeEl.checked);
+// The engine is invisible during live play, full stop — no eval, no best
+// move, no grades until the game ends. ?dev=1 in the URL is the only override,
+// for development. Analysis still runs each ply so the post-game report is
+// complete.
+const devOn = () => /[?&]dev=1/.test(location.search);
 function analysisVisible() { return devOn() || gameOver(); }
 
 function applyTutorVisibility() {
@@ -373,16 +402,6 @@ function applyTutorVisibility() {
   if (!show && hintMove) { hintMove = null; render(); }
   const log = document.getElementById('log');
   if (log) log.classList.toggle('hide-grades', !show);
-}
-
-if (devModeEl) {
-  try { devModeEl.checked = localStorage.getItem('wildcardchess.dev') === '1'
-    || /[?&]dev=1/.test(location.search); } catch (e) {}
-  devModeEl.addEventListener('change', function () {
-    try { localStorage.setItem('wildcardchess.dev', devModeEl.checked ? '1' : '0'); } catch (e) {}
-    applyTutorVisibility();
-    renderLog();
-  });
 }
 
 if (flipBtn) flipBtn.addEventListener('click', function () { flipped = !flipped; render(); });
@@ -1066,6 +1085,8 @@ function startCasual(kind) {
 }
 
 function resetGameState() {
+  aiGen++;                   // invalidate any bot move still sitting on a timer
+  aiThinking = false;
   game.reset();
   game.endReason = null;
   paintNetCard();
@@ -1381,15 +1402,13 @@ window.addEventListener('hashchange', () => {
 
 // ---- modes ----------------------------------------------------------------
 const HINTS = {
-  addcell: 'ADD SQUARE: click a dashed spot to attach a new square to the board.',
-  removecell: 'REMOVE SQUARE: click an empty square to delete it. The hole blocks sliding pieces.',
-  movecell: 'MOVE SQUARE: click an empty square to pick it up, then a dashed spot to re-attach it.',
+  movecell: 'Tap an empty square to lift it, then a dashed spot to place it.',
 };
 function setMode(m) {
   mode = m; selected = null; legal = [];
   for (const b of document.querySelectorAll('.wild-btn')) b.classList.toggle('active', b.dataset.mode === m);
   if (m === 'normal') ui.hint.textContent = game.canWildcard()
-    ? 'Wildcard turn — move a piece normally, or reshape the board.'
+    ? 'Wildcard turn — move a piece, or double-tap an empty square to move it.'
     : (game.status === 'check' ? 'You are in check — get out of it.' : 'Make your move.');
   else ui.hint.textContent = HINTS[m];
 }

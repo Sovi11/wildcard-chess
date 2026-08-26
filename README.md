@@ -5,10 +5,11 @@ Standard chess — but **the board itself is fair game**. Every second move, ins
 ## Rules (v3)
 
 - Standard chess movement, local 2-player hotseat. Board starts 8×8.
-- Each player's **2nd, 4th, 6th… move** is *wildcard-eligible*: make a normal move **or** one board action:
-  - **Add square** — attach a new square at any empty spot touching the board (any direction, including diagonally). The board can grow without limit.
-  - **Remove square** — delete any **empty** square (occupied squares are safe). Leaves a hole.
-  - **Move square** — pick up any **empty** square and re-attach it anywhere touching the rest of the board.
+- Each player's **2nd, 4th, 6th… move** is *wildcard-eligible*: make a normal move **or**
+  **move a square** — double-tap any **empty** square to lift it, then tap where to
+  re-attach it (anywhere touching the rest of the board). It leaves a hole behind.
+  *(Add and Remove square exist in the engine but are parked as redundant: moving a square
+  is a remove and an add in one action. The harness can still enable them for experiments.)*
 - **Holes block sliding pieces** (rook/bishop/queen lines stop at missing squares). Knights jump over holes but must land on an existing square. Square colour is just position parity — a moved square may change colour.
 - **Win by checkmate.** Full legality: no moving into check, pins are real. On a wildcard turn, board actions count as escapes — e.g. removing a square to sever the attacker's line. It's only mate if nothing (moves *or* board actions) saves you.
 - **Pawns promote at the edge of the world**: a pawn promotes only when there is no square anywhere ahead of it in its file. A lone hole directly in front is *not* the edge — the board may resume past it. Extend the board above the 8th rank and the pawn must march further.
@@ -148,6 +149,8 @@ opens instantly and plays bot games offline.
 
 A chess.com-style coach runs alongside play:
 
+- **Hidden during live play** — no eval, no best move, no grades until the game ends.
+  The full report appears the moment it's over. (`?dev=1` shows it live, for development.)
 - **Eval bar** beside the board, White at the bottom, with a numeric score (`+1.2`, `-0.4`, `+M3`).
 - **Best move** button draws a gold arrow for piece moves, or marks the square for board actions.
 - **Move grading** — every ply is graded by centipawn loss against the engine's best:

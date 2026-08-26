@@ -568,3 +568,4 @@ body.brd-neon #board { box-shadow: 0 20px 55px rgba(0,0,0,.6), 0 0 34px rgba(77,
   .wild-buttons { grid-template-columns: 1fr; }
   .wild-btn[data-mode="movecell"] { grid-column: auto; }
 }
+.wild-buttons.one { grid-template-columns: 1fr; }

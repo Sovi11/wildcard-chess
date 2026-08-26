@@ -62,6 +62,8 @@
       this.budget = (spec.rules && spec.rules.budget != null) ? spec.rules.budget : Infinity;
       this.wildUsed = spec.wildUsed ? [spec.wildUsed.white, spec.wildUsed.black] : [0, 0];
       this.ep = spec.ep ? pack(spec.ep.c, spec.ep.r) : -1;    // -1 = no en-passant square
+      // which board actions the ruleset offers (absent = all)
+      this.allowActions = (spec.rules && spec.rules.actions) || this.allowActions || null;
       this.w = weights || DEFAULT_WEIGHTS;
       this.nodes = 0;
     }

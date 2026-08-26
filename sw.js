@@ -3,24 +3,24 @@
 // work offline. Everything cross-origin (Supabase, PeerJS broker, CDNs) is left
 // alone: auth and matchmaking must always hit the network.
 
-const CACHE = 'wildcard-chess-v20';
+const CACHE = 'wildcard-chess-v21';
 
 const CORE = [
   './',
   './index.html',
-  './styles.css?v=20',
-  './js/config.js?v=20',
-  './js/cloud.js?v=20',
-  './js/engine.js?v=20',
-  './js/pieces.js?v=20',
-  './js/themes.js?v=20',
-  './js/ai.js?v=20',
-  './js/ladder.js?v=20',
-  './js/matchmaking.js?v=20',
-  './js/net.js?v=20',
-  './js/share.js?v=20',
-  './js/analysis.js?v=20',
-  './js/main.js?v=20',
+  './styles.css?v=21',
+  './js/config.js?v=21',
+  './js/cloud.js?v=21',
+  './js/engine.js?v=21',
+  './js/pieces.js?v=21',
+  './js/themes.js?v=21',
+  './js/ai.js?v=21',
+  './js/ladder.js?v=21',
+  './js/matchmaking.js?v=21',
+  './js/net.js?v=21',
+  './js/share.js?v=21',
+  './js/analysis.js?v=21',
+  './js/main.js?v=21',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
