@@ -18,6 +18,25 @@
   // kindBias: root-only nudge (centipawns) toward each board action.
   //   ac = add square, rc = remove square, mc = move square
   const BOTS = [
+    // The gutter of the ladder: bots built to LOSE. Cooked evals (all pieces
+    // worth a pawn; eval installed upside-down) plus huge jitter/blunder means
+    // shit openings, hung queens, and a soft landing for new players.
+    {
+      id: 'tumble', name: 'Tumbleweed Tim', elo: 140, emoji: '🌾',
+      blurb: 'Might play the best move. Entirely by accident.',
+      style: 'Feral · basically random',
+      search: { depth: 1, K: 3, movetime: 200, jitter: 9999, blunder: 0.50 },
+      // every piece is worth a pawn to Tim — he trades his queen for anything
+      weights: { material: mat(100, 100, 100, 100, 100), mobility: 0, kingRing: 0, pawnAdv: 0, tempo: 0, kindBias: { ac: -200, rc: -200, mc: -200 } },
+    },
+    {
+      id: 'bella', name: 'Backwards Bella', elo: 220, emoji: '🙃',
+      blurb: 'Her evaluation is installed upside-down. Develops nothing, walls in her own king, marches the rook pawns.',
+      style: 'Confused · cooked eval',
+      search: { depth: 1, K: 3, movetime: 250, jitter: 170, blunder: 0.32 },
+      // negative mobility/kingRing/pawnAdv: she prefers cramped, exposed, passive
+      weights: { mobility: -4, kingRing: -10, pawnAdv: -6, tempo: 0, kindBias: { ac: -120, rc: -120, mc: -120 } },
+    },
     {
       id: 'pawnsy', name: 'Pawnsy', elo: 300, emoji: '🌱',
       blurb: 'Plays the first thing that looks fine. Barely notices the board can change.',
@@ -29,21 +48,21 @@
       id: 'rusty', name: 'Rusty Rook', elo: 420, emoji: '🗼',
       blurb: 'Convinced rooks win games. Will trade almost anything for one.',
       style: 'Novice · rook-obsessed',
-      search: { depth: 2, K: 6, movetime: 500, jitter: 80, blunder: 0.18 },
+      search: { depth: 2, K: 6, movetime: 500, jitter: 100, blunder: 0.25 },
       weights: { material: mat(100, 260, 270, 640, 900), kindBias: { ac: -80, rc: -80, mc: -80 } },
     },
     {
       id: 'vandal', name: 'The Vandal', elo: 520, emoji: '🕳️',
       blurb: 'Would rather delete the board than play on it. Expect holes everywhere.',
       style: 'Chaotic · tears out squares',
-      search: { depth: 2, K: 12, movetime: 700, jitter: 50, blunder: 0.10 },
+      search: { depth: 2, K: 12, movetime: 700, jitter: 60, blunder: 0.15 },
       weights: { kindBias: { ac: -40, rc: 190, mc: 40 } },
     },
     {
       id: 'castle', name: 'Sir Castle', elo: 600, emoji: '🛡️',
       blurb: 'Builds a fortress and dares you to crack it. Hoards floor around his king.',
       style: 'Defensive · king safety',
-      search: { depth: 2, K: 10, movetime: 800, jitter: 30, blunder: 0.06 },
+      search: { depth: 2, K: 10, movetime: 800, jitter: 40, blunder: 0.10 },
       weights: { kingRing: 22, mobility: 2, kindBias: { ac: 70, rc: -60, mc: -20 } },
     },
     {
@@ -71,21 +90,21 @@
       id: 'ivan', name: 'Iron Ivan', elo: 1020, emoji: '⚙️',
       blurb: 'Pure chess, no theatrics. Punishes loose pieces and ignores the wildcards.',
       style: 'Solid · classical',
-      search: { depth: 3, K: 8, movetime: 1300, jitter: 0, blunder: 0 },
+      search: { depth: 3, K: 8, movetime: 1100, jitter: 0, blunder: 0 },
       weights: { mobility: 4, kindBias: { ac: -120, rc: -120, mc: -120 } },
     },
     {
       id: 'vex', name: 'Grandmaster Vex', elo: 1200, emoji: '👑',
       blurb: 'Sees your plan two moves before you do. Uses the board when it actually helps.',
       style: 'Strong · all-round',
-      search: { depth: 4, K: 12, movetime: 2000, jitter: 0, blunder: 0 },
+      search: { depth: 4, K: 12, movetime: 1200, jitter: 0, blunder: 0 },
       weights: {},
     },
     {
       id: 'void', name: 'THE VOID', elo: 1450, emoji: '🕯️',
       blurb: 'Eats the board one square at a time. You will run out of floor before it runs out of ideas.',
       style: 'Brutal · terrain master',
-      search: { depth: 5, K: 16, movetime: 3200, jitter: 0, blunder: 0 },
+      search: { depth: 5, K: 16, movetime: 1300, jitter: 0, blunder: 0 },
       weights: { kindBias: { ac: 40, rc: 110, mc: 80 }, kingRing: 10 },
     },
   ];

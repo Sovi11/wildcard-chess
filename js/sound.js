@@ -110,14 +110,86 @@
     try { FX[name](a, a.currentTime + 0.001); } catch (e) {}
   }
 
+  // ---- ambient menu music ---------------------------------------------------
+  // A very quiet generative tune for the lobby / welcome / post-game lull:
+  // two barely-there drone sines and an unhurried A-minor-pentatonic pluck
+  // every few seconds. Composed live, never repeats, costs nothing to ship.
+  let ambientWanted = false;
+  let amb = null;                  // { master, oscs, timer }
+  const PENTA = [220, 261.63, 293.66, 329.63, 392, 440, 523.25];
+
+  function ambientStart() {
+    if (amb || muted) return;
+    const a = ac();
+    if (!a) return;                // no gesture yet: the unlock listener retries
+    const master = a.createGain();
+    master.gain.setValueAtTime(0.0001, a.currentTime);
+    master.gain.exponentialRampToValueAtTime(1, a.currentTime + 2.5);   // fade in
+    master.connect(a.destination);
+    const oscs = [];
+    [[110, 0.016], [164.81, 0.011]].forEach(function (d) {             // A2 + E3 drone
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = 'sine'; o.frequency.value = d[0]; g.gain.value = d[1];
+      o.connect(g); g.connect(master); o.start();
+      oscs.push(o);
+    });
+    const pluck = function () {
+      if (!amb || muted) return;
+      const f = PENTA[Math.floor(Math.random() * PENTA.length)];
+      const t = a.currentTime + 0.02;
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.035, t + 0.06);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 2.3);
+    };
+    const timer = setInterval(function () {
+      if (Math.random() < 0.75) pluck();                 // the silences matter
+    }, 2600);
+    amb = { master, oscs, timer };
+    pluck();
+  }
+
+  function ambientStop() {
+    if (!amb) return;
+    const a = ctx, dying = amb;
+    amb = null;
+    clearInterval(dying.timer);
+    try {
+      dying.master.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 1.2);  // fade out
+      setTimeout(function () {
+        dying.oscs.forEach(function (o) { try { o.stop(); } catch (e) {} });
+        try { dying.master.disconnect(); } catch (e) {}
+      }, 1400);
+    } catch (e) {}
+  }
+
+  function setAmbient(on) {
+    ambientWanted = !!on;
+    if (ambientWanted) ambientStart(); else ambientStop();
+  }
+
+  // Autoplay policy: the context unlocks on the first gesture — start the
+  // ambience then if a menu is already asking for it.
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+    window.addEventListener(ev, function () {
+      if (!muted && ambientWanted && !amb) ambientStart();
+    }, { passive: true });
+  });
+
   function setMuted(v) {
     muted = !!v;
     try { localStorage.setItem(KEY, muted ? 'off' : 'on'); } catch (e) {}
+    if (muted) ambientStop();
+    else if (ambientWanted) ambientStart();
   }
 
   window.WCSOUND = {
     play,
     setMuted,
+    setAmbient,
     isMuted: function () { return muted; },
     toggle: function () { setMuted(!muted); return muted; },
   };

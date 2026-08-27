@@ -664,3 +664,10 @@ body.wild-turn .badge { animation: pulse 1.4s ease-in-out infinite; }
 .tut-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .tut-navright { display: flex; gap: 10px; align-items: center; }
 .tut-next { padding: 10px 22px; }
+
+/* humans on the blended leaderboard get a quiet tag */
+.lb-tag {
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--accent); background: rgba(231,193,74,.12); border: 1px solid rgba(231,193,74,.3);
+  border-radius: 5px; padding: 1px 5px; margin-left: 7px; vertical-align: 1px;
+}

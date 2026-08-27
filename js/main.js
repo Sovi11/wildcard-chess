@@ -145,6 +145,17 @@ function esc(v) {
 function keyJS(c, r) { return c + ',' + r; }
 function parseKeyJS(k) { const [c, r] = k.split(',').map(Number); return { c, r }; }
 
+// The soft menu tune plays whenever no game demands attention: any full-screen
+// overlay (welcome, lobby, profile, tutorial) or a finished game. It stops the
+// moment live play resumes.
+function updateAmbient() {
+  const overlayOpen = ['welcome', 'lobby', 'profile', 'tutorial'].some(function (id) {
+    const el = document.getElementById(id);
+    return !!el && el.classList.contains('show');
+  });
+  WCSOUND.setAmbient(overlayOpen || gameOver());
+}
+
 // ---- interaction ----------------------------------------------------------
 boardEl.addEventListener('click', (e) => {
   if (gameOver()) return;
@@ -278,6 +289,11 @@ function maybeAI() {
       aiThinking = false;
       return;
     }
+    // Search now, answer later: every bot replies on the same human-feeling
+    // clock — roughly a second — whether its search took 5 ms or 1 s.
+    // Instant replies read as a computer; wildly varying ones read as lag.
+    const t0 = Date.now();
+    let gmBot = null;
     try {
       const pos = activeBot
         ? WCAI.Pos.fromGame(game, WCLADDER.weightsFor(activeBot))
@@ -285,24 +301,33 @@ function maybeAI() {
       const res = activeBot
         ? WCAI.chooseMoveFor(pos, activeBot.search)
         : WCAI.chooseMove(pos, lv.id);
-      const gmBot = WCAI.moveToGame(res.move);
-      if (WCAI.applyToGame(game, gmBot)) {
-        gameActs.push(gmBot);                       // keep the bot's action for replay
-      } else {
-        outer: for (const [k, p] of game.board) {
-          if (p.color !== game.turn) continue;
-          const [c, r] = k.split(',').map(Number);
-          for (const m of game.legalMoves(c, r)) if (game.makeMove(c, r, m.c, m.r)) {
-            gameActs.push({ kind: 'm', from: { c: c, r: r }, to: { c: m.c, r: m.r } });
-            break outer;
+      gmBot = WCAI.moveToGame(res.move);
+    } catch (e) { gmBot = null; }
+    const wait = Math.max(0, 900 + Math.random() * 400 - (Date.now() - t0));
+    setTimeout(() => {
+      if (myGen !== aiGen || !botEnabled() || gameOver() || game.turn !== botSide()) {
+        aiThinking = false;
+        return;
+      }
+      try {
+        if (gmBot && WCAI.applyToGame(game, gmBot)) {
+          gameActs.push(gmBot);                       // keep the bot's action for replay
+        } else {
+          outer: for (const [k, p] of game.board) {
+            if (p.color !== game.turn) continue;
+            const [c, r] = k.split(',').map(Number);
+            for (const m of game.legalMoves(c, r)) if (game.makeMove(c, r, m.c, m.r)) {
+              gameActs.push({ kind: 'm', from: { c: c, r: r }, to: { c: m.c, r: m.r } });
+              break outer;
+            }
           }
         }
+      } finally {
+        aiThinking = false;
+        afterMove();
+        maybeAI();
       }
-    } finally {
-      aiThinking = false;
-      afterMove();
-      maybeAI();
-    }
+    }, wait);
   }, 30);
 }
 
@@ -576,36 +601,47 @@ function renderLobby() {
   if (count) count.textContent = '(' + rows.length + ' rated players)';
 }
 
-function openLobby() { renderLobby(); renderLeaderboard(); resetQueueUI(); lobbyEl.classList.add('show'); }
+function openLobby() { renderLobby(); renderLeaderboard(); resetQueueUI(); lobbyEl.classList.add('show'); updateAmbient(); }
 
 // Everyone in the pool plus you, ranked. Bot ratings drift, so this moves.
-function renderLeaderboard() {
-  const el = document.getElementById('leaderboard');
-  if (!el) return;
-  if (WCCLOUD.enabled()) {
-    WCCLOUD.leaderboard(25).then(function (rows) {
-      if (!rows || !rows.length) return;            // fall back to what is drawn below
-      const me = WCLADDER.getProfile();
-      el.innerHTML = rows.map(function (r, i) {
-        const mine = r.name === me.name;
-        return '<div class="lb-row' + (mine ? ' you' : '') + '">' +
-          '<span class="lb-rank">' + (i + 1) + '</span>' +
-          '<span class="lb-name">' + esc(r.name) + '</span>' +
-          '<span class="lb-elo">' + r.elo + '</span></div>';
-      }).join('');
-    }).catch(function () {});
-  }
-  const me = WCLADDER.getProfile();
-  const rows = WCLADDER.livePool()
-    .map(function (b) { return { name: b.name, elo: b.elo, you: false }; })
-    .concat([{ name: (me.name && me.name !== 'You') ? me.name : 'You', elo: me.elo, you: true }])
-    .sort(function (a, b) { return b.elo - a.elo; });
+// Signed in, the cloud's registered players are BLENDED with the resident
+// pool rather than replacing it — with two humans registered, a humans-only
+// board is a very lonely place.
+function lbRows(el, rows) {
   el.innerHTML = rows.map(function (r, i) {
     return '<div class="lb-row' + (r.you ? ' you' : '') + '">' +
       '<span class="lb-rank">' + (i + 1) + '</span>' +
-      '<span class="lb-name">' + esc(r.name) + '</span>' +
+      '<span class="lb-name">' + esc(r.name) +
+        (r.human ? ' <span class="lb-tag">player</span>' : '') + '</span>' +
       '<span class="lb-elo">' + r.elo + '</span></div>';
   }).join('');
+}
+
+function renderLeaderboard() {
+  const el = document.getElementById('leaderboard');
+  if (!el) return;
+  const me = WCLADDER.getProfile();
+  const myName = (me.name && me.name !== 'You') ? me.name : 'You';
+  const bots = WCLADDER.livePool()
+    .map(function (b) { return { name: b.name, elo: b.elo, you: false, human: false }; });
+
+  if (WCCLOUD.enabled()) {
+    WCCLOUD.leaderboard(25).then(function (rows) {
+      if (!rows || !rows.length) return;            // fall back to what is drawn below
+      const humans = rows.map(function (r) {
+        return { name: r.name, elo: r.elo, you: r.name === me.name, human: true };
+      });
+      const iAmListed = humans.some(function (h) { return h.you; });
+      const all = humans
+        .concat(bots)
+        .concat(iAmListed ? [] : [{ name: myName, elo: me.elo, you: true, human: true }])
+        .sort(function (a, b) { return b.elo - a.elo; });
+      lbRows(el, all);
+    }).catch(function () {});
+  }
+  lbRows(el, bots
+    .concat([{ name: myName, elo: me.elo, you: true, human: true }])
+    .sort(function (a, b) { return b.elo - a.elo; }));
 }
 
 // ---- online play (real-time, peer to peer) ---------------------------------
@@ -951,12 +987,13 @@ function enterSite() {
   closeWelcome();
   if (!tutSeen()) { markTutSeen(); WCTUT.open(openLobby); }
   else openLobby();
+  updateAmbient();
 }
 function bindClick(id, fn) { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
 bindClick('welcomeGuest', enterSite);
 bindClick('welcomeSignin', function () { openAuthModal(); });
-bindClick('welcomeHow', function () { WCTUT.open(); });
-bindClick('howBtn', function () { WCTUT.open(); });
+bindClick('welcomeHow', function () { WCTUT.open(updateAmbient); updateAmbient(); });
+bindClick('howBtn', function () { WCTUT.open(updateAmbient); updateAmbient(); });
 
 WCCLOUD.onChange(function (u) {
   if (u && welcomeEl && welcomeEl.classList.contains('show')) enterSite();
@@ -973,7 +1010,7 @@ function hasCachedSession() {
     });
   } catch (e) { return false; }
 }
-if (!bootOnInvite && welcomeEl && !hasCachedSession()) welcomeEl.classList.add('show');
+if (!bootOnInvite && welcomeEl && !hasCachedSession()) { welcomeEl.classList.add('show'); updateAmbient(); }
 
 (async function bootCloud() {
   try {
@@ -1138,7 +1175,7 @@ function showFound(opp, isHuman) {
 
 if (findBtn) findBtn.addEventListener('click', beginSearch);
 if (cancelSearchBtn) cancelSearchBtn.addEventListener('click', resetQueueUI);
-function closeLobby() { if (cancelSearch) { cancelSearch(); cancelSearch = null; } lobbyEl.classList.remove('show'); }
+function closeLobby() { if (cancelSearch) { cancelSearch(); cancelSearch = null; } lobbyEl.classList.remove('show'); updateAmbient(); }
 
 // Start a fresh rated game against a ladder bot. You are White, the bot is Black.
 function startMatch(botId) {
@@ -1243,8 +1280,8 @@ const matchListEl = document.getElementById('matchList');
 const profListEl = document.getElementById('profList');
 const profReviewEl = document.getElementById('profReview');
 
-function openProfile() { renderProfile(); showMatchList(); profileEl.classList.add('show'); }
-function closeProfile() { profileEl.classList.remove('show'); }
+function openProfile() { renderProfile(); showMatchList(); profileEl.classList.add('show'); updateAmbient(); }
+function closeProfile() { profileEl.classList.remove('show'); updateAmbient(); }
 function showMatchList() { profListEl.style.display = ''; profReviewEl.classList.remove('show'); }
 function showReview() { profListEl.style.display = 'none'; profReviewEl.classList.add('show'); }
 
@@ -1586,6 +1623,7 @@ function sync() {
     ui.bannerText.textContent = text;
     ui.banner.classList.add('show');
   }
+  updateAmbient();
 }
 
 // Boot: a #g=… link means a friend just sent us a position — load it and play.

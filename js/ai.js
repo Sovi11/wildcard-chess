@@ -537,8 +537,8 @@
     { id: 1, name: 'Beginner', depth: 1, K: 4,  movetime: 250,  jitter: 130, blunder: 0.30, blurb: 'Sees one move ahead. Hangs pieces freely.' },
     { id: 2, name: 'Casual',   depth: 2, K: 6,  movetime: 600,  jitter: 70,  blunder: 0.12, blurb: 'Spots simple captures and threats.' },
     { id: 3, name: 'Medium',   depth: 3, K: 10, movetime: 1200, jitter: 25,  blunder: 0.03, blurb: 'Plans ahead and uses board wildcards with purpose.' },
-    { id: 4, name: 'Strong',   depth: 4, K: 12, movetime: 2000, jitter: 0,   blunder: 0,    blurb: 'Punishes mistakes. Real terrain tactics.' },
-    { id: 5, name: 'Brutal',   depth: 6, K: 16, movetime: 3500, jitter: 0,   blunder: 0,    blurb: 'Deepest search the clock allows.' },
+    { id: 4, name: 'Strong',   depth: 4, K: 12, movetime: 1200, jitter: 0,   blunder: 0,    blurb: 'Punishes mistakes. Real terrain tactics.' },
+    { id: 5, name: 'Brutal',   depth: 6, K: 16, movetime: 1400, jitter: 0,   blunder: 0,    blurb: 'Deepest search the clock allows.' },
   ];
   const levelById = (id) => LEVELS.find(l => l.id === +id) || LEVELS[2];
 
