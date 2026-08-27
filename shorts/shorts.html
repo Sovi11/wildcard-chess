@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Hollow Chess — shorts stage</title>
+<style>
+  :root { --bg:#14161b; --lt:#e9e3d6; --dk:#6f7d92; --accent:#e7c14a; --ink:#e9e9e4; --muted:#969aa1; --danger:#e05656; --ok:#57c974; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1080px; height:1920px; overflow:hidden; background:var(--bg);
+    font-family:'Segoe UI', Arial, sans-serif; }
+  #stage { position:relative; width:1080px; height:1920px; }
+
+  .cap {
+    position:absolute; left:60px; right:60px; text-align:center; z-index:5;
+    text-shadow:0 4px 24px rgba(10,11,14,.9), 0 0 8px rgba(10,11,14,.8);
+    font-weight:900; color:var(--ink); line-height:1.04; letter-spacing:.01em;
+    opacity:0; transform:scale(.92); transition:opacity .38s ease, transform .38s cubic-bezier(.2,1.6,.4,1);
+  }
+  .cap.show { opacity:1; transform:scale(1); }
+  .cap.top { top:170px; font-size:104px; }
+  .cap.sub { top:420px; font-size:56px; color:var(--muted); font-weight:700; }
+  .cap.bottom { bottom:150px; font-size:72px; }
+  .cap .gold { color:var(--accent); }
+  .cap .red { color:var(--danger); }
+  .cap .green { color:var(--ok); }
+
+  #cheese { position:absolute; left:0; right:0; top:44%; text-align:center; font-size:420px;
+    opacity:0; transform:scale(.6) rotate(-8deg); transition:opacity .4s, transform .5s cubic-bezier(.2,1.7,.4,1); }
+  #cheese.show { opacity:1; transform:scale(1) rotate(0); }
+
+  #boardWrap { position:absolute; left:50px; top:560px; width:980px; height:980px;
+    opacity:0; transition:opacity .5s; z-index:1; }
+  #boardWrap.show { opacity:1; }
+  #boardWrap.quake { animation:quake .4s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes quake {
+    10%,90% { transform:translate(-4px,0); } 20%,80% { transform:translate(7px,3px); }
+    30%,50%,70% { transform:translate(-10px,-4px); } 40%,60% { transform:translate(10px,4px); }
+  }
+  #board { width:100%; height:100%; display:block; }
+
+  .pc { pointer-events:none; }
+  .pc.w { color:#f2ead8; }
+  .pc.b { color:#23252c; }
+  .pc.w * { stroke:#26282e; stroke-width:1.1; }
+  .pc.b * { stroke:#cfd2d8; stroke-width:.8; }
+
+  #counter { position:absolute; top:340px; left:0; right:0; text-align:center; z-index:5;
+    font-size:64px; font-weight:900; color:var(--accent); opacity:0; font-variant-numeric:tabular-nums; }
+  #counter.show { opacity:1; }
+
+  /* end card */
+  #endcard { position:absolute; inset:0; background:var(--bg); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:44px; opacity:0; transition:opacity .6s; }
+  #endcard.show { opacity:1; }
+  #endcard .mark { width:360px; height:360px; }
+  #endcard .wm { font-size:130px; font-weight:900; line-height:.85; text-align:center; color:var(--ink); }
+  #endcard .wm .l2 { color:var(--accent); }
+  #endcard .tag { font-size:44px; color:var(--muted); font-weight:600; }
+  #endcard .url { font-size:64px; color:var(--accent); font-weight:900; letter-spacing:.04em; }
+  #endcard .free { font-size:40px; color:var(--ink); opacity:.8; font-weight:700; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="cheese">🧀</div>
+  <div id="capTop" class="cap top"></div>
+  <div id="capSub" class="cap sub"></div>
+  <div id="capBottom" class="cap bottom"></div>
+  <div id="counter"></div>
+  <div id="boardWrap"><svg id="board" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div id="endcard">
+    <div class="mark">
+      <svg viewBox="0 -0.75 3.6 4.35" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(0.3 0.3)">
+          <rect x="0" y="0" width="1" height="1" fill="#e9e3d6" rx="0.06"/><rect x="1" y="0" width="1" height="1" fill="#6f7d92" rx="0.06"/><rect x="2" y="0" width="1" height="1" fill="#e9e3d6" rx="0.06"/>
+          <rect x="0" y="1" width="1" height="1" fill="#6f7d92" rx="0.06"/>
+          <rect x="1.09" y="1.09" width="0.82" height="0.82" fill="none" stroke="#e7c14a" stroke-width="0.055" stroke-dasharray="0.16 0.11" rx="0.08"/>
+          <rect x="2" y="1" width="1" height="1" fill="#e9e3d6" rx="0.06"/>
+          <rect x="0" y="2" width="1" height="1" fill="#e9e3d6" rx="0.06"/><rect x="1" y="2" width="1" height="1" fill="#6f7d92" rx="0.06"/><rect x="2" y="2" width="1" height="1" fill="#6f7d92" rx="0.06"/>
+          <g transform="translate(1.62 -0.62)">
+            <rect x="0" y="0" width="1" height="1" fill="#e7c14a" rx="0.06"/>
+            <g transform="translate(0.06 0.04) scale(0.0196)">
+              <path fill="#14161b" d="M14 38 c0 -7 3 -10.5 8.4 -13.7 c-4 1 -7.6 .2 -9 -3.4 c-.6 -1.6 -.3 -3.2 .8 -4.4 l-2.6 2.9 l-2 -2.4 c1 -5.4 5.6 -9.4 11.4 -10.2 c.4 -1.9 2.2 -3 4 -2.2 c2.2 .9 1.9 3.1 1.1 3.9 c4.7 1.2 8.2 5.4 9 11 c.6 4.2 .9 8.7 1 13 .04 1.8 .1 3.5 .1 5.5 z"/>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="wm">HOLLOW<br/><span class="l2">CHESS</span></div>
+    <div class="tag">the board itself is fair game</div>
+    <div class="url">hollowchess.com</div>
+    <div class="free">free · in your browser · no download</div>
+  </div>
+</div>
+
+<script src="../js/engine.js?v=26"></script>
+<script src="../js/pieces.js?v=26"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const boardEl = $('board');
+  const wrap = $('boardWrap');
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const key = (c, r) => c + ',' + r;
+
+  let game = new Game();
+  // overlays: {kind:'beam', pts:[[c,r],[c,r]]}, {kind:'flash', c,r,color}
+  let overlays = [];
+  // lifted: {c,r,dx,dy,alpha} — a square drawn floating above the board
+  let lifted = null;
+  let holdView = null; // freeze the viewBox during flight animations
+
+  function view() {
+    const b = game.bounds();
+    return { minC: b.minC, maxC: b.maxC, minR: b.minR, maxR: b.maxR };
+  }
+
+  function render() {
+    const v = holdView || view();
+    const cols = v.maxC - v.minC + 1, rows = v.maxR - v.minR + 1;
+    const M = 0.12;
+    boardEl.setAttribute('viewBox', `${-M} ${-M} ${cols + 2 * M} ${rows + 2 * M}`);
+    const X = (c) => c - v.minC, Y = (r) => v.maxR - r;
+    let svg = pieceDefs('classic');
+    for (const k of game.cells) {
+      const [c, r] = k.split(',').map(Number);
+      const light = (((c + r) % 2) + 2) % 2 === 1;
+      svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" fill="${light ? '#e9e3d6' : '#6f7d92'}"/>`;
+    }
+    for (const o of overlays) {
+      if (o.kind === 'flash') {
+        svg += `<rect x="${X(o.c) + .04}" y="${Y(o.r) + .04}" width=".92" height=".92" rx=".1" fill="none" stroke="${o.color}" stroke-width=".08"><animate attributeName="opacity" values="1;.25;1" dur="0.7s" repeatCount="indefinite"/></rect>`;
+      }
+    }
+    for (const [k, p] of game.board) {
+      const [c, r] = k.split(',').map(Number);
+      svg += `<use href="#pc-classic-${p.type}" x="${X(c)}" y="${Y(r)}" width="1" height="1" class="pc ${p.color === 'white' ? 'w' : 'b'}"/>`;
+    }
+    for (const o of overlays) {
+      if (o.kind === 'beam') {
+        const [a, b] = o.pts;
+        svg += `<line x1="${X(a[0]) + .5}" y1="${Y(a[1]) + .5}" x2="${X(b[0]) + .5}" y2="${Y(b[1]) + .5}" stroke="#e7c14a" stroke-width=".14" stroke-linecap="round" opacity=".92"/>`;
+      }
+    }
+    if (lifted) {
+      const light = (((lifted.c + lifted.r) % 2) + 2) % 2 === 1;
+      svg += `<g opacity="${lifted.alpha}" transform="translate(${lifted.dx} ${lifted.dy})">
+        <rect x="${X(lifted.c) + .03}" y="${Y(lifted.r) + .03}" width=".94" height=".94" rx=".05" fill="#0a0b0e" opacity=".45"/>
+        <rect x="${X(lifted.c)}" y="${Y(lifted.r) - .12}" width="1" height="1" rx=".05" fill="${light ? '#e9e3d6' : '#6f7d92'}" stroke="#e7c14a" stroke-width=".05"/>
+      </g>`;
+    }
+    boardEl.innerHTML = svg;
+  }
+
+  // Animate a legal square move: lift at (fc,fr), fly to (tc,tr), settle + quake.
+  async function flySquare(fc, fr, tc, tr, ms) {
+    ms = ms || 900;
+    const pre = view();
+    const post = { minC: Math.min(pre.minC, tc), maxC: Math.max(pre.maxC, tc), minR: Math.min(pre.minR, tr), maxR: Math.max(pre.maxR, tr) };
+    holdView = post;
+    const ok = game.wildcardMoveCell(fc, fr, tc, tr);
+    if (!ok) { holdView = null; render(); return false; }
+    // draw the flight: source hole exists already; animate ghost from src to dst
+    const t0 = performance.now();
+    await new Promise((done) => {
+      let finished = false;
+      const step = (now) => {
+        if (finished) return;
+        const t = Math.min(1, (now - t0) / ms);
+        const e = t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;    // easeInOut
+        lifted = { c: fc, r: fr, dx: (tc - fc) * e, dy: (fr - tr) * e, alpha: 1 };
+        render();
+        if (t >= 1) { finished = true; clearInterval(tick); done(); }
+        else requestAnimationFrame(step);
+      };
+      // rAF is suspended in hidden tabs; this timer guarantees completion anywhere
+      const tick = setInterval(() => step(performance.now()), 50);
+      requestAnimationFrame(step);
+    });
+    lifted = null; holdView = null;
+    wrap.classList.remove('quake'); void wrap.offsetWidth; wrap.classList.add('quake');
+    render();
+    return true;
+  }
+
+  function cap(id, html, ms) {
+    const el = $(id);
+    el.innerHTML = html;
+    el.classList.add('show');
+    if (ms) setTimeout(() => el.classList.remove('show'), ms);
+  }
+  function hideCaps() { ['capTop', 'capSub', 'capBottom'].forEach((i) => $(i).classList.remove('show')); }
+
+  async function endCard(holdMs) {
+    hideCaps(); $('counter').classList.remove('show');
+    wrap.classList.remove('show');
+    $('endcard').classList.add('show');
+    await sleep(holdMs || 4500);
+    window.SCENE_DONE = true;
+  }
+
+  // ---------------- scene: cheese ----------------
+  async function sceneCheese() {
+    await sleep(400);
+    $('cheese').classList.add('show');
+    cap('capTop', 'YOUR CHEESE<br/>HAS HOLES.');
+    await sleep(2700);
+    $('cheese').classList.remove('show');
+    hideCaps();
+    await sleep(400);
+    cap('capTop', 'DOES YOUR <span class="gold">CHESS</span>?');
+    wrap.classList.add('show'); render();
+    await sleep(2000);
+    // tear out squares: real legal square-moves, e3->attach edges
+    const moves = [[4, 3, 8, 4], [3, 4, -1, 3], [5, 4, 4, 8], [2, 2, 8, 2], [5, 2, -1, 6]];
+    // make every ply a board turn for the demo
+    game.rules = { cadence: 1, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
+    game.turn = 'white';
+    for (const [a, b, c, d] of moves) {
+      await flySquare(a, b, c, d, 750);
+      game.turn = 'white';           // demo: keep the same side tearing
+      await sleep(280);
+    }
+    cap('capBottom', 'holes <span class="red">block</span> bishops.<br/>squares <span class="gold">move</span>. the board is a weapon.');
+    await sleep(3400);
+    await endCard(4800);
+  }
+
+  // ---------------- scene: escape ----------------
+  function setupMatePosition() {
+    game = new Game();
+    game.board.clear();
+    game._put(3, 3, 'queen', 'white', true);
+    game._put(6, 0, 'rook', 'white', true);
+    game._put(0, 6, 'rook', 'white', true);
+    game._put(1, 0, 'king', 'white', true);
+    game._put(7, 7, 'king', 'black', true);
+    game._put(0, 3, 'pawn', 'black', true);
+    game.turn = 'black';
+    game.moveCount = { white: 1, black: 0 };   // ply 2: Black's board turn
+    game.epTarget = null;
+    game._evaluate();
+  }
+  async function sceneEscape() {
+    setupMatePosition();
+    overlays = [
+      { kind: 'beam', pts: [[3, 3], [7, 7]] },
+      { kind: 'flash', c: 7, r: 7, color: '#e05656' },
+    ];
+    wrap.classList.add('show'); render();
+    await sleep(500);
+    cap('capTop', '<span class="red">CHECKMATE.</span>');
+    await sleep(2200);
+    cap('capSub', 'king trapped. line unblockable.<br/>…right?');
+    await sleep(2600);
+    hideCaps();
+    cap('capTop', 'WATCH THIS.');
+    await sleep(1300);
+    // sever the diagonal: lift f6 (5,5) and drop it at a9 (0,8)
+    overlays = [{ kind: 'flash', c: 7, r: 7, color: '#e05656' }];
+    await flySquare(5, 5, 0, 8, 1100);
+    overlays = [
+      { kind: 'beam', pts: [[3, 3], [4, 4]] },
+      { kind: 'flash', c: 7, r: 7, color: '#57c974' },
+    ];
+    render();
+    hideCaps();
+    cap('capTop', 'HE MOVED<br/>THE <span class="gold">SQUARE</span>.');
+    cap('capBottom', 'check line: <span class="green">severed</span>.<br/><span class="green">NOT MATE.</span>');
+    await sleep(3800);
+    hideCaps();
+    cap('capTop', 'chess, but the<br/><span class="gold">board itself</span><br/>is fair game.');
+    await sleep(2800);
+    await endCard(4800);
+  }
+
+  // ---------------- scene: morph ----------------
+  function mulberry(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  async function sceneMorph() {
+    game.rules = { cadence: 1, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
+    wrap.classList.add('show'); render();
+    cap('capTop', 'THIS IS A<br/>CHESS BOARD.');
+    await sleep(2400);
+    hideCaps();
+    cap('capTop', 'FOR NOW.');
+    await sleep(1400);
+    hideCaps();
+    $('counter').classList.add('show');
+    const rand = mulberry(42);
+    let applied = 0;
+    let delay = 620;
+    while (applied < 34) {
+      // pick a random empty source square and a random attach target — engine validates
+      const empties = [...game.cells].filter((k) => !game.board.has(k));
+      const src = empties[Math.floor(rand() * empties.length)].split(',').map(Number);
+      const targets = [...game._attachTargetsExcluding(key(src[0], src[1]))];
+      if (!targets.length) continue;
+      const dst = targets[Math.floor(rand() * targets.length)].split(',').map(Number);
+      const ok = await flySquare(src[0], src[1], dst[0], dst[1], Math.max(160, delay * .8));
+      if (!ok) continue;
+      game.turn = rand() < .5 ? 'white' : 'black';
+      applied++;
+      $('counter').textContent = 'board move ' + applied;
+      delay = Math.max(90, delay * 0.87);
+      await sleep(delay * .5);
+    }
+    await sleep(600);
+    cap('capTop', 'STILL A<br/><span class="gold">LEGAL</span> POSITION.');
+    cap('capBottom', 'every move: validated by the engine.<br/>holes block sliders. knights jump.');
+    await sleep(3600);
+    await endCard(4800);
+  }
+
+  const scene = new URLSearchParams(location.search).get('scene') || 'cheese';
+  window.SCENE_DONE = false;
+  ({ cheese: sceneCheese, escape: sceneEscape, morph: sceneMorph }[scene] || sceneCheese)()
+    .catch((e) => { console.error(e); window.SCENE_DONE = true; });
+})();
+</script>
+</body>
+</html>

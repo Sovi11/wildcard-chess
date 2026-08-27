@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Hollow Chess — brand stage</title>
+<style>
+  :root {
+    --bg: #14161b; --panel: #1d2027; --lt: #e9e3d6; --dk: #6f7d92;
+    --accent: #e7c14a; --ink: #e9e9e4; --muted: #969aa1;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #333; font-family: 'Segoe UI', Arial, sans-serif; }
+  .asset { position: relative; overflow: hidden; margin: 20px; }
+
+  /* ---------- shared mark: 3x3 board with a hole + gold knight ---------- */
+  .mark svg { display: block; width: 100%; height: 100%; }
+
+  /* ---------- 1024 square logo ---------- */
+  #logo-1024 { width: 1024px; height: 1024px; background: var(--bg); border-radius: 180px; }
+  #logo-1024 .mark { position: absolute; inset: 172px; }
+
+  /* transparent version for overlays */
+  #logo-flat { width: 1024px; height: 1024px; background: transparent; }
+  #logo-flat .mark { position: absolute; inset: 112px; }
+
+  /* ---------- wordmark ---------- */
+  .wordmark { display: flex; flex-direction: column; line-height: .82; letter-spacing: .04em; font-weight: 900; }
+  .wordmark .l1 { color: var(--ink); display: flex; align-items: center; }
+  .wordmark .l2 { color: var(--accent); }
+  .wordmark .o-hole {
+    display: inline-block; border: .045em dashed var(--accent); border-radius: .06em;
+    width: .62em; height: .62em; margin: 0 .045em; position: relative; top: -0.06em;
+    background: transparent;
+  }
+  #wordmark-wide { width: 2000px; height: 560px; background: var(--bg); display: flex; align-items: center; gap: 70px; padding: 0 90px; }
+  #wordmark-wide .mark { width: 360px; height: 360px; flex: none; }
+  #wordmark-wide .wordmark { font-size: 218px; }
+  #wordmark-wide .tag { color: var(--muted); font-size: 44px; font-weight: 600; letter-spacing: .02em; margin-top: 26px; }
+
+  /* ---------- YouTube banner 2560x1440 (safe zone 1546x423 centered) ---------- */
+  #banner-yt { width: 2560px; height: 1440px; background: var(--bg); }
+  #banner-yt .bigboard { position: absolute; inset: 0; opacity: .16; }
+  #banner-yt .safe { position: absolute; left: 507px; top: 508.5px; width: 1546px; height: 423px;
+    display: flex; align-items: center; justify-content: center; gap: 56px; }
+  #banner-yt .mark { width: 300px; height: 300px; flex: none; }
+  #banner-yt .wordmark { font-size: 148px; }
+  #banner-yt .tag { color: var(--ink); opacity: .75; font-size: 34px; font-weight: 600; margin-top: 20px; }
+  #banner-yt .url { position: absolute; left: 0; right: 0; bottom: -74px; text-align: center; color: var(--accent); font-size: 40px; font-weight: 800; letter-spacing: .06em; }
+
+  /* ---------- generic social banner 1500x500 ---------- */
+  #banner-social { width: 1500px; height: 500px; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; gap: 48px; }
+  #banner-social .bigboard { position: absolute; inset: 0; opacity: .14; }
+  #banner-social .mark { width: 280px; height: 280px; flex: none; position: relative; }
+  #banner-social .wordmark { font-size: 132px; position: relative; }
+  #banner-social .tag { color: var(--muted); font-size: 30px; font-weight: 600; margin-top: 18px; }
+</style>
+</head>
+<body>
+
+<template id="markTpl">
+  <svg viewBox="0 -0.75 3.6 4.35" xmlns="http://www.w3.org/2000/svg">
+    <!-- 3x3 board fragment, one square torn out at (1,1) -->
+    <g transform="translate(0.3 0.3)">
+      <rect x="0" y="0" width="1" height="1" fill="#e9e3d6" rx="0.06"/>
+      <rect x="1" y="0" width="1" height="1" fill="#6f7d92" rx="0.06"/>
+      <rect x="2" y="0" width="1" height="1" fill="#e9e3d6" rx="0.06"/>
+      <rect x="0" y="1" width="1" height="1" fill="#6f7d92" rx="0.06"/>
+      <!-- (1,1): the hole — dashed ghost of the square that left -->
+      <rect x="1.09" y="1.09" width="0.82" height="0.82" fill="none" stroke="#e7c14a"
+            stroke-width="0.055" stroke-dasharray="0.16 0.11" rx="0.08"/>
+      <rect x="2" y="1" width="1" height="1" fill="#e9e3d6" rx="0.06"/>
+      <rect x="0" y="2" width="1" height="1" fill="#e9e3d6" rx="0.06"/>
+      <rect x="1" y="2" width="1" height="1" fill="#6f7d92" rx="0.06"/>
+      <rect x="2" y="2" width="1" height="1" fill="#6f7d92" rx="0.06"/>
+      <!-- the gold knight, standing on the lifted square floating up-right -->
+      <g transform="translate(1.62 -0.62)">
+        <rect x="0" y="0" width="1" height="1" fill="#e7c14a" rx="0.06" opacity="0.98"/>
+        <g transform="translate(0.06 0.04) scale(0.0196)" >
+          <path fill="#14161b" d="M14 38 c0 -7 3 -10.5 8.4 -13.7 c-4 1 -7.6 .2 -9 -3.4 c-.6 -1.6 -.3 -3.2 .8 -4.4 l-2.6 2.9 l-2 -2.4 c1 -5.4 5.6 -9.4 11.4 -10.2 c.4 -1.9 2.2 -3 4 -2.2 c2.2 .9 1.9 3.1 1.1 3.9 c4.7 1.2 8.2 5.4 9 11 c.6 4.2 .9 8.7 1 13 .04 1.8 .1 3.5 .1 5.5 z"/>
+        </g>
+      </g>
+    </g>
+  </svg>
+</template>
+
+<template id="bigboardTpl">
+  <svg viewBox="0 0 16 9" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"></svg>
+</template>
+
+<div id="logo-1024" class="asset"><div class="mark"></div></div>
+<div id="logo-flat" class="asset"><div class="mark"></div></div>
+
+<div id="wordmark-wide" class="asset">
+  <div class="mark"></div>
+  <div>
+    <div class="wordmark">
+      <span class="l1">H&#8202;O&#8202;L&#8202;L&#8202;<span class="o-hole"></span>&#8202;W</span>
+      <span class="l2">CHESS</span>
+    </div>
+    <div class="tag">the board itself is fair game</div>
+  </div>
+</div>
+
+<div id="banner-yt" class="asset">
+  <div class="bigboard"></div>
+  <div class="safe">
+    <div class="mark"></div>
+    <div style="position:relative">
+      <div class="wordmark">
+        <span class="l1">H&#8202;O&#8202;L&#8202;L&#8202;<span class="o-hole"></span>&#8202;W</span>
+        <span class="l2">CHESS</span>
+      </div>
+      <div class="tag">chess where the board itself is fair game</div>
+      <div class="url">hollowchess.com</div>
+    </div>
+  </div>
+</div>
+
+<div id="banner-social" class="asset">
+  <div class="bigboard"></div>
+  <div class="mark"></div>
+  <div>
+    <div class="wordmark">
+      <span class="l1">H&#8202;O&#8202;L&#8202;L&#8202;<span class="o-hole"></span>&#8202;W</span>
+      <span class="l2">CHESS</span>
+    </div>
+    <div class="tag">hollowchess.com — free in your browser</div>
+  </div>
+</div>
+
+<script>
+  // stamp the shared mark into every .mark container
+  const tpl = document.getElementById('markTpl');
+  document.querySelectorAll('.mark').forEach(el => el.appendChild(tpl.content.cloneNode(true)));
+
+  // faded giant board with holes for the banner backgrounds
+  document.querySelectorAll('.bigboard').forEach(el => {
+    const svg = document.getElementById('bigboardTpl').content.cloneNode(true).firstElementChild;
+    let cells = '';
+    const holes = new Set(['3,2','9,5','12,1','6,7','14,6','1,6','10,3']);
+    for (let x = -1; x < 18; x++) for (let y = 0; y < 10; y++) {
+      if (holes.has(x + ',' + y)) continue;
+      const light = ((x + y) % 2 + 2) % 2 === 1;
+      cells += `<rect x="${x}" y="${y}" width="1" height="1" fill="${light ? '#e9e3d6' : '#6f7d92'}"/>`;
+    }
+    svg.innerHTML = cells;
+    el.appendChild(svg);
+  });
+  window.STAGE_READY = true;
+</script>
+</body>
+</html>

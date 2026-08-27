@@ -120,16 +120,24 @@ action steers style without corrupting the search:
 
 | Player | Seed | Style |
 |---|---|---|
-| Pawnsy | 300 | Beginner, barely notices the board can change |
-| Rusty Rook | 420 | Overvalues rooks, trades anything for one |
-| The Vandal | 520 | Tears squares out; expect holes everywhere |
-| Sir Castle | 600 | Defensive, hoards floor around his king |
-| Gambit | 700 | Aggressive, sacrifices happily |
-| Chaos Kate | 760 | Terrain shuffler, wildly inconsistent |
-| The Architect | 820 | Grows new ground and marches pawns across it |
-| Iron Ivan | 1020 | Pure chess, ignores the wildcards entirely |
-| Grandmaster Vex | 1200 | Strong all-round |
-| THE VOID | 1450 | Terrain master; you run out of floor first |
+| Tumbleweed Tim | 250 | Basically random; every piece is worth a pawn to him |
+| Backwards Bella | 400 | Eval installed upside-down; walls in her own king |
+| Pawnsy | 550 | Beginner, barely notices the board can change |
+| Rusty Rook | 750 | Overvalues rooks, trades anything for one |
+| The Vandal | 900 | Tears squares out; expect holes everywhere |
+| Sir Castle | 1000 | Defensive, hoards floor around his king |
+| Gambit | 1100 | Aggressive, sacrifices happily |
+| Chaos Kate | 1250 | Terrain shuffler, wildly inconsistent |
+| The Architect | 1350 | Grows new ground and marches pawns across it |
+| Iron Ivan | 1500 | Pure chess, ignores the wildcards entirely |
+| Grandmaster Vex | 1750 | Strong all-round |
+| THE VOID | 2050 | Terrain master; you run out of floor first |
+
+Seeds are calibrated against **real Stockfish 18** (`node harness/stockfish-match.js`,
+UCI_LimitStrength, wildcards disabled so it's plain chess): our depth-1 search is
+sub-1000, depth-3 lands ≈1050–1150, and depth-5 swept SF-1320 6–0 and beat SF-2000
+3.5–2.5 (implied ≈2050). Personality handicaps (blunder rates, cooked evals) place
+each bot below its raw search strength.
 
 ## Appearance
 

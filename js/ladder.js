@@ -8,7 +8,7 @@
   'use strict';
 
   const KEY = 'wildcardchess.profile.v1';
-  const BOTKEY = 'wildcardchess.pool.v1';
+  const BOTKEY = 'wildcardchess.pool.v2';   // v2: seeds recalibrated vs real Stockfish
   const START_ELO = 500;
 
   const base = () => (window.WCAI ? window.WCAI.DEFAULT_WEIGHTS : {});
@@ -22,7 +22,7 @@
     // worth a pawn; eval installed upside-down) plus huge jitter/blunder means
     // shit openings, hung queens, and a soft landing for new players.
     {
-      id: 'tumble', name: 'Tumbleweed Tim', elo: 140, emoji: '🌾',
+      id: 'tumble', name: 'Tumbleweed Tim', elo: 250, emoji: '🌾',
       blurb: 'Might play the best move. Entirely by accident.',
       style: 'Feral · basically random',
       search: { depth: 1, K: 3, movetime: 200, jitter: 9999, blunder: 0.50 },
@@ -30,7 +30,7 @@
       weights: { material: mat(100, 100, 100, 100, 100), mobility: 0, kingRing: 0, pawnAdv: 0, tempo: 0, kindBias: { ac: -200, rc: -200, mc: -200 } },
     },
     {
-      id: 'bella', name: 'Backwards Bella', elo: 220, emoji: '🙃',
+      id: 'bella', name: 'Backwards Bella', elo: 400, emoji: '🙃',
       blurb: 'Her evaluation is installed upside-down. Develops nothing, walls in her own king, marches the rook pawns.',
       style: 'Confused · cooked eval',
       search: { depth: 1, K: 3, movetime: 250, jitter: 170, blunder: 0.32 },
@@ -38,70 +38,70 @@
       weights: { mobility: -4, kingRing: -10, pawnAdv: -6, tempo: 0, kindBias: { ac: -120, rc: -120, mc: -120 } },
     },
     {
-      id: 'pawnsy', name: 'Pawnsy', elo: 300, emoji: '🌱',
+      id: 'pawnsy', name: 'Pawnsy', elo: 550, emoji: '🌱',
       blurb: 'Plays the first thing that looks fine. Barely notices the board can change.',
       style: 'Beginner · ignores wildcards',
       search: { depth: 1, K: 4, movetime: 300, jitter: 140, blunder: 0.34 },
       weights: { kindBias: { ac: -160, rc: -160, mc: -160 } },
     },
     {
-      id: 'rusty', name: 'Rusty Rook', elo: 420, emoji: '🗼',
+      id: 'rusty', name: 'Rusty Rook', elo: 750, emoji: '🗼',
       blurb: 'Convinced rooks win games. Will trade almost anything for one.',
       style: 'Novice · rook-obsessed',
       search: { depth: 2, K: 6, movetime: 500, jitter: 100, blunder: 0.25 },
       weights: { material: mat(100, 260, 270, 640, 900), kindBias: { ac: -80, rc: -80, mc: -80 } },
     },
     {
-      id: 'vandal', name: 'The Vandal', elo: 520, emoji: '🕳️',
+      id: 'vandal', name: 'The Vandal', elo: 900, emoji: '🕳️',
       blurb: 'Would rather delete the board than play on it. Expect holes everywhere.',
       style: 'Chaotic · tears out squares',
       search: { depth: 2, K: 12, movetime: 700, jitter: 60, blunder: 0.15 },
       weights: { kindBias: { ac: -40, rc: 190, mc: 40 } },
     },
     {
-      id: 'castle', name: 'Sir Castle', elo: 600, emoji: '🛡️',
+      id: 'castle', name: 'Sir Castle', elo: 1000, emoji: '🛡️',
       blurb: 'Builds a fortress and dares you to crack it. Hoards floor around his king.',
       style: 'Defensive · king safety',
       search: { depth: 2, K: 10, movetime: 800, jitter: 40, blunder: 0.10 },
       weights: { kingRing: 22, mobility: 2, kindBias: { ac: 70, rc: -60, mc: -20 } },
     },
     {
-      id: 'gambit', name: 'Gambit', elo: 700, emoji: '⚔️',
+      id: 'gambit', name: 'Gambit', elo: 1100, emoji: '⚔️',
       blurb: 'Attacks first and counts material later. Sacrifices happily.',
       style: 'Aggressive · loves complications',
       search: { depth: 2, K: 10, movetime: 900, jitter: 45, blunder: 0.05 },
       weights: { material: mat(110, 350, 360, 470, 980), kingRing: -4, mobility: 6, kindBias: { ac: -30, rc: 60, mc: 30 } },
     },
     {
-      id: 'architect', name: 'The Architect', elo: 820, emoji: '🧱',
+      id: 'architect', name: 'The Architect', elo: 1350, emoji: '🧱',
       blurb: 'Grows new ground and marches pawns across it. Plays the map, not the pieces.',
       style: 'Builder · adds squares',
       search: { depth: 3, K: 12, movetime: 1100, jitter: 20, blunder: 0.03 },
       weights: { pawnAdv: 11, kindBias: { ac: 170, rc: -40, mc: 50 } },
     },
     {
-      id: 'kate', name: 'Chaos Kate', elo: 760, emoji: '🎲',
+      id: 'kate', name: 'Chaos Kate', elo: 1250, emoji: '🎲',
       blurb: 'Reshapes the terrain every chance she gets. Wildly inconsistent, occasionally brilliant.',
       style: 'Unpredictable · terrain shuffler',
       search: { depth: 3, K: 14, movetime: 1100, jitter: 90, blunder: 0.07 },
       weights: { kindBias: { ac: 90, rc: 90, mc: 160 } },
     },
     {
-      id: 'ivan', name: 'Iron Ivan', elo: 1020, emoji: '⚙️',
+      id: 'ivan', name: 'Iron Ivan', elo: 1500, emoji: '⚙️',
       blurb: 'Pure chess, no theatrics. Punishes loose pieces and ignores the wildcards.',
       style: 'Solid · classical',
       search: { depth: 3, K: 8, movetime: 1100, jitter: 0, blunder: 0 },
       weights: { mobility: 4, kindBias: { ac: -120, rc: -120, mc: -120 } },
     },
     {
-      id: 'vex', name: 'Grandmaster Vex', elo: 1200, emoji: '👑',
+      id: 'vex', name: 'Grandmaster Vex', elo: 1750, emoji: '👑',
       blurb: 'Sees your plan two moves before you do. Uses the board when it actually helps.',
       style: 'Strong · all-round',
       search: { depth: 4, K: 12, movetime: 1200, jitter: 0, blunder: 0 },
       weights: {},
     },
     {
-      id: 'void', name: 'THE VOID', elo: 1450, emoji: '🕯️',
+      id: 'void', name: 'THE VOID', elo: 2050, emoji: '🕯️',
       blurb: 'Eats the board one square at a time. You will run out of floor before it runs out of ideas.',
       style: 'Brutal · terrain master',
       search: { depth: 5, K: 16, movetime: 1300, jitter: 0, blunder: 0 },
