@@ -50,19 +50,20 @@ async function recordScene(browser, scene) {
   });
   const page = await ctx.newPage();
   await page.goto(BASE + '/shorts/shorts.html?scene=' + scene);
-  await page.waitForFunction('window.SCENE_DONE === true', null, { timeout: 120000 });
+  await page.waitForFunction('window.SCENE_DONE === true', null, { timeout: 180000 });
+  const beats = await page.evaluate('window.SCENE_BEATS || []');
   await page.waitForTimeout(300);
   const video = page.video();
   await ctx.close();                       // flushes the webm
   const raw = await video.path();
-  const mp4 = path.join(SHORTS_OUT, scene + '.mp4');
-  // 30fps H.264 + faint synthesized room tone so platforms treat it as a real video
-  ffmpeg(['-i', raw, '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo',
-    '-shortest', '-r', '30', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '19',
-    '-c:a', 'aac', '-b:a', '64k', mp4]);
+  const mp4 = path.join(SHORTS_OUT, scene + '-video.mp4');
+  ffmpeg(['-i', raw, '-r', '30', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '19', '-an', mp4]);
   fs.unlinkSync(raw);
-  console.log('short:', scene + '.mp4');
+  fs.writeFileSync(path.join(SHORTS_OUT, scene + '.beats.json'), JSON.stringify(beats, null, 1));
+  console.log('short recorded:', scene, '(' + beats.length + ' beats)');
 }
+
+const SCENES = ['rook', 'escape', 'cheese', 'morph'];
 
 (async function main() {
   const what = process.argv[2] || 'all';
@@ -71,10 +72,11 @@ async function recordScene(browser, scene) {
   try {
     if (what === 'brand' || what === 'all') await renderBrand(browser);
     if (what === 'shorts' || what === 'all') {
-      for (const scene of ['cheese', 'escape', 'morph']) await recordScene(browser, scene);
+      const only = process.argv[3];
+      for (const scene of (only ? [only] : SCENES)) await recordScene(browser, scene);
     }
   } finally {
     await browser.close();
   }
-  console.log('done.');
+  console.log('done. now run: node harness/mix-audio.js');
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -1,0 +1,54 @@
+[
+ {
+  "t": 0,
+  "sync": true
+ },
+ {
+  "t": 0.767,
+  "vo": "CHECKMATE."
+ },
+ {
+  "t": 0.7671000000005588,
+  "sfx": "braam"
+ },
+ {
+  "t": 2.772600000000559,
+  "vo": "Or... is it?"
+ },
+ {
+  "t": 5.077400000000373,
+  "vo": "He moves... the FLOOR. ITSELF."
+ },
+ {
+  "t": 5.077400000000373,
+  "sfx": "whoosh"
+ },
+ {
+  "t": 5.982400000000372,
+  "sfx": "lift"
+ },
+ {
+  "t": 6.990100000000559,
+  "sfx": "hit"
+ },
+ {
+  "t": 7.696100000000559,
+  "vo": "The check line? GONE. NOT. MATE."
+ },
+ {
+  "t": 7.696100000000559,
+  "sfx": "braam"
+ },
+ {
+  "t": 12.705799999999813,
+  "sfx": "hit"
+ },
+ {
+  "t": 12.705799999999813,
+  "vo": "HOLLOW CHESS. Escape the inescapable. hollow chess dot com."
+ },
+ {
+  "t": 12.705799999999813,
+  "sfx": "braam"
+ }
+]

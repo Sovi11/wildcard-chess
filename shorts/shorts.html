@@ -9,65 +9,83 @@
   html,body { width:1080px; height:1920px; overflow:hidden; background:var(--bg);
     font-family:'Segoe UI', Arial, sans-serif; }
   #stage { position:relative; width:1080px; height:1920px; }
+  #stage.shake { animation:bigshake .45s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes bigshake {
+    10%,90% { transform:translate(-8px,2px) rotate(-.4deg); } 20%,80% { transform:translate(12px,-4px) rotate(.5deg); }
+    30%,50%,70% { transform:translate(-16px,6px) rotate(-.7deg); } 40%,60% { transform:translate(16px,-6px) rotate(.6deg); }
+  }
+
+  /* camera rig: the board rides on this */
+  #cam { position:absolute; inset:0; z-index:1; transform-origin:540px 1050px;
+    transition:transform .7s cubic-bezier(.22,1,.36,1); }
+  #cam.snap { transition:transform .14s cubic-bezier(.25,1.5,.4,1); }
 
   .cap {
-    position:absolute; left:60px; right:60px; text-align:center; z-index:5;
-    text-shadow:0 4px 24px rgba(10,11,14,.9), 0 0 8px rgba(10,11,14,.8);
-    font-weight:900; color:var(--ink); line-height:1.04; letter-spacing:.01em;
-    opacity:0; transform:scale(.92); transition:opacity .38s ease, transform .38s cubic-bezier(.2,1.6,.4,1);
+    position:absolute; left:40px; right:40px; text-align:center; z-index:6;
+    font-weight:900; color:var(--ink); line-height:.98; letter-spacing:-.01em;
+    text-shadow:0 6px 30px rgba(0,0,0,.95), 0 0 14px rgba(0,0,0,.85);
+    opacity:0;
   }
-  .cap.show { opacity:1; transform:scale(1); }
-  .cap.top { top:170px; font-size:104px; }
-  .cap.sub { top:420px; font-size:56px; color:var(--muted); font-weight:700; }
-  .cap.bottom { bottom:150px; font-size:72px; }
+  .cap.top { top:150px; font-size:150px; }
+  .cap.mid { top:44%; font-size:170px; }
+  .cap.bottom { bottom:130px; font-size:84px; }
   .cap .gold { color:var(--accent); }
   .cap .red { color:var(--danger); }
   .cap .green { color:var(--ok); }
-
-  #cheese { position:absolute; left:0; right:0; top:44%; text-align:center; font-size:420px;
-    opacity:0; transform:scale(.6) rotate(-8deg); transition:opacity .4s, transform .5s cubic-bezier(.2,1.7,.4,1); }
-  #cheese.show { opacity:1; transform:scale(1) rotate(0); }
-
-  #boardWrap { position:absolute; left:50px; top:560px; width:980px; height:980px;
-    opacity:0; transition:opacity .5s; z-index:1; }
-  #boardWrap.show { opacity:1; }
-  #boardWrap.quake { animation:quake .4s cubic-bezier(.36,.07,.19,.97); }
-  @keyframes quake {
-    10%,90% { transform:translate(-4px,0); } 20%,80% { transform:translate(7px,3px); }
-    30%,50%,70% { transform:translate(-10px,-4px); } 40%,60% { transform:translate(10px,4px); }
+  .cap.show { opacity:1; }
+  .cap.slam { animation:slamIn .38s cubic-bezier(.15,1.3,.3,1) forwards; }
+  @keyframes slamIn {
+    0% { transform:scale(3.4) rotate(-3deg); opacity:0; }
+    55% { transform:scale(.92) rotate(.6deg); opacity:1; }
+    75% { transform:scale(1.07) rotate(-.3deg); opacity:1; }
+    100% { transform:scale(1) rotate(0); opacity:1; }
   }
+
+  #flash { position:absolute; inset:0; z-index:9; pointer-events:none; background:#fff; opacity:0; }
+  #vignette { position:absolute; inset:0; z-index:4; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 46%, transparent 52%, rgba(0,0,0,.55) 100%); }
+
+  #boardWrap { position:absolute; left:50px; top:560px; width:980px; height:980px; opacity:0; transition:opacity .4s; }
+  #boardWrap.show { opacity:1; }
   #board { width:100%; height:100%; display:block; }
 
   .pc { pointer-events:none; }
-  .pc.w { color:#f2ead8; }
-  .pc.b { color:#23252c; }
+  .pc.w { color:#f2ead8; } .pc.b { color:#23252c; }
   .pc.w * { stroke:#26282e; stroke-width:1.1; }
   .pc.b * { stroke:#cfd2d8; stroke-width:.8; }
 
-  #counter { position:absolute; top:340px; left:0; right:0; text-align:center; z-index:5;
-    font-size:64px; font-weight:900; color:var(--accent); opacity:0; font-variant-numeric:tabular-nums; }
+  #cheese { position:absolute; left:0; right:0; top:42%; text-align:center; font-size:460px; z-index:5;
+    opacity:0; transform:scale(.5) rotate(-14deg); transition:opacity .25s, transform .3s cubic-bezier(.2,1.8,.4,1); }
+  #cheese.show { opacity:1; transform:scale(1) rotate(0); }
+
+  #counter { position:absolute; top:330px; left:0; right:0; text-align:center; z-index:6;
+    font-size:78px; font-weight:900; color:var(--accent); opacity:0; font-variant-numeric:tabular-nums;
+    text-shadow:0 4px 20px rgba(0,0,0,.9); }
   #counter.show { opacity:1; }
 
-  /* end card */
-  #endcard { position:absolute; inset:0; background:var(--bg); display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:44px; opacity:0; transition:opacity .6s; }
+  #endcard { position:absolute; inset:0; z-index:10; background:var(--bg); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:40px; opacity:0; transition:opacity .35s; }
   #endcard.show { opacity:1; }
-  #endcard .mark { width:360px; height:360px; }
-  #endcard .wm { font-size:130px; font-weight:900; line-height:.85; text-align:center; color:var(--ink); }
+  #endcard .mark { width:380px; height:440px; }
+  #endcard .wm { font-size:150px; font-weight:900; line-height:.85; text-align:center; color:var(--ink); }
   #endcard .wm .l2 { color:var(--accent); }
-  #endcard .tag { font-size:44px; color:var(--muted); font-weight:600; }
-  #endcard .url { font-size:64px; color:var(--accent); font-weight:900; letter-spacing:.04em; }
-  #endcard .free { font-size:40px; color:var(--ink); opacity:.8; font-weight:700; }
+  #endcard .tag { font-size:46px; color:var(--muted); font-weight:700; }
+  #endcard .url { font-size:74px; color:var(--accent); font-weight:900; letter-spacing:.03em; }
+  #endcard .free { font-size:42px; color:var(--ink); opacity:.85; font-weight:700; }
 </style>
 </head>
 <body>
 <div id="stage">
+  <div id="cam">
+    <div id="boardWrap"><svg id="board" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  </div>
+  <div id="vignette"></div>
   <div id="cheese">🧀</div>
   <div id="capTop" class="cap top"></div>
-  <div id="capSub" class="cap sub"></div>
+  <div id="capMid" class="cap mid"></div>
   <div id="capBottom" class="cap bottom"></div>
   <div id="counter"></div>
-  <div id="boardWrap"><svg id="board" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div id="flash"></div>
   <div id="endcard">
     <div class="mark">
       <svg viewBox="0 -0.75 3.6 4.35" xmlns="http://www.w3.org/2000/svg">
@@ -93,31 +111,35 @@
   </div>
 </div>
 
-<script src="../js/engine.js?v=26"></script>
-<script src="../js/pieces.js?v=26"></script>
+<script src="../js/engine.js?v=27"></script>
+<script src="../js/pieces.js?v=27"></script>
 <script>
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const boardEl = $('board');
-  const wrap = $('boardWrap');
+  const boardEl = $('board'), wrap = $('boardWrap'), cam = $('cam'), stage = $('stage');
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const key = (c, r) => c + ',' + r;
 
   let game = new Game();
-  // overlays: {kind:'beam', pts:[[c,r],[c,r]]}, {kind:'flash', c,r,color}
   let overlays = [];
-  // lifted: {c,r,dx,dy,alpha} — a square drawn floating above the board
   let lifted = null;
-  let holdView = null; // freeze the viewBox during flight animations
+  let flying = null;              // {type,color,fc,fr,tc,tr,e} piece mid-slide
+  let holdView = null;
+  let curView = null;             // view used by the last render (for cam targeting)
 
-  function view() {
-    const b = game.bounds();
-    return { minC: b.minC, maxC: b.maxC, minR: b.minR, maxR: b.maxR };
-  }
+  // ---- beat log for the audio mixer (times in seconds from scene start) ----
+  const beats = [];
+  let T0 = 0;
+  const now = () => (performance.now() - T0) / 1000;
+  const vo = (line) => beats.push({ t: now(), vo: line });
+  const sfx = (name) => beats.push({ t: now(), sfx: name });
+
+  function view() { const b = game.bounds(); return { minC: b.minC, maxC: b.maxC, minR: b.minR, maxR: b.maxR }; }
 
   function render() {
     const v = holdView || view();
+    curView = v;
     const cols = v.maxC - v.minC + 1, rows = v.maxR - v.minR + 1;
     const M = 0.12;
     boardEl.setAttribute('viewBox', `${-M} ${-M} ${cols + 2 * M} ${rows + 2 * M}`);
@@ -130,18 +152,24 @@
     }
     for (const o of overlays) {
       if (o.kind === 'flash') {
-        svg += `<rect x="${X(o.c) + .04}" y="${Y(o.r) + .04}" width=".92" height=".92" rx=".1" fill="none" stroke="${o.color}" stroke-width=".08"><animate attributeName="opacity" values="1;.25;1" dur="0.7s" repeatCount="indefinite"/></rect>`;
+        svg += `<rect x="${X(o.c) + .04}" y="${Y(o.r) + .04}" width=".92" height=".92" rx=".1" fill="none" stroke="${o.color}" stroke-width=".09"><animate attributeName="opacity" values="1;.2;1" dur="0.55s" repeatCount="indefinite"/></rect>`;
       }
     }
     for (const [k, p] of game.board) {
       const [c, r] = k.split(',').map(Number);
+      if (flying && c === flying.tc && r === flying.tr) continue;   // drawn as ghost below
       svg += `<use href="#pc-classic-${p.type}" x="${X(c)}" y="${Y(r)}" width="1" height="1" class="pc ${p.color === 'white' ? 'w' : 'b'}"/>`;
     }
     for (const o of overlays) {
       if (o.kind === 'beam') {
         const [a, b] = o.pts;
-        svg += `<line x1="${X(a[0]) + .5}" y1="${Y(a[1]) + .5}" x2="${X(b[0]) + .5}" y2="${Y(b[1]) + .5}" stroke="#e7c14a" stroke-width=".14" stroke-linecap="round" opacity=".92"/>`;
+        svg += `<line x1="${X(a[0]) + .5}" y1="${Y(a[1]) + .5}" x2="${X(b[0]) + .5}" y2="${Y(b[1]) + .5}" stroke="#e7c14a" stroke-width=".15" stroke-linecap="round" opacity=".92"/>`;
       }
+    }
+    if (flying) {
+      const fx = X(flying.fc) + (X(flying.tc) - X(flying.fc)) * flying.e;
+      const fy = Y(flying.fr) + (Y(flying.tr) - Y(flying.fr)) * flying.e;
+      svg += `<use href="#pc-classic-${flying.type}" x="${fx}" y="${fy}" width="1" height="1" class="pc ${flying.color === 'white' ? 'w' : 'b'}"/>`;
     }
     if (lifted) {
       const light = (((lifted.c + lifted.r) % 2) + 2) % 2 === 1;
@@ -153,81 +181,164 @@
     boardEl.innerHTML = svg;
   }
 
-  // Animate a legal square move: lift at (fc,fr), fly to (tc,tr), settle + quake.
+  // camera: focus square (c,r) of the CURRENT view at given zoom, with dutch tilt
+  function camTo(zoom, rot, focus, snap) {
+    cam.classList.toggle('snap', !!snap);
+    if (!focus) { cam.style.transform = `scale(${zoom}) rotate(${rot || 0}deg)`; return; }
+    const v = curView || view();
+    const cols = v.maxC - v.minC + 1, rows = v.maxR - v.minR + 1;
+    const M = 0.12, span = Math.max(cols, rows) + 2 * M;
+    const px = 980 / span;                                     // board px per square
+    const sx = 50 + (980 - (cols + 2 * M) * px) / 2 + (focus[0] - v.minC + .5 + M) * px;
+    const sy = 560 + (980 - (rows + 2 * M) * px) / 2 + (v.maxR - focus[1] + .5 + M) * px;
+    const dx = 540 - sx, dy = 1050 - sy;
+    cam.style.transform = `translate(${dx * zoom}px, ${dy * zoom}px) scale(${zoom}) rotate(${rot || 0}deg)`;
+  }
+  function camReset(snap) { cam.classList.toggle('snap', !!snap); cam.style.transform = 'none'; }
+
+  function flash(color, ms) {
+    const f = $('flash');
+    f.style.background = color || '#fff';
+    f.style.transition = 'none'; f.style.opacity = .95;
+    requestAnimationFrame(() => { f.style.transition = 'opacity ' + (ms || 320) + 'ms ease-out'; f.style.opacity = 0; });
+  }
+  function shake() { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); }
+  function hit() { flash('#ffffff', 240); shake(); sfx('hit'); }
+
+  function slam(id, html) {
+    const el = $(id);
+    el.innerHTML = html;
+    el.classList.remove('show', 'slam'); void el.offsetWidth;
+    el.classList.add('show', 'slam');
+    shake();
+  }
+  function cap(id, html) { const el = $(id); el.innerHTML = html; el.classList.remove('slam'); el.classList.add('show'); }
+  function hide(id) { $(id).classList.remove('show', 'slam'); }
+  function hideCaps() { ['capTop', 'capMid', 'capBottom'].forEach(hide); }
+
+  // animated frame loop that survives hidden tabs
+  function animate(ms, step) {
+    const t0 = performance.now();
+    return new Promise((done) => {
+      let finished = false;
+      const frame = (nowMs) => {
+        if (finished) return;
+        const t = Math.min(1, (nowMs - t0) / ms);
+        step(t);
+        if (t >= 1) { finished = true; clearInterval(tick); done(); }
+        else requestAnimationFrame(frame);
+      };
+      const tick = setInterval(() => frame(performance.now()), 50);
+      requestAnimationFrame(frame);
+    });
+  }
+  const easeInOut = (t) => (t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
+
   async function flySquare(fc, fr, tc, tr, ms) {
-    ms = ms || 900;
     const pre = view();
-    const post = { minC: Math.min(pre.minC, tc), maxC: Math.max(pre.maxC, tc), minR: Math.min(pre.minR, tr), maxR: Math.max(pre.maxR, tr) };
-    holdView = post;
+    holdView = { minC: Math.min(pre.minC, tc), maxC: Math.max(pre.maxC, tc), minR: Math.min(pre.minR, tr), maxR: Math.max(pre.maxR, tr) };
     const ok = game.wildcardMoveCell(fc, fr, tc, tr);
     if (!ok) { holdView = null; render(); return false; }
-    // draw the flight: source hole exists already; animate ghost from src to dst
-    const t0 = performance.now();
-    await new Promise((done) => {
-      let finished = false;
-      const step = (now) => {
-        if (finished) return;
-        const t = Math.min(1, (now - t0) / ms);
-        const e = t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;    // easeInOut
-        lifted = { c: fc, r: fr, dx: (tc - fc) * e, dy: (fr - tr) * e, alpha: 1 };
-        render();
-        if (t >= 1) { finished = true; clearInterval(tick); done(); }
-        else requestAnimationFrame(step);
-      };
-      // rAF is suspended in hidden tabs; this timer guarantees completion anywhere
-      const tick = setInterval(() => step(performance.now()), 50);
-      requestAnimationFrame(step);
+    sfx('lift');
+    await animate(ms || 800, (t) => {
+      const e = easeInOut(t);
+      lifted = { c: fc, r: fr, dx: (tc - fc) * e, dy: (fr - tr) * e, alpha: 1 };
+      render();
     });
     lifted = null; holdView = null;
-    wrap.classList.remove('quake'); void wrap.offsetWidth; wrap.classList.add('quake');
     render();
+    hit();
     return true;
   }
 
-  function cap(id, html, ms) {
-    const el = $(id);
-    el.innerHTML = html;
-    el.classList.add('show');
-    if (ms) setTimeout(() => el.classList.remove('show'), ms);
+  async function slidePiece(fc, fr, tc, tr, ms) {
+    const p = game.get(fc, fr);
+    if (!p || !game.makeMove(fc, fr, tc, tr)) return false;
+    const moved = game.get(tc, tr);
+    await animate(ms || 600, (t) => {
+      flying = { type: moved.type, color: moved.color, fc, fr, tc, tr, e: easeInOut(t) };
+      render();
+    });
+    flying = null; render();
+    return true;
   }
-  function hideCaps() { ['capTop', 'capSub', 'capBottom'].forEach((i) => $(i).classList.remove('show')); }
 
-  async function endCard(holdMs) {
+  async function endCard(holdMs, voLine) {
     hideCaps(); $('counter').classList.remove('show');
-    wrap.classList.remove('show');
+    hit();
     $('endcard').classList.add('show');
-    await sleep(holdMs || 4500);
+    if (voLine) vo(voLine);
+    sfx('braam');
+    await sleep(holdMs || 5200);
+    window.SCENE_BEATS = beats;
     window.SCENE_DONE = true;
   }
 
-  // ---------------- scene: cheese ----------------
-  async function sceneCheese() {
-    await sleep(400);
-    $('cheese').classList.add('show');
-    cap('capTop', 'YOUR CHEESE<br/>HAS HOLES.');
-    await sleep(2700);
-    $('cheese').classList.remove('show');
-    hideCaps();
-    await sleep(400);
-    cap('capTop', 'DOES YOUR <span class="gold">CHESS</span>?');
-    wrap.classList.add('show'); render();
-    await sleep(2000);
-    // tear out squares: real legal square-moves, e3->attach edges
-    const moves = [[4, 3, 8, 4], [3, 4, -1, 3], [5, 4, 4, 8], [2, 2, 8, 2], [5, 2, -1, 6]];
-    // make every ply a board turn for the demo
-    game.rules = { cadence: 1, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
-    game.turn = 'white';
-    for (const [a, b, c, d] of moves) {
-      await flySquare(a, b, c, d, 750);
-      game.turn = 'white';           // demo: keep the same side tearing
-      await sleep(280);
-    }
-    cap('capBottom', 'holes <span class="red">block</span> bishops.<br/>squares <span class="gold">move</span>. the board is a weapon.');
-    await sleep(3400);
-    await endCard(4800);
+  async function startScene() {
+    // Sync mark for the audio mixer: a SOLID white hold, well after load so the
+    // recorder is definitely compositing by then. T0 = the moment it appears.
+    await sleep(450);
+    const f = $('flash');
+    T0 = performance.now();
+    beats.push({ t: 0, sync: true });
+    f.style.transition = 'none'; f.style.background = '#fff'; f.style.opacity = 1;
+    await sleep(180);
+    f.style.opacity = 0;
+    await sleep(120);
   }
 
-  // ---------------- scene: escape ----------------
+  // =================== ROOK ===================
+  async function sceneRook() {
+    game.board.clear();
+    game._put(0, 0, 'rook', 'white', true);
+    game._put(1, 0, 'king', 'white', true);
+    game._put(7, 7, 'king', 'black', true);
+    game._put(4, 6, 'pawn', 'black', true);
+    game.turn = 'white';
+    game.rules = { cadence: 1, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
+    game._evaluate();
+    await startScene();
+    wrap.classList.add('show'); render();
+    camTo(2.7, -7, [0, 0]);
+    await sleep(500);
+    slam('capMid', 'THE <span class="gold">ROOK</span>.');
+    vo('THE ROOK.'); sfx('braam');
+    await sleep(2100);
+    hide('capMid');
+    cap('capTop', 'eight squares.<br/>one straight line.');
+    vo('Eight squares. One straight line. NOTHING stops it.');
+    camTo(1.5, -3, [0, 3]);
+    await sleep(2600);
+    hideCaps();
+    // the charge: a1 -> a5, camera chasing
+    sfx('whoosh');
+    const chase = slidePiece(0, 0, 0, 4, 900);
+    camTo(1.9, 2, [0, 4]);
+    await chase;
+    hit();
+    await sleep(350);
+    slam('capTop', '<span class="red">UNTIL NOW.</span>');
+    vo('Until now.'); sfx('braam');
+    // tear a6 out of the file, right in its face
+    game.turn = 'black';
+    await flySquare(0, 5, 4, 8, 950);
+    game.turn = 'white';
+    camTo(2.4, -5, [0, 5], true);
+    overlays = [{ kind: 'flash', c: 0, r: 4, color: '#e05656' }];
+    render();
+    await sleep(900);
+    hideCaps();
+    slam('capMid', 'THE FILE<br/>IS <span class="red">GONE</span>.');
+    vo('Even the rook... stops... at the VOID.');
+    await sleep(3100);
+    hideCaps();
+    camReset();
+    slam('capTop', 'the board is<br/>the <span class="gold">weapon</span>.');
+    await sleep(2200);
+    await endCard(5200, 'HOLLOW CHESS. The board is the weapon. Play free at hollow chess dot com.');
+  }
+
+  // =================== ESCAPE ===================
   function setupMatePosition() {
     game = new Game();
     game.board.clear();
@@ -238,44 +349,78 @@
     game._put(7, 7, 'king', 'black', true);
     game._put(0, 3, 'pawn', 'black', true);
     game.turn = 'black';
-    game.moveCount = { white: 1, black: 0 };   // ply 2: Black's board turn
+    game.moveCount = { white: 1, black: 0 };
     game.epTarget = null;
     game._evaluate();
   }
   async function sceneEscape() {
     setupMatePosition();
-    overlays = [
-      { kind: 'beam', pts: [[3, 3], [7, 7]] },
-      { kind: 'flash', c: 7, r: 7, color: '#e05656' },
-    ];
+    await startScene();
+    overlays = [{ kind: 'beam', pts: [[3, 3], [7, 7]] }, { kind: 'flash', c: 7, r: 7, color: '#e05656' }];
     wrap.classList.add('show'); render();
-    await sleep(500);
-    cap('capTop', '<span class="red">CHECKMATE.</span>');
-    await sleep(2200);
-    cap('capSub', 'king trapped. line unblockable.<br/>…right?');
-    await sleep(2600);
+    camTo(2.2, 5, [7, 7]);
+    await sleep(450);
+    slam('capMid', '<span class="red">CHECKMATE.</span>');
+    vo('CHECKMATE.'); sfx('braam');
+    await sleep(2000);
+    hide('capMid');
+    cap('capTop', '…or <span class="gold">is it</span>?');
+    vo('Or... is it?');
+    camTo(1.25, -2, [5, 5]);
+    await sleep(2300);
     hideCaps();
-    cap('capTop', 'WATCH THIS.');
-    await sleep(1300);
-    // sever the diagonal: lift f6 (5,5) and drop it at a9 (0,8)
+    slam('capTop', 'HE MOVES<br/>THE <span class="gold">FLOOR</span>.');
+    vo('He moves... the FLOOR. ITSELF.'); sfx('whoosh');
+    await sleep(900);
     overlays = [{ kind: 'flash', c: 7, r: 7, color: '#e05656' }];
-    await flySquare(5, 5, 0, 8, 1100);
-    overlays = [
-      { kind: 'beam', pts: [[3, 3], [4, 4]] },
-      { kind: 'flash', c: 7, r: 7, color: '#57c974' },
-    ];
+    await flySquare(5, 5, 0, 8, 1000);
+    overlays = [{ kind: 'beam', pts: [[3, 3], [4, 4]] }, { kind: 'flash', c: 7, r: 7, color: '#57c974' }];
     render();
+    camTo(1.8, -4, [5, 5], true);
+    await sleep(700);
     hideCaps();
-    cap('capTop', 'HE MOVED<br/>THE <span class="gold">SQUARE</span>.');
-    cap('capBottom', 'check line: <span class="green">severed</span>.<br/><span class="green">NOT MATE.</span>');
-    await sleep(3800);
-    hideCaps();
-    cap('capTop', 'chess, but the<br/><span class="gold">board itself</span><br/>is fair game.');
-    await sleep(2800);
-    await endCard(4800);
+    slam('capMid', '<span class="green">NOT. MATE.</span>');
+    vo('The check line? GONE. NOT. MATE.'); sfx('braam');
+    await sleep(2900);
+    hide('capMid');
+    camReset();
+    slam('capTop', 'escape the<br/><span class="gold">inescapable</span>.');
+    await sleep(2100);
+    await endCard(5200, 'HOLLOW CHESS. Escape the inescapable. hollow chess dot com.');
   }
 
-  // ---------------- scene: morph ----------------
+  // =================== CHEESE ===================
+  async function sceneCheese() {
+    await startScene();
+    await sleep(300);
+    $('cheese').classList.add('show');
+    slam('capTop', 'YOUR CHEESE<br/>HAS <span class="gold">HOLES</span>.');
+    vo('Your cheese has holes!'); sfx('hit');
+    await sleep(2300);
+    $('cheese').classList.remove('show');
+    hideCaps();
+    slam('capTop', 'DOES YOUR<br/><span class="gold">CHESS</span>?');
+    vo('But does your CHESS?'); sfx('braam');
+    wrap.classList.add('show'); render();
+    camTo(1.15, -2);
+    await sleep(1900);
+    game.rules = { cadence: 1, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
+    game.turn = 'white';
+    vo('RIP OUT THE SQUARES. Break the board. Trap the pieces.');
+    const moves = [[4, 3, 8, 4], [3, 4, -1, 3], [5, 4, 4, 8], [2, 2, 8, 2], [5, 2, -1, 6]];
+    for (const [a, b, c, d] of moves) {
+      await flySquare(a, b, c, d, 620);
+      game.turn = 'white';
+      await sleep(160);
+    }
+    camTo(1.35, 3, [3, 3], true);
+    slam('capBottom', 'holes <span class="red">block</span> bishops.<br/>the board is a <span class="gold">weapon</span>.');
+    await sleep(3000);
+    camReset();
+    await endCard(5200, 'HOLLOW CHESS. Free. In your browser.');
+  }
+
+  // =================== MORPH ===================
   function mulberry(a) {
     return function () {
       a |= 0; a = (a + 0x6D2B79F5) | 0;
@@ -286,43 +431,49 @@
   }
   async function sceneMorph() {
     game.rules = { cadence: 1, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
+    await startScene();
     wrap.classList.add('show'); render();
-    cap('capTop', 'THIS IS A<br/>CHESS BOARD.');
-    await sleep(2400);
+    slam('capTop', 'THIS IS A<br/>CHESS BOARD.');
+    vo('This... is a chess board.');
+    await sleep(2300);
     hideCaps();
-    cap('capTop', 'FOR NOW.');
-    await sleep(1400);
-    hideCaps();
+    slam('capMid', '<span class="red">WAS.</span>');
+    vo('WAS. A chess board.'); sfx('braam');
+    await sleep(1500);
+    hide('capMid');
     $('counter').classList.add('show');
     const rand = mulberry(42);
-    let applied = 0;
-    let delay = 620;
-    while (applied < 34) {
-      // pick a random empty source square and a random attach target — engine validates
+    let applied = 0, delay = 520;
+    while (applied < 30) {
       const empties = [...game.cells].filter((k) => !game.board.has(k));
       const src = empties[Math.floor(rand() * empties.length)].split(',').map(Number);
       const targets = [...game._attachTargetsExcluding(key(src[0], src[1]))];
       if (!targets.length) continue;
       const dst = targets[Math.floor(rand() * targets.length)].split(',').map(Number);
-      const ok = await flySquare(src[0], src[1], dst[0], dst[1], Math.max(160, delay * .8));
+      const ok = await flySquare(src[0], src[1], dst[0], dst[1], Math.max(140, delay * .8));
       if (!ok) continue;
       game.turn = rand() < .5 ? 'white' : 'black';
       applied++;
       $('counter').textContent = 'board move ' + applied;
-      delay = Math.max(90, delay * 0.87);
-      await sleep(delay * .5);
+      if (applied === 10) vo('Ten board moves.');
+      if (applied === 22) { vo('Where does it END?'); camTo(1.2, -3); }
+      delay = Math.max(80, delay * 0.86);
+      await sleep(delay * .4);
     }
-    await sleep(600);
-    cap('capTop', 'STILL A<br/><span class="gold">LEGAL</span> POSITION.');
-    cap('capBottom', 'every move: validated by the engine.<br/>holes block sliders. knights jump.');
-    await sleep(3600);
-    await endCard(4800);
+    await sleep(400);
+    $('counter').classList.remove('show');
+    camReset();
+    slam('capTop', 'STILL <span class="gold">100%</span><br/>LEGAL.');
+    vo('Still. One hundred percent. LEGAL.'); sfx('braam');
+    cap('capBottom', 'every move validated by the engine.');
+    await sleep(3200);
+    await endCard(5200, 'HOLLOW CHESS. hollow chess dot com.');
   }
 
-  const scene = new URLSearchParams(location.search).get('scene') || 'cheese';
+  const scene = new URLSearchParams(location.search).get('scene') || 'rook';
   window.SCENE_DONE = false;
-  ({ cheese: sceneCheese, escape: sceneEscape, morph: sceneMorph }[scene] || sceneCheese)()
-    .catch((e) => { console.error(e); window.SCENE_DONE = true; });
+  ({ rook: sceneRook, escape: sceneEscape, cheese: sceneCheese, morph: sceneMorph }[scene] || sceneRook)()
+    .catch((e) => { console.error(e); window.SCENE_BEATS = beats; window.SCENE_DONE = true; });
 })();
 </script>
 </body>
