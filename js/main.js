@@ -1044,14 +1044,13 @@ function syncProfileUp() {
 const authModalEl = document.getElementById('authModal');
 const googleBtn = document.getElementById('googleBtn');
 const emailInput = document.getElementById('emailInput');
-const emailSend = document.getElementById('emailSend');
 const authMsgEl = document.getElementById('authMsg');
 
 function openAuthModal() {
   if (!authModalEl) return;
   if (googleBtn) googleBtn.style.display = WCCLOUD.hasGoogle() ? '' : 'none';
-  if (authMsgEl) authMsgEl.textContent = "We'll email you a one-tap sign-in link. No password.";
-  if (emailSend) { emailSend.disabled = false; emailSend.textContent = 'Send link'; }
+  if (authMsgEl) authMsgEl.textContent = 'Use a password, or get a one-tap link by email instead.';
+  authBusy(false);
   authModalEl.classList.add('show');
   if (!WCCLOUD.hasGoogle() && emailInput) setTimeout(function () { emailInput.focus(); }, 60);
 }
@@ -1068,25 +1067,89 @@ if (googleBtn) googleBtn.addEventListener('click', async function () {
   await WCCLOUD.signIn();               // navigates away to Google
 });
 
-async function sendEmailLink() {
-  const email = (emailInput.value || '').trim();
-  if (!email || email.indexOf('@') < 1) {
-    authMsgEl.textContent = 'That does not look like an email address.';
-    emailInput.focus();
+const passInput = document.getElementById('passInput');
+const signInBtn = document.getElementById('signInBtn');
+const signUpBtn = document.getElementById('signUpBtn');
+const magicBtn = document.getElementById('magicBtn');
+const forgotBtn = document.getElementById('forgotBtn');
+
+const authEmail = () => (emailInput ? (emailInput.value || '').trim() : '');
+const authPass = () => (passInput ? (passInput.value || '') : '');
+function authBusy(on, label) {
+  [signInBtn, signUpBtn].forEach(function (b) { if (b) b.disabled = on; });
+  if (on && label && authMsgEl) authMsgEl.textContent = label;
+}
+function badEmail() {
+  if (authEmail().indexOf('@') > 0) return false;
+  authMsgEl.textContent = 'That does not look like an email address.';
+  emailInput.focus();
+  return true;
+}
+
+// Password sign-in. Supabase does the hashing and session handling; the
+// password is sent straight to it and never stored on our side.
+async function doPasswordSignIn() {
+  if (badEmail()) return;
+  if (authPass().length < 6) {
+    authMsgEl.textContent = 'Enter your password.'; passInput.focus(); return;
+  }
+  authBusy(true, 'Signing in\u2026');
+  const r = await WCCLOUD.signInWithPassword(authEmail(), authPass());
+  authBusy(false);
+  if (r.ok) { if (passInput) passInput.value = ''; return; }        // onChange closes the modal
+  authMsgEl.textContent = /invalid login/i.test(r.error)
+    ? 'Wrong email or password. New here? Hit "Create account".'
+    : 'Could not sign in: ' + r.error;
+}
+
+async function doSignUp() {
+  if (badEmail()) return;
+  if (authPass().length < 8) {
+    authMsgEl.textContent = 'Pick a password of at least 8 characters.';
+    passInput.focus(); return;
+  }
+  authBusy(true, 'Creating your account\u2026');
+  const r = await WCCLOUD.signUpWithPassword(authEmail(), authPass());
+  authBusy(false);
+  if (!r.ok) {
+    authMsgEl.textContent = /already registered/i.test(r.error)
+      ? 'That email already has an account \u2014 sign in instead.'
+      : 'Could not create the account: ' + r.error;
     return;
   }
-  emailSend.disabled = true; emailSend.textContent = 'Sending\u2026';
-  const r = await WCCLOUD.signInWithEmail(email);
-  if (r.ok) {
-    authMsgEl.textContent = 'Sent. Open the link in your email \u2014 it signs you in right here.';
-    emailSend.textContent = 'Sent \u2713';
-  } else {
-    authMsgEl.textContent = 'Could not send: ' + r.error;
-    emailSend.disabled = false; emailSend.textContent = 'Send link';
-  }
+  if (passInput) passInput.value = '';
+  authMsgEl.textContent = r.needsConfirm
+    ? 'Account created. Check your email to confirm it, then sign in.'
+    : 'Account created \u2014 you are signed in.';
 }
-if (emailSend) emailSend.addEventListener('click', sendEmailLink);
-if (emailInput) emailInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendEmailLink(); });
+
+async function sendEmailLink() {
+  if (badEmail()) return;
+  authBusy(true, 'Sending\u2026');
+  const r = await WCCLOUD.signInWithEmail(authEmail());
+  authBusy(false);
+  authMsgEl.textContent = r.ok
+    ? 'Sent. Open the link in your email \u2014 it signs you in right here.'
+    : 'Could not send: ' + r.error;
+}
+
+async function doForgot() {
+  if (badEmail()) return;
+  authBusy(true, 'Sending reset link\u2026');
+  const r = await WCCLOUD.resetPassword(authEmail());
+  authBusy(false);
+  authMsgEl.textContent = r.ok
+    ? 'Password reset sent \u2014 check your email.'
+    : 'Could not send: ' + r.error;
+}
+
+if (signInBtn) signInBtn.addEventListener('click', doPasswordSignIn);
+if (signUpBtn) signUpBtn.addEventListener('click', doSignUp);
+if (magicBtn) magicBtn.addEventListener('click', sendEmailLink);
+if (forgotBtn) forgotBtn.addEventListener('click', doForgot);
+const onEnter = function (e) { if (e.key === 'Enter') doPasswordSignIn(); };
+if (emailInput) emailInput.addEventListener('keydown', onEnter);
+if (passInput) passInput.addEventListener('keydown', onEnter);
 const closeAuthBtn = document.getElementById('closeAuth');
 if (closeAuthBtn) closeAuthBtn.addEventListener('click', closeAuthModal);
 if (authModalEl) authModalEl.addEventListener('click', function (e) { if (e.target === authModalEl) closeAuthModal(); });

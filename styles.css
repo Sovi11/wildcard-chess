@@ -678,3 +678,15 @@ select.ob-field { cursor: pointer; }
 
 /* menu-music opt-in in the appearance panel */
 .appear-chk { display: flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 13px; color: var(--muted); cursor: pointer; }
+
+/* email + password sign-in */
+.auth-field { width: 100%; margin: 4px 0 12px; }
+.auth-actions { display: flex; gap: 10px; margin-top: 4px; }
+.auth-actions .auth-send { flex: 1; }
+.auth-actions .ghost-btn { flex: 1; }
+.auth-alt { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.linky {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; color: var(--muted); text-decoration: underline;
+}
+.linky:hover { color: var(--accent); }

@@ -25,7 +25,7 @@
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=35" />
+  <link rel="stylesheet" href="styles.css?v=36" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -221,12 +221,23 @@
       </button>
       <div id="emailBlock">
         <label class="auth-label" for="emailInput">Email</label>
-        <div class="auth-row">
-          <input id="emailInput" class="share-input auth-email" type="email" autocomplete="email"
-                 placeholder="you@example.com" />
-          <button id="emailSend" class="share-btn auth-send">Send link</button>
+        <input id="emailInput" class="share-input auth-field" type="email" autocomplete="email"
+               placeholder="you@example.com" />
+
+        <label class="auth-label" for="passInput">Password</label>
+        <input id="passInput" class="share-input auth-field" type="password"
+               autocomplete="current-password" placeholder="at least 8 characters" />
+
+        <div class="auth-actions">
+          <button id="signInBtn" class="share-btn auth-send">Sign in</button>
+          <button id="signUpBtn" class="ghost-btn">Create account</button>
         </div>
-        <p id="authMsg" class="auth-msg">We'll email you a one-tap sign-in link. No password.</p>
+
+        <p id="authMsg" class="auth-msg">Use a password, or get a one-tap link by email instead.</p>
+        <div class="auth-alt">
+          <button id="magicBtn" class="linky">Email me a sign-in link instead</button>
+          <button id="forgotBtn" class="linky">Forgot password?</button>
+        </div>
       </div>
       <div class="lobby-foot">
         <span></span>
@@ -398,21 +409,21 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=35"></script>
-  <script src="js/cloud.js?v=35"></script>
-  <script src="js/engine.js?v=35"></script>
-  <script src="js/pieces.js?v=35"></script>
-  <script src="js/themes.js?v=35"></script>
-  <script src="js/sound.js?v=35"></script>
-  <script src="js/tutorial.js?v=35"></script>
-  <script src="js/ai.js?v=35"></script>
-  <script src="js/ladder.js?v=35"></script>
+  <script src="js/config.js?v=36"></script>
+  <script src="js/cloud.js?v=36"></script>
+  <script src="js/engine.js?v=36"></script>
+  <script src="js/pieces.js?v=36"></script>
+  <script src="js/themes.js?v=36"></script>
+  <script src="js/sound.js?v=36"></script>
+  <script src="js/tutorial.js?v=36"></script>
+  <script src="js/ai.js?v=36"></script>
+  <script src="js/ladder.js?v=36"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=35"></script>
-  <script src="js/net.js?v=35"></script>
-  <script src="js/share.js?v=35"></script>
-  <script src="js/analysis.js?v=35"></script>
-  <script src="js/main.js?v=35"></script>
+  <script src="js/matchmaking.js?v=36"></script>
+  <script src="js/net.js?v=36"></script>
+  <script src="js/share.js?v=36"></script>
+  <script src="js/analysis.js?v=36"></script>
+  <script src="js/main.js?v=36"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

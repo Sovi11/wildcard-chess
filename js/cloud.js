@@ -76,6 +76,37 @@
     return { ok: true };
   }
 
+  // Email + password. Supabase hashes and stores the password server-side; it
+  // never touches our code beyond this call.
+  async function signInWithPassword(email, password) {
+    if (!client) return { ok: false, error: 'cloud off' };
+    const { error } = await client.auth.signInWithPassword({
+      email: String(email || '').trim(), password: String(password || ''),
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  }
+
+  async function signUpWithPassword(email, password) {
+    if (!client) return { ok: false, error: 'cloud off' };
+    const { data, error } = await client.auth.signUp({
+      email: String(email || '').trim(), password: String(password || ''),
+      options: { emailRedirectTo: location.origin + location.pathname },
+    });
+    if (error) return { ok: false, error: error.message };
+    // With "confirm email" on, a session is null until they click the link.
+    return { ok: true, needsConfirm: !(data && data.session) };
+  }
+
+  async function resetPassword(email) {
+    if (!client) return { ok: false, error: 'cloud off' };
+    const { error } = await client.auth.resetPasswordForEmail(String(email || '').trim(), {
+      redirectTo: location.origin + location.pathname,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  }
+
   async function signIn() {
     if (!client) return false;
     // Land back on this exact page; Supabase recovers the session from the URL.
@@ -175,6 +206,7 @@
 
   window.WCCLOUD = {
     configured, enabled, init, signIn, signInWithEmail, hasGoogle, providerList,
+    signInWithPassword, signUpWithPassword, resetPassword,
     signOut, currentUser, onChange,
     loadProfile, saveProfile, leaderboard,
     joinQueue, leaveQueue, findWaiting,
