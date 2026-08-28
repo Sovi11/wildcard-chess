@@ -115,7 +115,16 @@
       wins: p.wins | 0, losses: p.losses | 0, draws: p.draws | 0,
       updated_at: new Date().toISOString(),
     };
-    const { error } = await client.from('profiles').upsert(row);
+    // onboarding extras — the table may predate these columns, so on a schema
+    // error retry with the base row rather than losing the rating sync
+    if (p.dob) row.dob = p.dob;
+    if (p.chessLevel) row.chess_level = p.chessLevel;
+    let { error } = await client.from('profiles').upsert(row);
+    if (error && /column|schema/i.test(error.message || '')) {
+      delete row.dob; delete row.chess_level;
+      ({ error } = await client.from('profiles').upsert(row));
+      if (!error) console.warn('[cloud] profiles table is missing dob/chess_level — run the ALTER TABLE in SUPABASE_SETUP.md');
+    }
     if (error) { console.warn('[cloud] saveProfile:', error.message); return false; }
     return true;
   }

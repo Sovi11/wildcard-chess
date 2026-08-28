@@ -122,3 +122,14 @@ second browser, sign in with a different Google account, and queue on both.
 
 **Everything still local** — `js/config.js` is empty, or the Supabase library failed to
 load. The console says which.
+
+## 5. Onboarding columns (added later)
+
+The post-sign-in onboarding stores date of birth and chess familiarity. Run this
+once in the SQL editor (Dashboard → SQL) — until then the client silently skips
+these fields and everything else keeps working:
+
+```sql
+alter table profiles add column if not exists dob date;
+alter table profiles add column if not exists chess_level text;
+```

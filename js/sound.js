@@ -158,11 +158,11 @@
     amb = null;
     clearInterval(dying.timer);
     try {
-      dying.master.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 1.2);  // fade out
+      dying.master.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 0.45); // fast fade
       setTimeout(function () {
         dying.oscs.forEach(function (o) { try { o.stop(); } catch (e) {} });
         try { dying.master.disconnect(); } catch (e) {}
-      }, 1400);
+      }, 600);
     } catch (e) {}
   }
 

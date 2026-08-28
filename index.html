@@ -25,7 +25,7 @@
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=28" />
+  <link rel="stylesheet" href="styles.css?v=29" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -234,6 +234,36 @@
     </div>
   </div>
 
+  <div id="onboard" class="lobby auth-modal">
+    <div class="lobby-inner auth-inner">
+      <h2 class="lobby-title">Welcome to Hollow Chess</h2>
+      <p class="lobby-sub">Thirty seconds of setup and we can match you properly.</p>
+
+      <label class="auth-label" for="obName">Display name</label>
+      <input id="obName" class="share-input ob-field" maxlength="16" spellcheck="false"
+             placeholder="what opponents will see" />
+
+      <label class="auth-label" for="obDob">Date of birth</label>
+      <input id="obDob" class="share-input ob-field" type="date" />
+
+      <label class="auth-label" for="obLevel">How's your chess?</label>
+      <select id="obLevel" class="share-input ob-field">
+        <option value="" selected disabled>Pick one…</option>
+        <option value="new">New to chess — I know how the pieces move, mostly</option>
+        <option value="casual">Casual — I play sometimes, online or with friends</option>
+        <option value="club">Serious — chess.com/lichess regular or club player</option>
+        <option value="rated">Rated — tournament / FIDE-rated player</option>
+      </select>
+      <p class="auth-msg" id="obMsg">Your answer sets your starting rating, so your first
+        matches are fair fights — it moves from there.</p>
+
+      <div class="lobby-foot">
+        <button id="obSkip" class="ghost-btn">Later</button>
+        <button id="obSave" class="share-btn auth-send">Let's play</button>
+      </div>
+    </div>
+  </div>
+
   <div class="app">
     <header>
       <h1>Hollow&nbsp;Chess <span class="sub">the board itself is fair game</span></h1>
@@ -364,21 +394,21 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=28"></script>
-  <script src="js/cloud.js?v=28"></script>
-  <script src="js/engine.js?v=28"></script>
-  <script src="js/pieces.js?v=28"></script>
-  <script src="js/themes.js?v=28"></script>
-  <script src="js/sound.js?v=28"></script>
-  <script src="js/tutorial.js?v=28"></script>
-  <script src="js/ai.js?v=28"></script>
-  <script src="js/ladder.js?v=28"></script>
+  <script src="js/config.js?v=29"></script>
+  <script src="js/cloud.js?v=29"></script>
+  <script src="js/engine.js?v=29"></script>
+  <script src="js/pieces.js?v=29"></script>
+  <script src="js/themes.js?v=29"></script>
+  <script src="js/sound.js?v=29"></script>
+  <script src="js/tutorial.js?v=29"></script>
+  <script src="js/ai.js?v=29"></script>
+  <script src="js/ladder.js?v=29"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=28"></script>
-  <script src="js/net.js?v=28"></script>
-  <script src="js/share.js?v=28"></script>
-  <script src="js/analysis.js?v=28"></script>
-  <script src="js/main.js?v=28"></script>
+  <script src="js/matchmaking.js?v=29"></script>
+  <script src="js/net.js?v=29"></script>
+  <script src="js/share.js?v=29"></script>
+  <script src="js/analysis.js?v=29"></script>
+  <script src="js/main.js?v=29"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

@@ -895,14 +895,16 @@ function paintAuth() {
 // seed it from whatever was already on this device.
 async function syncProfileDown() {
   if (!WCCLOUD.enabled() || !WCCLOUD.currentUser()) return;
+  let remote = null;
   try {
-    const remote = await WCCLOUD.loadProfile();
+    remote = await WCCLOUD.loadProfile();
     const local = WCLADDER.getProfile();
     if (remote) {
       WCLADDER.saveProfile({
         name: remote.name || local.name,
         elo: remote.elo,
         wins: remote.wins, losses: remote.losses, draws: remote.draws,
+        dob: remote.dob || local.dob, chessLevel: remote.chess_level || local.chessLevel,
         log: local.log || [],
       });
     } else {
@@ -910,7 +912,57 @@ async function syncProfileDown() {
     }
   } catch (e) { console.warn('[cloud] sync down failed:', e && e.message); }
   paintProfile(); renderLeaderboard();
+  maybeOnboard(remote);
 }
+
+// ---- post-sign-in onboarding ----------------------------------------------
+// Once per account: display name, date of birth, and chess familiarity. The
+// familiarity answer seeds the starting rating (the ladder is calibrated, so
+// "rated player" starting at 500 would stomp the gutter bots for ten games).
+const OB_SEED = { new: 350, casual: 500, club: 800, rated: 1100 };
+const obEl = document.getElementById('onboard');
+const OBSKIP = 'wildcardchess.onboard.v1';
+
+function maybeOnboard(remote) {
+  if (!obEl || !WCCLOUD.currentUser()) return;
+  const local = WCLADDER.getProfile();
+  const done = (remote && remote.chess_level) || local.chessLevel;
+  let skipped = false;
+  try { skipped = localStorage.getItem(OBSKIP) === '1'; } catch (e) {}
+  if (done || skipped) return;
+  const dobEl = document.getElementById('obDob');
+  if (dobEl && !dobEl.max) dobEl.max = new Date().toISOString().slice(0, 10);
+  const nameEl = document.getElementById('obName');
+  if (nameEl && !nameEl.value) {
+    const u = WCCLOUD.currentUser();
+    nameEl.value = (local.name && local.name !== 'You') ? local.name
+      : ((u.email || '').split('@')[0] || '').slice(0, 16);
+  }
+  obEl.classList.add('show');
+}
+
+bindClick('obSkip', function () {
+  try { localStorage.setItem(OBSKIP, '1'); } catch (e) {}
+  obEl.classList.remove('show');
+});
+bindClick('obSave', function () {
+  const p = WCLADDER.getProfile();
+  const name = (document.getElementById('obName').value || '').trim().slice(0, 16);
+  const dob = document.getElementById('obDob').value || '';
+  const level = document.getElementById('obLevel').value || '';
+  if (!level) { document.getElementById('obMsg').textContent = 'Pick your chess level — it sets your starting rating.'; return; }
+  if (name) p.name = name;
+  if (dob) p.dob = dob;
+  p.chessLevel = level;
+  // seed the rating only for fresh accounts — never clobber earned Elo
+  if ((p.wins + p.losses + p.draws) === 0 && OB_SEED[level]) p.elo = OB_SEED[level];
+  WCLADDER.saveProfile(p);
+  try { localStorage.setItem(OBSKIP, '1'); } catch (e) {}
+  obEl.classList.remove('show');
+  paintProfile(); renderLeaderboard();
+  syncProfileUp();
+});
+if (obEl) obEl.addEventListener('click', function (e) { if (e.target === obEl) obEl.classList.remove('show'); });
 
 function syncProfileUp() {
   if (!WCCLOUD.enabled() || !WCCLOUD.currentUser()) return;
@@ -1216,6 +1268,7 @@ function resetGameState() {
   aiGen++;                   // invalidate any bot move still sitting on a timer
   aiThinking = false;
   endSounded = false;
+  WCSOUND.setAmbient(false); // a game is starting: the menu tune stops NOW
   game.reset();
   game.endReason = null;
   paintNetCard();
