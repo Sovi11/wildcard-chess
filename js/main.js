@@ -555,9 +555,11 @@ let resultRecorded = false;  // guard: score each game exactly once
 const youNameEl = document.getElementById('youName');
 if (youNameEl) youNameEl.addEventListener('change', function () {
   const p = WCLADDER.getProfile();
-  p.name = (youNameEl.value || '').trim().slice(0, 16) || 'You';
+  const typed = (youNameEl.value || '').trim().slice(0, 16);
+  p.name = typed || 'You';
+  p.nameChosen = !!typed;               // a name the human actually picked — never auto-scrub it
   WCLADDER.saveProfile(p);
-  youNameEl.value = p.name;
+  youNameEl.value = p.name === 'You' ? '' : p.name;
   renderLeaderboard();
   syncProfileUp();
 });
@@ -983,9 +985,30 @@ function scrubIdentityName() {
   if (full) leaks.push(full);
   if (leaks.includes(nm)) {
     p.name = randomHandle();
+    p.nameChosen = true;                 // handle is final now; don't re-touch
     WCLADDER.saveProfile(p);
     paintProfile(); renderLeaderboard(); syncProfileUp();
   }
+}
+
+// Offline safety net for the old email-prefilled name: it runs once, needs no
+// sign-in. A name that was never explicitly chosen and is shaped like an email
+// local-part (all lowercase, no spaces — e.g. "pravarkataria") could only have
+// come from the old auto-fill, so replace it with a handle. Human-chosen names
+// (any capital or space, or the nameChosen flag) are left untouched.
+function migrateLeakedName() {
+  const MIG = 'wildcardchess.namemig.v1';
+  try { if (localStorage.getItem(MIG) === '1') return; } catch (e) { return; }
+  const p = WCLADDER.getProfile();
+  const nm = (p.name || '').trim();
+  const derivedShape = /^[a-z0-9][a-z0-9._-]*$/.test(nm);       // email-localpart-like
+  if (nm && nm !== 'You' && !p.nameChosen && derivedShape) {
+    p.name = randomHandle();
+    p.nameChosen = true;
+    WCLADDER.saveProfile(p);
+    if (WCCLOUD.enabled && WCCLOUD.enabled() && WCCLOUD.currentUser && WCCLOUD.currentUser()) syncProfileUp();
+  }
+  try { localStorage.setItem(MIG, '1'); } catch (e) {}
 }
 
 bindClick('obSkip', function () {
@@ -998,7 +1021,7 @@ bindClick('obSave', function () {
   const dob = document.getElementById('obDob').value || '';
   const level = document.getElementById('obLevel').value || '';
   if (!level) { document.getElementById('obMsg').textContent = 'Pick your chess level — it sets your starting rating.'; return; }
-  if (name) p.name = name;
+  if (name) { p.name = name; p.nameChosen = true; }
   if (dob) p.dob = dob;
   p.chessLevel = level;
   // seed the rating only for fresh accounts — never clobber earned Elo
@@ -1739,6 +1762,7 @@ try {
   alert('That game link could not be read — starting a new game instead.');
 }
 
+migrateLeakedName();          // clear any old email-derived name before first paint
 paintProfile();
 paintOppCard();
 applyTutorVisibility();
