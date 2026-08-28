@@ -25,7 +25,7 @@
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=29" />
+  <link rel="stylesheet" href="styles.css?v=30" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -303,7 +303,7 @@
         </div>
 
         <div class="tutor-group">
-          <div class="wild-label">Tutor</div>
+          <div class="wild-label">Post-game analysis</div>
           <div class="tutor-row">
             <label class="chk"><input type="checkbox" id="anaOn" checked /> Analysis</label>
             <select id="anaDepth" aria-label="Analysis depth">
@@ -394,21 +394,21 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=29"></script>
-  <script src="js/cloud.js?v=29"></script>
-  <script src="js/engine.js?v=29"></script>
-  <script src="js/pieces.js?v=29"></script>
-  <script src="js/themes.js?v=29"></script>
-  <script src="js/sound.js?v=29"></script>
-  <script src="js/tutorial.js?v=29"></script>
-  <script src="js/ai.js?v=29"></script>
-  <script src="js/ladder.js?v=29"></script>
+  <script src="js/config.js?v=30"></script>
+  <script src="js/cloud.js?v=30"></script>
+  <script src="js/engine.js?v=30"></script>
+  <script src="js/pieces.js?v=30"></script>
+  <script src="js/themes.js?v=30"></script>
+  <script src="js/sound.js?v=30"></script>
+  <script src="js/tutorial.js?v=30"></script>
+  <script src="js/ai.js?v=30"></script>
+  <script src="js/ladder.js?v=30"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=29"></script>
-  <script src="js/net.js?v=29"></script>
-  <script src="js/share.js?v=29"></script>
-  <script src="js/analysis.js?v=29"></script>
-  <script src="js/main.js?v=29"></script>
+  <script src="js/matchmaking.js?v=30"></script>
+  <script src="js/net.js?v=30"></script>
+  <script src="js/share.js?v=30"></script>
+  <script src="js/analysis.js?v=30"></script>
+  <script src="js/main.js?v=30"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

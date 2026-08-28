@@ -467,6 +467,13 @@ function applyTutorVisibility() {
   if (!show && hintMove) { hintMove = null; render(); }
   const log = document.getElementById('log');
   if (log) log.classList.toggle('hide-grades', !show);
+  // The move log and the whole analysis panel are POST-GAME: during live play
+  // the board tells the story, and the full annotated report appears with the
+  // result. (?dev=1 shows everything live.)
+  const logWrap = document.querySelector('.log-wrap');
+  if (logWrap) logWrap.style.display = show ? '' : 'none';
+  const tutorGroup = document.querySelector('.tutor-group');
+  if (tutorGroup) tutorGroup.style.display = show ? '' : 'none';
 }
 
 if (flipBtn) flipBtn.addEventListener('click', function () { flipped = !flipped; render(); });
