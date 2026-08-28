@@ -928,6 +928,7 @@ async function syncProfileDown() {
       await WCCLOUD.saveProfile(local);
     }
   } catch (e) { console.warn('[cloud] sync down failed:', e && e.message); }
+  scrubIdentityName();              // undo any old email/real-name leak first
   paintProfile(); renderLeaderboard();
   maybeOnboard(remote);
 }
@@ -951,11 +952,40 @@ function maybeOnboard(remote) {
   if (dobEl && !dobEl.max) dobEl.max = new Date().toISOString().slice(0, 10);
   const nameEl = document.getElementById('obName');
   if (nameEl && !nameEl.value) {
-    const u = WCCLOUD.currentUser();
-    nameEl.value = (local.name && local.name !== 'You') ? local.name
-      : ((u.email || '').split('@')[0] || '').slice(0, 16);
+    // NEVER derive the public name from real identity (email / Google name) —
+    // the leaderboard is public. Suggest a random handle they can keep or edit.
+    nameEl.value = (local.name && local.name !== 'You') ? local.name : randomHandle();
   }
   obEl.classList.add('show');
+}
+
+// A safe, public, made-up handle. No connection to the account's real name.
+function randomHandle() {
+  const a = ['Void', 'Hollow', 'Slate', 'Ember', 'Moss', 'Stone', 'Iron', 'Ghost', 'Rift', 'Dusk', 'Onyx', 'Ashen'];
+  const b = ['Rook', 'Knight', 'Bishop', 'Gambit', 'Castle', 'King', 'Mate', 'Tempo', 'Fork', 'Pin', 'Pawn', 'Void'];
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  return pick(a) + pick(b) + (10 + Math.floor(Math.random() * 90));
+}
+
+// If a saved name matches what the OLD onboarding auto-filled from the account
+// (email local-part, or the Google display name), it's an identity leak that
+// was never a deliberate choice — replace it with a handle and re-sync.
+function scrubIdentityName() {
+  const u = WCCLOUD.currentUser && WCCLOUD.currentUser();
+  if (!u) return;
+  const p = WCLADDER.getProfile();
+  const nm = (p.name || '').trim().toLowerCase();
+  if (!nm || nm === 'you') return;
+  const leaks = [];
+  if (u.email) leaks.push((u.email.split('@')[0] || '').slice(0, 16).toLowerCase());
+  const meta = u.user_metadata || {};
+  const full = (meta.full_name || meta.name || '').slice(0, 16).toLowerCase();
+  if (full) leaks.push(full);
+  if (leaks.includes(nm)) {
+    p.name = randomHandle();
+    WCLADDER.saveProfile(p);
+    paintProfile(); renderLeaderboard(); syncProfileUp();
+  }
 }
 
 bindClick('obSkip', function () {

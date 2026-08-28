@@ -25,7 +25,7 @@
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=32" />
+  <link rel="stylesheet" href="styles.css?v=33" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -43,7 +43,8 @@
           <div class="you-elo" id="youElo">500</div>
           <div class="you-meta">
             <input id="youName" class="you-nameinput" maxlength="16" spellcheck="false"
-                   aria-label="Your display name" placeholder="Your name" />
+                   aria-label="Your public handle (shown on the leaderboard)"
+                   title="Public handle — shown on the leaderboard" placeholder="public handle" />
             <div class="you-rec" id="youRecord">0W · 0L · 0D</div>
           </div>
         </div>
@@ -239,9 +240,9 @@
       <h2 class="lobby-title">Welcome to Hollow Chess</h2>
       <p class="lobby-sub">Thirty seconds of setup and we can match you properly.</p>
 
-      <label class="auth-label" for="obName">Display name</label>
+      <label class="auth-label" for="obName">Public handle <span style="color:var(--muted);font-weight:400">(shown on the leaderboard — not your real name)</span></label>
       <input id="obName" class="share-input ob-field" maxlength="16" spellcheck="false"
-             placeholder="what opponents will see" />
+             placeholder="pick a handle" />
 
       <label class="auth-label" for="obDob">Date of birth</label>
       <input id="obDob" class="share-input ob-field" type="date" />
@@ -395,21 +396,21 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=32"></script>
-  <script src="js/cloud.js?v=32"></script>
-  <script src="js/engine.js?v=32"></script>
-  <script src="js/pieces.js?v=32"></script>
-  <script src="js/themes.js?v=32"></script>
-  <script src="js/sound.js?v=32"></script>
-  <script src="js/tutorial.js?v=32"></script>
-  <script src="js/ai.js?v=32"></script>
-  <script src="js/ladder.js?v=32"></script>
+  <script src="js/config.js?v=33"></script>
+  <script src="js/cloud.js?v=33"></script>
+  <script src="js/engine.js?v=33"></script>
+  <script src="js/pieces.js?v=33"></script>
+  <script src="js/themes.js?v=33"></script>
+  <script src="js/sound.js?v=33"></script>
+  <script src="js/tutorial.js?v=33"></script>
+  <script src="js/ai.js?v=33"></script>
+  <script src="js/ladder.js?v=33"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=32"></script>
-  <script src="js/net.js?v=32"></script>
-  <script src="js/share.js?v=32"></script>
-  <script src="js/analysis.js?v=32"></script>
-  <script src="js/main.js?v=32"></script>
+  <script src="js/matchmaking.js?v=33"></script>
+  <script src="js/net.js?v=33"></script>
+  <script src="js/share.js?v=33"></script>
+  <script src="js/analysis.js?v=33"></script>
+  <script src="js/main.js?v=33"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
