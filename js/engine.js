@@ -271,16 +271,22 @@ class Game {
     this.board.delete(key(fc, fr));
     p.hasMoved = true;
     this.board.set(key(tc, tr), p);
-    this.halfmoveClock = (p.type === PIECE.P || target || epCaptured) ? 0 : this.halfmoveClock + 1;
+    const wasPawn = p.type === PIECE.P;
+    this.halfmoveClock = (wasPawn || target || epCaptured) ? 0 : this.halfmoveClock + 1;
     // a double step leaves the skipped square capturable for exactly one reply
-    this.epTarget = (p.type === PIECE.P && Math.abs(tr - fr) === 2)
+    this.epTarget = (wasPawn && Math.abs(tr - fr) === 2)
       ? { c: fc, r: (fr + tr) / 2 } : null;
     // Promotion: the pawn reached the edge of the world in its file.
-    if (p.type === PIECE.P && this._atWorldEdge(tc, tr, p.color)) p.type = PIECE.Q;
+    const promoted = wasPawn && this._atWorldEdge(tc, tr, p.color);
+    if (promoted) p.type = PIECE.Q;
     this.lastAction = { kind: 'move', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
+    // HCN (Hollow Chess Notation): long algebraic — piece letter (pawns bare),
+    // from, '-' or 'x', to; '=Q' promotion; ' ep' en passant; O-O castling.
+    // Check '+' and mate '#' are appended in _endTurn once the reply is known.
     this._record(mv.castle
       ? (mv.castle > 0 ? 'O-O' : 'O-O-O')
-      : `${L(p.type)} ${sq(fc, fr)}${(target || epCaptured) ? 'x' : '–'}${sq(tc, tr)}${epCaptured ? ' e.p.' : ''}`);
+      : (wasPawn ? '' : L(p.type)) + sq(fc, fr) + ((target || epCaptured) ? 'x' : '-') + sq(tc, tr)
+        + (promoted ? '=Q' : '') + (epCaptured ? ' ep' : ''));
     this._endTurn();
     return true;
   }
@@ -303,7 +309,7 @@ class Game {
     this.halfmoveClock++;
     this.epTarget = null;
     this.lastAction = { kind: 'addcell', to: { c, r } };
-    this._record(`✚ square ${sq(c, r)}`);
+    this._record(`+${sq(c, r)}`);                       // HCN: add square
     this._endTurn();
     return true;
   }
@@ -319,7 +325,7 @@ class Game {
     this.halfmoveClock++;
     this.epTarget = null;
     this.lastAction = { kind: 'removecell', to: { c, r } };
-    this._record(`✖ square ${sq(c, r)}`);
+    this._record(`×${sq(c, r)}`);                       // HCN: remove square
     this._endTurn();
     return true;
   }
@@ -340,7 +346,7 @@ class Game {
     this.halfmoveClock++;
     this.epTarget = null;
     this.lastAction = { kind: 'movecell', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
-    this._record(`➤ square ${sq(fc, fr)}→${sq(tc, tr)}`);
+    this._record(`${sq(fc, fr)}>${sq(tc, tr)}`);        // HCN: square-move — '>' is terrain-only
     this._endTurn();
     return true;
   }
@@ -350,6 +356,12 @@ class Game {
     if (!this.winner) {
       this.turn = opp(this.turn);
       this._evaluate();
+      // HCN check/mate suffix — knowable only after the position is evaluated
+      const last = this.history[this.history.length - 1];
+      if (last) {
+        if (this.status === 'checkmate') last.text += '#';
+        else if (this.status === 'check') last.text += '+';
+      }
       if (this.status === 'playing' || this.status === 'check') {
         // 50-move rule: 100 plies with no pawn move and no capture is a draw.
         // Board moves don't reset the clock — an island fortress can be built
@@ -416,7 +428,9 @@ class Game {
   }
 }
 
-function fileLabel(c) { return c >= 0 && c <= 25 ? String.fromCharCode(97 + c) : '#' + c; }
+// Files a–z; a board grown past that uses the numeric index in parens, so
+// "(-1)5" reads unambiguously as file -1, rank 5 (see NOTATION.md).
+function fileLabel(c) { return c >= 0 && c <= 25 ? String.fromCharCode(97 + c) : '(' + c + ')'; }
 function rankLabel(r) { return String(r + 1); }
 function sq(c, r) { return fileLabel(c) + rankLabel(r); }
 const L = (type) => ({ pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', king: 'K' }[type]);

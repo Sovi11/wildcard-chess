@@ -47,18 +47,19 @@
     return 50 + 50 * Math.tanh(whiteCp / 500);
   }
 
-  // Describe an action in the game's own notation. `game` must still be in the
+  // Describe an action in HCN (see NOTATION.md). `game` must still be in the
   // position BEFORE the action (needed to look up the moving piece).
   function describe(gm, game) {
     if (!gm) return '—';
     if (gm.kind === 'm') {
       const p = game.get(gm.from.c, gm.from.r);
-      const cap = game.get(gm.to.c, gm.to.r) ? '×' : '–';
-      return `${p ? L(p.type) : ''} ${sq(gm.from.c, gm.from.r)}${cap}${sq(gm.to.c, gm.to.r)}`.trim();
+      const pawn = p && p.type === 'pawn';
+      const cap = game.get(gm.to.c, gm.to.r) ? 'x' : '-';
+      return `${p && !pawn ? L(p.type) : ''}${sq(gm.from.c, gm.from.r)}${cap}${sq(gm.to.c, gm.to.r)}`;
     }
-    if (gm.kind === 'ac') return `✚ add square ${sq(gm.cell.c, gm.cell.r)}`;
-    if (gm.kind === 'rc') return `✖ remove square ${sq(gm.cell.c, gm.cell.r)}`;
-    return `➤ move square ${sq(gm.from.c, gm.from.r)}→${sq(gm.to.c, gm.to.r)}`;
+    if (gm.kind === 'ac') return `+${sq(gm.cell.c, gm.cell.r)}`;
+    if (gm.kind === 'rc') return `×${sq(gm.cell.c, gm.cell.r)}`;
+    return `${sq(gm.from.c, gm.from.r)}>${sq(gm.to.c, gm.to.r)}`;
   }
 
   // Short plain-English reason a board action is good — the tutor's voice.

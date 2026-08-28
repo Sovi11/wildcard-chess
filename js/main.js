@@ -1519,7 +1519,7 @@ function revSeek(n) {
   } else {
     const h = revMoves[revPos - 1];
     const q = revQuality[revPos - 1];
-    info.innerHTML = '<b>' + revPos + '.</b> ' + esc(h ? h.text : '') +
+    info.innerHTML = '<b>' + plyLabel(revPos - 1) + '</b> ' + esc(h ? h.text : '') +
       (q ? ' <span class="q q-' + q.key + '">' + q.mark + ' ' + q.label + '</span>' : '');
   }
 
@@ -1528,7 +1528,7 @@ function revSeek(n) {
     const q = revQuality[i];
     return '<div class="logline ' + h.color + (i === revPos - 1 ? ' cur' : '') +
       (i >= revPos ? ' ahead' : '') + '" data-ply="' + (i + 1) + '">' +
-      '<span class="ln">' + (i + 1) + '.</span> <span class="mv">' + esc(h.text) + '</span>' +
+      '<span class="ln">' + plyLabel(i) + '</span> <span class="mv">' + esc(h.text) + '</span>' +
       (q ? ' <span class="q q-' + q.key + '">' + q.mark + '</span>' : '') + '</div>';
   }).join('');
   const cur = logEl.querySelector('.cur');
@@ -1575,9 +1575,6 @@ bind('revFirst', function () { revSeek(0); });
 bind('revPrev', function () { revSeek(revPos - 1); });
 bind('revNext', function () { revSeek(revPos + 1); });
 bind('revLast', function () { revSeek(revActs.length); });
-bind('clearHistory', function () {
-  if (confirm('Delete your game history? Your rating is kept.')) { WCLADDER.clearHistory(); renderProfile(); }
-});
 if (profileEl) profileEl.addEventListener('click', function (e) { if (e.target === profileEl) closeProfile(); });
 document.addEventListener('keydown', function (e) {
   if (!profileEl.classList.contains('show') || !profReviewEl.classList.contains('show')) return;
@@ -1686,18 +1683,47 @@ document.getElementById('newGame').addEventListener('click', () => {
 });
 
 // ---- ui sync --------------------------------------------------------------
+// Chess-style pair numbering for the notation log: "1." for White's ply,
+// "1…" for Black's. History strictly alternates W/B, so parity is enough.
+const plyLabel = (i) => (i % 2 === 0 ? (i / 2 + 1) + '.' : Math.floor(i / 2) + 1 + '…');
+
 function renderLog() {
   ui.log.innerHTML = '';
   game.history.forEach((h, i) => {
     const d = document.createElement('div');
     d.className = 'logline ' + h.color;
     const q = quality[i];
-    d.innerHTML = `<span class="ln">${i + 1}.</span> <span class="mv">${h.text}</span>` +
+    d.innerHTML = `<span class="ln">${plyLabel(i)}</span> <span class="mv">${h.text}</span>` +
       (q ? ` <span class="q q-${q.key}" title="${q.label} (−${(q.loss / 100).toFixed(2)})">${q.mark}</span>` : '');
     ui.log.appendChild(d);
   });
   ui.log.scrollTop = ui.log.scrollHeight;
 }
+
+// The full game in Hollow Chess Notation, one line, chess-style: piece moves
+// in long algebraic (Nb1-c3, Qd4xh8, e7-e8=Q), square-moves as from>to.
+function gameNotation() {
+  const out = [];
+  game.history.forEach((h, i) => {
+    if (i % 2 === 0) out.push((i / 2 + 1) + '.');
+    out.push(h.text);
+  });
+  let result = '*';
+  if (game.winner === 'white') result = '1-0';
+  else if (game.winner === 'black') result = '0-1';
+  else if (gameOver()) result = '½-½';
+  out.push(result);
+  return out.join(' ');
+}
+
+const copyNotationBtn = document.getElementById('copyNotation');
+if (copyNotationBtn) copyNotationBtn.addEventListener('click', async function () {
+  try {
+    await navigator.clipboard.writeText(gameNotation());
+    copyNotationBtn.textContent = 'Copied';
+  } catch (e) { copyNotationBtn.textContent = 'Blocked'; }
+  setTimeout(function () { copyNotationBtn.textContent = 'Copy'; }, 1600);
+});
 
 function sync() {
   const side = game.turn === 'white' ? 'White' : 'Black';

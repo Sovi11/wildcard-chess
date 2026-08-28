@@ -21,6 +21,13 @@ Standard chess — but **the board itself is fair game**. On board turns, instea
 - **50-move rule**: 100 plies with no pawn move and no capture is a draw. Board moves never reset the clock — so a fortress-island siege (bridge, burn, bridge, burn) ends in a draw instead of running forever.
 - **Castling** works as in normal chess, with one variant condition: the path between king and rook must be **complete**. A hole anywhere along it denies castling on that side until the square is put back.
 
+## Notation
+
+Games are recorded in **Hollow Chess Notation** (HCN) — long-algebraic chess
+plus one new operator: `>` moves a square of the world (`e5>c9`). Full spec in
+[NOTATION.md](NOTATION.md). The post-game panel has a Copy button that exports
+the whole game as text.
+
 ## Play
 
 **Play:** https://hollowchess.com  (also at https://sovi11.github.io/wildcard-chess/)
