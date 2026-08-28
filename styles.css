@@ -675,3 +675,6 @@ body.wild-turn .badge { animation: pulse 1.4s ease-in-out infinite; }
 /* onboarding modal */
 .ob-field { width: 100%; margin: 4px 0 14px; }
 select.ob-field { cursor: pointer; }
+
+/* menu-music opt-in in the appearance panel */
+.appear-chk { display: flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 13px; color: var(--muted); cursor: pointer; }

@@ -491,6 +491,16 @@ if (soundBtn) soundBtn.addEventListener('click', function () {
 });
 paintSound();
 
+// Menu music is opt-in (off by default); the checkbox lives in Appearance.
+const musicOnEl = document.getElementById('musicOn');
+if (musicOnEl) {
+  musicOnEl.checked = WCSOUND.musicEnabled();
+  musicOnEl.addEventListener('change', function () {
+    WCSOUND.setMusic(musicOnEl.checked);
+    updateAmbient();                 // start/stop for the current screen right away
+  });
+}
+
 // Which colour does the person at this keyboard control?
 function localColor() {
   if (onlineActive) return myColor;

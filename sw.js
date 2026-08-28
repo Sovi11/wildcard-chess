@@ -3,26 +3,26 @@
 // work offline. Everything cross-origin (Supabase, PeerJS broker, CDNs) is left
 // alone: auth and matchmaking must always hit the network.
 
-const CACHE = 'hollow-chess-v30';
+const CACHE = 'hollow-chess-v31';
 
 const CORE = [
   './',
   './index.html',
-  './styles.css?v=30',
-  './js/config.js?v=30',
-  './js/cloud.js?v=30',
-  './js/engine.js?v=30',
-  './js/pieces.js?v=30',
-  './js/themes.js?v=30',
-  './js/sound.js?v=30',
-  './js/tutorial.js?v=30',
-  './js/ai.js?v=30',
-  './js/ladder.js?v=30',
-  './js/matchmaking.js?v=30',
-  './js/net.js?v=30',
-  './js/share.js?v=30',
-  './js/analysis.js?v=30',
-  './js/main.js?v=30',
+  './styles.css?v=31',
+  './js/config.js?v=31',
+  './js/cloud.js?v=31',
+  './js/engine.js?v=31',
+  './js/pieces.js?v=31',
+  './js/themes.js?v=31',
+  './js/sound.js?v=31',
+  './js/tutorial.js?v=31',
+  './js/ai.js?v=31',
+  './js/ladder.js?v=31',
+  './js/matchmaking.js?v=31',
+  './js/net.js?v=31',
+  './js/share.js?v=31',
+  './js/analysis.js?v=31',
+  './js/main.js?v=31',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

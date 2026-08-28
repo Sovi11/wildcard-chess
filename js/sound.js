@@ -9,9 +9,13 @@
   'use strict';
 
   const KEY = 'wildcardchess.sound.v1';
+  const MUSIC_KEY = 'wildcardchess.music.v1';
   let ctx = null;
   let muted = false;
+  // Ambient menu music is OFF by default — it's opt-in via the appearance panel.
+  let musicOn = false;
   try { muted = localStorage.getItem(KEY) === 'off'; } catch (e) {}
+  try { musicOn = localStorage.getItem(MUSIC_KEY) === 'on'; } catch (e) {}
 
   function ac() {
     if (!ctx) {
@@ -119,7 +123,7 @@
   const PENTA = [220, 261.63, 293.66, 329.63, 392, 440, 523.25];
 
   function ambientStart() {
-    if (amb || muted) return;
+    if (amb || muted || !musicOn) return;
     const a = ac();
     if (!a) return;                // no gesture yet: the unlock listener retries
     const master = a.createGain();
@@ -172,10 +176,10 @@
   }
 
   // Autoplay policy: the context unlocks on the first gesture — start the
-  // ambience then if a menu is already asking for it.
+  // ambience then if a menu is already asking for it (and music is enabled).
   ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
     window.addEventListener(ev, function () {
-      if (!muted && ambientWanted && !amb) ambientStart();
+      if (!muted && musicOn && ambientWanted && !amb) ambientStart();
     }, { passive: true });
   });
 
@@ -186,11 +190,21 @@
     else if (ambientWanted) ambientStart();
   }
 
+  // Opt-in menu music, independent of the sound-effects mute.
+  function setMusic(v) {
+    musicOn = !!v;
+    try { localStorage.setItem(MUSIC_KEY, musicOn ? 'on' : 'off'); } catch (e) {}
+    if (musicOn && ambientWanted) ambientStart();
+    else ambientStop();
+  }
+
   window.WCSOUND = {
     play,
     setMuted,
     setAmbient,
+    setMusic,
     isMuted: function () { return muted; },
+    musicEnabled: function () { return musicOn; },
     toggle: function () { setMuted(!muted); return muted; },
   };
 })();
