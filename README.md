@@ -17,6 +17,7 @@ Standard chess — but **the board itself is fair game**. On board turns, instea
 - **Win by checkmate.** Full legality: no moving into check, pins are real. On a board turn, board actions count as escapes — e.g. moving a square to sever the attacker's line. It's only mate if nothing (moves *or* board actions) saves you.
 - **Pawns promote at the edge of the world**: a pawn promotes only when there is no square anywhere ahead of it in its file. A lone hole directly in front is *not* the edge — the board may resume past it. Extend the board above the 8th rank and the pawn must march further.
 - **En passant** works as in normal chess: a double-stepped pawn can be taken on the square it skipped, but only on the immediate reply. Spending that reply on a board wildcard forfeits the capture.
+- **50-move rule**: 100 plies with no pawn move and no capture is a draw. Board moves never reset the clock — so a fortress-island siege (bridge, burn, bridge, burn) ends in a draw instead of running forever.
 - **Castling** works as in normal chess, with one variant condition: the path between king and rook must be **complete**. A hole anywhere along it denies castling on that side until the square is put back.
 
 ## Play

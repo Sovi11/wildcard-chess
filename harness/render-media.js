@@ -63,7 +63,7 @@ async function recordScene(browser, scene) {
   console.log('short recorded:', scene, '(' + beats.length + ' beats)');
 }
 
-const SCENES = ['rook', 'escape', 'cheese', 'morph'];
+const SCENES = ['rook', 'island', 'escape', 'cheese', 'morph'];
 
 (async function main() {
   const what = process.argv[2] || 'all';

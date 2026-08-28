@@ -264,7 +264,7 @@ const linkMode = () => oppModeEl && oppModeEl.value === 'link';
 let linkPending = false;          // true after your move: waiting on your friend
 const botEnabled = () => oppModeEl && oppModeEl.value === 'bot';
 const botSide = () => (botSideEl ? botSideEl.value : 'black');
-function gameOver() { return !!game.winner || ['stalemate', 'repetition'].includes(game.status); }
+function gameOver() { return !!game.winner || ['stalemate', 'repetition', 'fifty'].includes(game.status); }
 
 function refreshBotUI() {
   const on = botEnabled();
@@ -1614,7 +1614,8 @@ function sync() {
     } else {
       text = game.status === 'checkmate'
         ? ('Checkmate \u2014 ' + (game.winner === 'white' ? 'White' : 'Black') + ' wins')
-        : (game.status === 'repetition' ? 'Draw by repetition' : 'Stalemate \u2014 draw');
+        : (game.status === 'repetition' ? 'Draw by repetition'
+          : game.status === 'fifty' ? 'Draw \u2014 50-move rule' : 'Stalemate \u2014 draw');
     }
     if (r) {
       const sign = r.delta >= 0 ? '+' : '';

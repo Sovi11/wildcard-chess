@@ -188,5 +188,5 @@ function mixScene(scene) {
 }
 
 const only = process.argv[2];
-for (const scene of (only ? [only] : ['rook', 'escape', 'cheese', 'morph'])) mixScene(scene);
+for (const scene of (only ? [only] : ['rook', 'island', 'escape', 'cheese', 'morph'])) mixScene(scene);
 console.log('audio done.');

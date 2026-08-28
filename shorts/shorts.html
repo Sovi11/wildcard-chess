@@ -338,6 +338,99 @@
     await endCard(5200, 'HOLLOW CHESS. The board is the weapon. Play free at hollow chess dot com.');
   }
 
+  // =================== ISLAND ===================
+  // The fortress endgame: the king tears a moat around the corner and lives on
+  // a two-square island. Every action here is engine-legal — the bridge really
+  // gives check through g7, and burning it really is the only escape.
+  async function sceneIsland() {
+    game.board.clear();
+    game._put(2, 5, 'queen', 'white', true);    // Qc6
+    game._put(1, 0, 'king', 'white', true);     // Kb1
+    game._put(7, 7, 'king', 'black', true);     // Kh8... starts g8
+    game.board.delete(key(7, 7));
+    game._put(6, 7, 'king', 'black', true);     // Kg8
+    game._put(0, 6, 'pawn', 'black', true);     // a7
+    game.turn = 'black';
+    game.rules = { cadence: 1, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
+    game._evaluate();
+    await startScene();
+    wrap.classList.add('show'); render();
+    overlays = [{ kind: 'flash', c: 6, r: 7, color: '#e05656' }];
+    camTo(2.0, 5, [6, 7]);
+    render();
+    slam('capTop', 'HIS KING<br/>WAS <span class="red">DOOMED</span>.');
+    vo('His king... was DOOMED.'); sfx('braam');
+    await sleep(2400);
+    hideCaps();
+    slam('capTop', 'SO HE DID THE<br/><span class="gold">UNTHINKABLE</span>.');
+    vo('So he did... the unthinkable.');
+    game.turn = 'black';
+    await slidePiece(6, 7, 7, 7, 600);          // Kg8 -> h8
+    overlays = [];
+    await sleep(1200);
+    hideCaps();
+    cap('capTop', 'he left<br/>the <span class="gold">MAP</span>.');
+    vo('He LEFT. The MAP.'); sfx('whoosh');
+    camTo(1.5, -3, [6, 6]);
+    // tear the moat: h6, g6, g7, g8 fly to the far shore
+    const moat = [[7, 5, -1, 2], [6, 5, -1, 3], [6, 6, -1, 4], [6, 7, -1, 5]];
+    for (const [a, b, c, d] of moat) {
+      game.turn = 'black';
+      await flySquare(a, b, c, d, 520);
+      await sleep(120);
+    }
+    hideCaps();
+    slam('capMid', 'AN <span class="gold">ISLAND</span>.');
+    vo('An ISLAND.'); sfx('braam');
+    await sleep(1700);
+    hide('capMid');
+    // the queen charges and hits the void
+    game.turn = 'white';
+    sfx('whoosh');
+    await slidePiece(2, 5, 5, 5, 700);          // Qc6 -> f6
+    overlays = [{ kind: 'beam', pts: [[5, 5], [6, 6]] }];
+    render();
+    camTo(2.1, 4, [6, 6], true);
+    slam('capTop', 'SHE CANNOT<br/><span class="green">TOUCH</span> HIM.');
+    vo('She cannot... TOUCH him.');
+    await sleep(2500);
+    hideCaps();
+    // bridge: white drops a square back into g7 — this is CHECK through g7
+    slam('capTop', 'SO SHE BUILDS<br/>A <span class="red">BRIDGE</span> —');
+    vo('So she builds a BRIDGE.');
+    game.turn = 'white';
+    await flySquare(-1, 2, 6, 6, 700);
+    overlays = [{ kind: 'beam', pts: [[5, 5], [7, 7]] }, { kind: 'flash', c: 7, r: 7, color: '#e05656' }];
+    render();
+    await sleep(1100);
+    hideCaps();
+    slam('capTop', 'HE <span class="gold">BURNS</span> IT.');
+    vo('He BURNS it.');
+    game.turn = 'black';
+    await flySquare(6, 6, -1, 6, 550);
+    overlays = [{ kind: 'beam', pts: [[5, 5], [6, 6]] }];
+    render();
+    await sleep(900);
+    // again, faster
+    game.turn = 'white';
+    await flySquare(-1, 3, 6, 6, 380);
+    game.turn = 'black';
+    await flySquare(6, 6, -1, 7, 380);
+    hideCaps();
+    slam('capMid', 'FOREVER.');
+    vo('Again. And again. FOREVER.'); sfx('braam');
+    await sleep(2300);
+    hide('capMid');
+    camReset();
+    overlays = [{ kind: 'flash', c: 7, r: 7, color: '#57c974' }];
+    render();
+    slam('capTop', '<span class="green">DRAW.</span>');
+    cap('capBottom', 'the first <span class="gold">man-made fortress</span> in chess.');
+    vo('DRAW. The fortress... HOLDS.');
+    await sleep(3000);
+    await endCard(5200, 'HOLLOW CHESS. Build your own endgame. Play free at hollow chess dot com.');
+  }
+
   // =================== ESCAPE ===================
   function setupMatePosition() {
     game = new Game();
@@ -472,7 +565,7 @@
 
   const scene = new URLSearchParams(location.search).get('scene') || 'rook';
   window.SCENE_DONE = false;
-  ({ rook: sceneRook, escape: sceneEscape, cheese: sceneCheese, morph: sceneMorph }[scene] || sceneRook)()
+  ({ rook: sceneRook, island: sceneIsland, escape: sceneEscape, cheese: sceneCheese, morph: sceneMorph }[scene] || sceneRook)()
     .catch((e) => { console.error(e); window.SCENE_BEATS = beats; window.SCENE_DONE = true; });
 })();
 </script>

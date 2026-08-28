@@ -26,7 +26,9 @@ class Game {
     this.moveCount = { white: 0, black: 0 };
     this.history = [];
     this.winner = null;
-    this.status = 'playing';          // playing | check | checkmate | stalemate | repetition
+    this.status = 'playing';          // playing | check | checkmate | stalemate | repetition | fifty
+    this.halfmoveClock = 0;           // plies since a pawn move or capture (50-move rule;
+                                      // board moves do NOT reset it, so fortress wars end)
     this.lastAction = null;
     this.epTarget = null;             // square a double-stepped pawn skipped over
     // rule knobs: cadence = every Nth PLY is a board turn (see _eligibleFor);
@@ -266,6 +268,7 @@ class Game {
     this.board.delete(key(fc, fr));
     p.hasMoved = true;
     this.board.set(key(tc, tr), p);
+    this.halfmoveClock = (p.type === PIECE.P || target || epCaptured) ? 0 : this.halfmoveClock + 1;
     // a double step leaves the skipped square capturable for exactly one reply
     this.epTarget = (p.type === PIECE.P && Math.abs(tr - fr) === 2)
       ? { c: fc, r: (fr + tr) / 2 } : null;
@@ -294,6 +297,7 @@ class Game {
     if (!this._trial(this.turn, () => this.cells.add(key(c, r)))) return false;
     this.cells.add(key(c, r));
     this.wildUsed[this.turn]++;
+    this.halfmoveClock++;
     this.epTarget = null;
     this.lastAction = { kind: 'addcell', to: { c, r } };
     this._record(`✚ square ${sq(c, r)}`);
@@ -309,6 +313,7 @@ class Game {
     if (!this._trial(this.turn, () => this.cells.delete(key(c, r)))) return false;
     this.cells.delete(key(c, r));
     this.wildUsed[this.turn]++;
+    this.halfmoveClock++;
     this.epTarget = null;
     this.lastAction = { kind: 'removecell', to: { c, r } };
     this._record(`✖ square ${sq(c, r)}`);
@@ -329,6 +334,7 @@ class Game {
     this.cells.delete(key(fc, fr));
     this.cells.add(key(tc, tr));
     this.wildUsed[this.turn]++;
+    this.halfmoveClock++;
     this.epTarget = null;
     this.lastAction = { kind: 'movecell', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
     this._record(`➤ square ${sq(fc, fr)}→${sq(tc, tr)}`);
@@ -342,6 +348,10 @@ class Game {
       this.turn = opp(this.turn);
       this._evaluate();
       if (this.status === 'playing' || this.status === 'check') {
+        // 50-move rule: 100 plies with no pawn move and no capture is a draw.
+        // Board moves don't reset the clock — an island fortress can be built
+        // and its bridges burned forever, but the game still ends.
+        if (this.halfmoveClock >= 100) { this.status = 'fifty'; this.winner = null; return; }
         const k = this._posKey();
         const n = (this.repCount.get(k) || 0) + 1;
         this.repCount.set(k, n);
