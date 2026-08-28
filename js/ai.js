@@ -18,6 +18,7 @@
   const upR = (k) => (k & 1023) - 128;
 
   const N8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  const N4 = [[1,0],[-1,0],[0,1],[0,-1]];   // squares attach along a shared edge only
   const DIAG = [[1,1],[1,-1],[-1,1],[-1,-1]];
   const ORTHO = [[1,0],[-1,0],[0,1],[0,-1]];
   const KNIGHT = [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
@@ -318,11 +319,11 @@
         removes.push({ kind: 'rc', cell: k, s });
       }
 
-      // addable spots (perimeter incl. holes)
+      // addable spots (edge-adjacent perimeter, incl. holes)
       const addsSeen = new Set(), adds = [];
       for (const k of this.cells) {
         const c = upC(k), r = upR(k);
-        for (const [dc, dr] of N8) {
+        for (const [dc, dr] of N4) {
           const nk = pack(c + dc, r + dr);
           if (this.has(nk) || addsSeen.has(nk)) continue;
           addsSeen.add(nk);

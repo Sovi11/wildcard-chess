@@ -9,7 +9,8 @@ Standard chess — but **the board itself is fair game**. On board turns, instea
   Black's 1st/4th/7th move, White's 3rd/6th/9th. (Black's early board turn offsets
   White's first-move tempo, and no two board turns ever land back to back.)
   On a board turn you make a normal move **or** **move a square** — click any
-  **empty** square to lift it, then click where to re-attach it (anywhere touching
+  **empty** square to lift it, then click where to re-attach it (anywhere edge-adjacent to —
+  sharing a side with, not just a corner of —
   the rest of the board). It leaves a hole behind.
   *(Add and Remove square exist in the engine but are parked as redundant: moving a square
   is a remove and an add in one action. The harness can still enable them for experiments.)*

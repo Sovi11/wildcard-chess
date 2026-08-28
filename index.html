@@ -25,7 +25,7 @@
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=31" />
+  <link rel="stylesheet" href="styles.css?v=32" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -384,7 +384,7 @@
           <ul>
             <li>Standard chess for the pieces — but the <b>board itself</b> is fair game.</li>
             <li><b>Every 3rd turn of the game is a board turn</b> (W&nbsp;B✦&nbsp;W&nbsp;B&nbsp;W✦&nbsp;B&nbsp;W&nbsp;B✦&nbsp;…): move a piece normally <i>or</i> <b>move a square</b>.</li>
-            <li><b>Click an empty square</b> to pick it up, then click where to put it (anywhere touching the board). It leaves a hole, and <b>holes block sliding pieces</b>.</li>
+            <li><b>Click an empty square</b> to pick it up, then click where to put it (anywhere <b>edge-adjacent</b> to the board — sharing a side, not just a corner). It leaves a hole, and <b>holes block sliding pieces</b>.</li>
             <li>Win by <b>checkmate</b> — on a board turn you may escape check by reshaping the board (e.g. cut the attacker's line).</li>
             <li>Pawns promote at the board's edge — extend the board and they must march further.</li>
           </ul>
@@ -395,21 +395,21 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=31"></script>
-  <script src="js/cloud.js?v=31"></script>
-  <script src="js/engine.js?v=31"></script>
-  <script src="js/pieces.js?v=31"></script>
-  <script src="js/themes.js?v=31"></script>
-  <script src="js/sound.js?v=31"></script>
-  <script src="js/tutorial.js?v=31"></script>
-  <script src="js/ai.js?v=31"></script>
-  <script src="js/ladder.js?v=31"></script>
+  <script src="js/config.js?v=32"></script>
+  <script src="js/cloud.js?v=32"></script>
+  <script src="js/engine.js?v=32"></script>
+  <script src="js/pieces.js?v=32"></script>
+  <script src="js/themes.js?v=32"></script>
+  <script src="js/sound.js?v=32"></script>
+  <script src="js/tutorial.js?v=32"></script>
+  <script src="js/ai.js?v=32"></script>
+  <script src="js/ladder.js?v=32"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=31"></script>
-  <script src="js/net.js?v=31"></script>
-  <script src="js/share.js?v=31"></script>
-  <script src="js/analysis.js?v=31"></script>
-  <script src="js/main.js?v=31"></script>
+  <script src="js/matchmaking.js?v=32"></script>
+  <script src="js/net.js?v=32"></script>
+  <script src="js/share.js?v=32"></script>
+  <script src="js/analysis.js?v=32"></script>
+  <script src="js/main.js?v=32"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

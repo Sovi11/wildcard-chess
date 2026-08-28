@@ -15,6 +15,9 @@ const parseKey = (k) => { const [c, r] = k.split(',').map(Number); return { c, r
 const opp = (col) => (col === WHITE ? BLACK : WHITE);
 
 const NEIGH8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+// A square attaches to the board only along a shared EDGE — orthogonal
+// neighbours, never a corner-only diagonal touch. (King attacks still use all 8.)
+const NEIGH4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 class Game {
   constructor() { this.reset(); }
@@ -74,12 +77,12 @@ class Game {
     return { minC, maxC, minR, maxR };
   }
 
-  // Empty positions adjacent to the board where a new square may attach.
+  // Empty positions edge-adjacent to the board where a new square may attach.
   addTargets() {
     const out = new Set();
     for (const k of this.cells) {
       const { c, r } = parseKey(k);
-      for (const [dc, dr] of NEIGH8) {
+      for (const [dc, dr] of NEIGH4) {
         const nk = key(c + dc, r + dr);
         if (!this.cells.has(nk)) out.add(nk);
       }
@@ -93,7 +96,7 @@ class Game {
     for (const k of this.cells) {
       if (k === exclude) continue;
       const { c, r } = parseKey(k);
-      for (const [dc, dr] of NEIGH8) {
+      for (const [dc, dr] of NEIGH4) {
         const nk = key(c + dc, r + dr);
         if (nk !== exclude && !this.cells.has(nk)) out.add(nk);
       }
@@ -283,7 +286,7 @@ class Game {
   }
 
   // ---- wildcards: reshape the board --------------------------------------
-  // Add a square at an empty position touching the board.
+  // Add a square at an empty position edge-adjacent to the board.
   _actionAllowed(kind) {
     const a = this.rules.actions;
     return !a || a[kind] !== false;
@@ -292,7 +295,7 @@ class Game {
   wildcardAddCell(c, r) {
     if (!this._actionAllowed('ac')) return false;
     if (!this.canWildcard() || this.hasCell(c, r)) return false;
-    const touches = NEIGH8.some(([dc, dr]) => this.hasCell(c + dc, r + dr));
+    const touches = NEIGH4.some(([dc, dr]) => this.hasCell(c + dc, r + dr));
     if (!touches) return false;
     if (!this._trial(this.turn, () => this.cells.add(key(c, r)))) return false;
     this.cells.add(key(c, r));
@@ -321,7 +324,7 @@ class Game {
     return true;
   }
 
-  // Move an EMPTY square: detach it and re-attach touching the remaining board.
+  // Move an EMPTY square: detach it and re-attach edge-adjacent to the remaining board.
   wildcardMoveCell(fc, fr, tc, tr) {
     if (!this._actionAllowed('mc')) return false;
     if (!this.canWildcard()) return false;

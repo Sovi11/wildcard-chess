@@ -53,7 +53,7 @@
     },
     {
       title: 'Click a square to lift it',
-      body: 'On your board turn, <b>click any empty square</b> — it lifts off the world. Then click one of the <b>dashed spots</b> to set it down anywhere touching the board. It leaves a hole where it was. Click the lifted square again to cancel.',
+      body: 'On your board turn, <b>click any empty square</b> — it lifts off the world. Then click one of the <b>dashed spots</b> to set it down anywhere <b>edge-adjacent</b> to the board (sharing a side, not just a corner). It leaves a hole where it was. Click the lifted square again to cancel.',
       art: mini(4, 3, [
         [0, 0, ''], [1, 0, ''], [2, 0, ''], [3, 0, ''],
         [0, 1, ''], [1, 1, 'lift'], [2, 1, ''], [3, 1, ''],
