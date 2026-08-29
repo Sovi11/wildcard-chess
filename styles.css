@@ -690,3 +690,13 @@ select.ob-field { cursor: pointer; }
   font-family: inherit; font-size: 12.5px; color: var(--muted); text-decoration: underline;
 }
 .linky:hover { color: var(--accent); }
+
+/* game-over banner: the analyze call-to-action */
+.banner { pointer-events: none; }
+.banner .analyze-btn {
+  pointer-events: auto; display: block; margin: 12px auto 0; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 800;
+  padding: 10px 22px; border-radius: 10px;
+  background: var(--accent); color: #1a1a1a; border: none;
+}
+.banner .analyze-btn:hover { filter: brightness(1.08); }

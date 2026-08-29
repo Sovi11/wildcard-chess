@@ -962,6 +962,9 @@ async function syncProfileDown() {
     } else {
       await WCCLOUD.saveProfile(local);
     }
+    if (remote && (remote.chess_level || ((remote.wins | 0) + (remote.losses | 0) + (remote.draws | 0)) > 0)) {
+      markTutSeen();                // an account with history knows the game
+    }
   } catch (e) { console.warn('[cloud] sync down failed:', e && e.message); }
   scrubIdentityName();              // undo any old email/real-name leak first
   paintProfile(); renderLeaderboard();
@@ -1196,11 +1199,15 @@ let signedInTracked = false;
 WCCLOUD.onChange(function (u) {
   if (!u) return;
   closeAuthModal();
+  let freshSignup = false;
   if (!signedInTracked) {                      // onChange can fire repeatedly
     signedInTracked = true;
     const created = u.created_at ? (Date.now() - new Date(u.created_at).getTime()) : 1e9;
-    WCSTATS.track(created < 60000 ? 'signup' : 'signin', {});
+    freshSignup = created < 60000;
+    WCSTATS.track(freshSignup ? 'signup' : 'signin', {});
   }
+  // A returning account already knows the game — never re-tutorial them.
+  if (!freshSignup) markTutSeen();
   // First entry through ANY door teaches you the game. enterSite() handles the
   // welcome-screen door; this covers signing in from the lobby button, where
   // the welcome overlay is not up.
@@ -1539,8 +1546,8 @@ const profListEl = document.getElementById('profList');
 const profReviewEl = document.getElementById('profReview');
 
 function openProfile() { renderProfile(); showMatchList(); profileEl.classList.add('show'); updateAmbient(); }
-function closeProfile() { profileEl.classList.remove('show'); updateAmbient(); }
-function showMatchList() { profListEl.style.display = ''; profReviewEl.classList.remove('show'); }
+function closeProfile() { revToken++; profileEl.classList.remove('show'); updateAmbient(); }
+function showMatchList() { revToken++; profListEl.style.display = ''; profReviewEl.classList.remove('show'); }
 function showReview() { profListEl.style.display = 'none'; profReviewEl.classList.add('show'); }
 
 function renderProfile() {
@@ -1590,44 +1597,89 @@ function reviewMatch(idx) {
   const p = WCLADDER.getProfile();
   const entry = (p.log || [])[idx];
   if (!entry || !entry.acts || !entry.acts.length) return;
+  openReview(entry.acts,
+    'vs ' + (entry.botName || 'Opponent') + ' · ' +
+    (entry.score === 1 ? 'you won' : entry.score === 0 ? 'you lost' : 'draw'));
+}
 
-  revActs = entry.acts;
+// Lichess-style review: the board is steppable IMMEDIATELY (arrow keys, click
+// the move list), while the engine works through the game behind it at its
+// highest depth, streaming eval + grades into the view as each ply lands.
+let revToken = 0;                 // bumping this cancels any in-flight analysis
+const REV_DEPTH = 5;              // Brutal-tier: the strongest search we ship
+const REV_MOVETIME = 900;
+
+function openReview(acts, title) {
+  const token = ++revToken;
+  revActs = acts;
   revPos = 0;
   revEvals = [];
   revQuality = [];
-  document.getElementById('reviewTitle').textContent =
-    'vs ' + (entry.botName || 'Opponent') + ' \u00b7 ' +
-    (entry.score === 1 ? 'you won' : entry.score === 0 ? 'you lost' : 'draw');
+  document.getElementById('reviewTitle').textContent = title;
 
-  // Replay from the start, scoring each position as we go.
-  const g = new Game();
-  const evals = [];
-  let prevStm = null;
-  const first = WCAN.analyse(g, 2, 260);
-  evals.push(first.whiteScore);
-  prevStm = first.stmScore;
+  // Instant walkthrough: replay without analysis to get the move list.
+  const g0 = new Game();
   for (let i = 0; i < revActs.length; i++) {
-    if (!WCAI.applyToGame(g, revActs[i])) break;
-    const res = WCAN.analyse(g, 2, 260);
-    evals.push(res.whiteScore);
-    // grade the move that produced this position
-    revQuality.push(WCAN.classify(WCAN.clamp(prevStm) - WCAN.clamp(-res.stmScore)));
-    prevStm = res.stmScore;
+    if (!WCAI.applyToGame(g0, revActs[i])) break;
   }
-  revEvals = evals;
-  revMoves = g.history.map(function (h) { return { text: h.text, color: h.color }; });
-
-  const lw = [], lb = [];
-  g.history.forEach(function (h, i) {
-    const q = revQuality[i]; if (!q) return;
-    (h.color === 'white' ? lw : lb).push(q.loss);
-  });
-  const aw = WCAN.accuracy(lw), ab = WCAN.accuracy(lb);
+  revMoves = g0.history.map(function (h) { return { text: h.text, color: h.color }; });
   document.getElementById('revAccuracy').textContent =
-    'Accuracy \u00b7 White ' + (aw != null ? aw + '%' : '\u2013') + ' \u00b7 Black ' + (ab != null ? ab + '%' : '\u2013');
-
+    'Deep analysis (depth ' + REV_DEPTH + ') … 0/' + revActs.length;
   revSeek(0);
   showReview();
+
+  // Stream the deep pass one ply at a time so the page never freezes.
+  const g = new Game();
+  let prevStm = null, i = 0;
+  const step = function () {
+    if (token !== revToken) return;                 // review closed or replaced
+    if (prevStm === null) {
+      const first = WCAN.analyse(g, 2, 200);
+      revEvals.push(first.whiteScore);
+      prevStm = first.stmScore;
+      setTimeout(step, 15);
+      return;
+    }
+    if (i >= revActs.length || !WCAI.applyToGame(g, revActs[i])) { finish(); return; }
+    const res = WCAN.analyse(g, REV_DEPTH, REV_MOVETIME);
+    if (token !== revToken) return;
+    revEvals.push(res.whiteScore);
+    revQuality[i] = WCAN.classify(WCAN.clamp(prevStm) - WCAN.clamp(-res.stmScore));
+    prevStm = res.stmScore;
+    i++;
+    document.getElementById('revAccuracy').textContent =
+      'Deep analysis (depth ' + REV_DEPTH + ') … ' + i + '/' + revActs.length;
+    revSeek(revPos);                                // refresh grades/eval in view
+    setTimeout(step, 15);
+  };
+  const finish = function () {
+    if (token !== revToken) return;
+    const lw = [], lb = [];
+    revMoves.forEach(function (h, k) {
+      const q = revQuality[k]; if (!q) return;
+      (h.color === 'white' ? lw : lb).push(q.loss);
+    });
+    const aw = WCAN.accuracy(lw), ab = WCAN.accuracy(lb);
+    document.getElementById('revAccuracy').textContent =
+      'Accuracy · White ' + (aw != null ? aw + '%' : '–') +
+      ' · Black ' + (ab != null ? ab + '%' : '–') +
+      ' · depth ' + REV_DEPTH;
+    revSeek(revPos);
+  };
+  setTimeout(step, 30);
+}
+
+// Analyze the game that JUST ended, straight from the game-over banner.
+function analyzeCurrentGame() {
+  if (!gameActs.length) return;
+  const opp = onlineActive ? (oppLabel || 'Online player')
+    : (activeBot ? activeBot.name : 'Friendly game');
+  const me = onlineActive ? myColor : (botEnabled() ? (botSide() === 'white' ? 'black' : 'white') : 'white');
+  const outcome = game.winner ? (game.winner === me ? 'you won' : 'you lost') : 'draw';
+  openReview(gameActs.slice(), 'vs ' + opp + ' · ' + outcome);
+  renderProfile();
+  profileEl.classList.add('show');
+  updateAmbient();
 }
 
 // Rebuild the position at ply n and draw it.
@@ -1701,6 +1753,7 @@ bind('openProfile', function () { closeLobby(); openProfile(); });
 bind('openProfileTop', openProfile);
 bind('closeProfile', closeProfile);
 bind('reviewBack', showMatchList);
+bind('analyzeBtn', analyzeCurrentGame);
 const revLogEl = document.getElementById('revLog');
 if (revLogEl) revLogEl.addEventListener('click', function (e) {
   const row = e.target.closest('.logline');
@@ -1919,6 +1972,8 @@ function sync() {
       text += '  \u00b7  ' + r.before + ' \u2192 ' + r.after + ' (' + sign + r.delta + ')';
     }
     ui.bannerText.textContent = text;
+    const ab = document.getElementById('analyzeBtn');
+    if (ab) ab.style.display = gameActs.length ? '' : 'none';
     ui.banner.classList.add('show');
   }
   updateAmbient();
