@@ -118,3 +118,28 @@ ever happens, delete the offending window:
 ```sql
 delete from events where at > 'YYYY-MM-DD' and session = '<offender>';
 ```
+
+## Letting Claude read the stats
+
+`events` is unreadable with the public key by design. To let a session pull
+numbers without handing over any secret key, install the read-only aggregate
+function in [`sql/stats-function.sql`](sql/stats-function.sql) — change the
+passphrase inside it first, then run it in the SQL editor.
+
+It is `security definer` (so it can read the table), returns **aggregates
+only** — never a raw row — and has no write path. Calling it:
+
+```bash
+curl -s -X POST \
+  "https://ykmenwvniegyhxzxsvod.supabase.co/rest/v1/rpc/hc_stats" \
+  -H "apikey: <publishable key>" \
+  -H "Authorization: Bearer <publishable key>" \
+  -H "Content-Type: application/json" \
+  -d '{"pass":"<your passphrase>","days":30}'
+```
+
+To revoke access later:
+
+```sql
+drop function if exists hc_stats(text, int);
+```
