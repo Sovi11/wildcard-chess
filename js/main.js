@@ -672,8 +672,13 @@ const netCardEl = document.getElementById('netCard');
 
 let netSession = null;      // { cancel } for the active host/join/search
 let onlineActive = false;   // a live game is running over the wire
+// Humans are STRICTLY preferred in matchmaking, but only within 250 Elo. Set
+// to my rating when a matchmade search begins; null for friend rooms, where
+// any rating gap is welcome. Checked on the hello handshake below.
+let matchmadeEloGate = null;
 let myColor = null;         // which side this browser controls
 let oppLabel = null;        // what to show for the person on the other end
+let oppRecord = null;       // their { w, l, d } from the hello handshake
 
 function netOnline() { return onlineActive && WCNET.connected(); }
 
@@ -688,7 +693,7 @@ function paintNetCard() {
     '<span class="nc-body">' +
       '<span class="nc-name">' + esc(oppLabel || 'Opponent') + '</span>' +
       '<span class="nc-meta">' + (live
-        ? ('You are ' + myColor + ' \u00b7 ' + (yourTurn ? 'your move' : 'their move'))
+        ? ((oppRecord ? (oppRecord.w + 'W ' + oppRecord.l + 'L ' + oppRecord.d + 'D | ') : '') + 'You are ' + myColor + ' \u00b7 ' + (yourTurn ? 'your move' : 'their move'))
         : 'disconnected') + '</span>' +
     '</span>';
 }
@@ -725,7 +730,8 @@ function startOnlineGame(isHost, label, forcedColor) {
   runAnalysis(); sync(); render();
   WCSOUND.play('notify');
   // The host owns the opening position and tells the guest which side they got.
-  WCNET.send({ t: 'hello', name: myName(), elo: WCLADDER.getProfile().elo });
+  const myP = WCLADDER.getProfile();
+  WCNET.send({ t: 'hello', name: myName(), elo: myP.elo, w: myP.wins, l: myP.losses, d: myP.draws });
   if (isHost) {
     WCNET.send({ t: 'start', state: WCSHARE.encode(game), youAre: myColor === 'white' ? 'black' : 'white' });
   }
@@ -742,10 +748,31 @@ function netBroadcast(gm) {
 function netApply(msg) {
   if (!msg || !msg.t) return;
   if (msg.t === 'hello') {
+    // Matchmade pairing more than 250 Elo apart: politely bail to the bot pool.
+    if (matchmadeEloGate != null && typeof msg.elo === 'number' && isFinite(msg.elo)
+        && Math.abs(msg.elo - matchmadeEloGate) > 250) {
+      const myElo = matchmadeEloGate;
+      matchmadeEloGate = null;
+      try { WCNET.send({ t: 'toofar' }); } catch (e) {}
+      WCNET.destroy(); onlineActive = false; paintNetCard();
+      ui.hint.textContent = 'Closest player was too far in rating - matching you from the pool.';
+      searchPool(myElo);
+      return;
+    }
+    matchmadeEloGate = null;               // pairing accepted
     const nm = String(msg.name || '').slice(0, 16).replace(/[<>&]/g, '');
     oppLabel = nm || 'Anonymous';
     if (typeof msg.elo === 'number' && isFinite(msg.elo)) oppLabel += ' (' + Math.round(msg.elo) + ')';
+    oppRecord = (typeof msg.w === 'number') ? { w: msg.w | 0, l: msg.l | 0, d: msg.d | 0 } : null;
     paintNetCard();
+    return;
+  }
+  if (msg.t === 'toofar') {
+    const myElo = matchmadeEloGate != null ? matchmadeEloGate : WCLADDER.getProfile().elo;
+    matchmadeEloGate = null;
+    WCNET.destroy(); onlineActive = false; paintNetCard();
+    ui.hint.textContent = 'Closest player was too far in rating - matching you from the pool.';
+    searchPool(myElo);
     return;
   }
   if (msg.t === 'start') {
@@ -815,6 +842,7 @@ function netHandlers(labelWhenJoined) {
 }
 
 function hostRoom() {
+  matchmadeEloGate = null;                 // friend rooms welcome any rating gap
   if (!WCNET.available()) {
     showRoomBox('Online play needs the network library, which failed to load. Check your connection and reload.', '');
     return;
@@ -825,6 +853,7 @@ function hostRoom() {
 }
 
 function joinRoom(code) {
+  matchmadeEloGate = null;                 // friend rooms welcome any rating gap
   if (!WCNET.available() || !code) return;
   if (netSession && netSession.cancel) netSession.cancel();
   showRoomBox('Connecting to ' + code + '\u2026', '');
@@ -954,6 +983,12 @@ function maybeOnboard(remote) {
   let skipped = false;
   try { skipped = localStorage.getItem(OBSKIP) === '1'; } catch (e) {}
   if (done || skipped) return;
+  // The walkthrough comes first — never stack the profile form on top of it.
+  const tut = document.getElementById('tutorial');
+  if (tut && tut.classList.contains('show')) {
+    setTimeout(function () { maybeOnboard(remote); }, 1200);
+    return;
+  }
   const dobEl = document.getElementById('obDob');
   if (dobEl && !dobEl.max) dobEl.max = new Date().toISOString().slice(0, 10);
   const nameEl = document.getElementById('obName');
@@ -1166,6 +1201,16 @@ WCCLOUD.onChange(function (u) {
     const created = u.created_at ? (Date.now() - new Date(u.created_at).getTime()) : 1e9;
     WCSTATS.track(created < 60000 ? 'signup' : 'signin', {});
   }
+  // First entry through ANY door teaches you the game. enterSite() handles the
+  // welcome-screen door; this covers signing in from the lobby button, where
+  // the welcome overlay is not up.
+  if (welcomeEl && welcomeEl.classList.contains('show')) enterSite();
+  else if (!tutSeen()) {
+    markTutSeen();
+    WCSTATS.track('tutorial_start', {});
+    WCTUT.open(function () { WCSTATS.track('tutorial_done', {}); updateAmbient(); });
+    updateAmbient();
+  }
 });
 
 // ---- welcome screen and tutorial ------------------------------------------
@@ -1174,7 +1219,7 @@ WCCLOUD.onChange(function (u) {
 // Never shown when arriving on a room or game link: nothing gets between a
 // player and their friend's game.
 const welcomeEl = document.getElementById('welcome');
-const TUTKEY = 'wildcardchess.tut.v1';
+const TUTKEY = 'wildcardchess.tut.v2';   // v2: re-show once after tutorial-flow fixes
 const tutSeen = function () { try { return localStorage.getItem(TUTKEY) === '1'; } catch (e) { return true; } };
 const markTutSeen = function () { try { localStorage.setItem(TUTKEY, '1'); } catch (e) {} };
 
@@ -1262,6 +1307,7 @@ function beginSearch() {
   // It persists, so an opponent who queued minutes ago is still reachable.
   if (WCCLOUD.enabled() && WCCLOUD.currentUser() && WCNET.available()) {
     if (searchLineEl) searchLineEl.textContent = 'Searching the queue\u2026';
+    matchmadeEloGate = elo;
     cloudQueueSearch(elo);
     return;
   }
@@ -1270,7 +1316,8 @@ function beginSearch() {
   if (WCNET.available()) {
     if (searchLineEl) searchLineEl.textContent = 'Searching for a player\u2026';
     let handedOff = false;
-    netSession = WCNET.findHuman(elo, 10000, {
+    matchmadeEloGate = elo;
+    netSession = WCNET.findHuman(elo, 30000, {
       onTick: function (st) {
         if (!searchBandEl) return;
         searchBandEl.textContent = st.phase === 'waiting'
@@ -1333,7 +1380,7 @@ async function cloudQueueSearch(elo) {
       netSession = null;
       if (searchLineEl) searchLineEl.textContent = 'No one in the queue \u2014 finding you an opponent\u2026';
       searchPool(elo);
-    }, 10000);
+    }, 30000);
   } catch (e) {
     console.warn('[cloud] queue search failed:', e && e.message);
     if (!stopped) searchPool(elo);
@@ -1380,6 +1427,7 @@ function closeLobby() { if (cancelSearch) { cancelSearch(); cancelSearch = null;
 
 // Start a fresh rated game against a ladder bot. You are White, the bot is Black.
 function startMatch(botId) {
+  matchmadeEloGate = null;
   WCSTATS.track('game_start', {
     mode: 'ranked', opponent: botId,
     signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()),

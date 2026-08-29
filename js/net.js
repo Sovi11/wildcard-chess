@@ -148,7 +148,7 @@
   function findHuman(elo, budgetMs, h) {
     handlers = h || {};
     let cancelled = false;
-    const deadline = Date.now() + (budgetMs || 10000);
+    const deadline = Date.now() + (budgetMs || 30000);
     const buckets = [bucketOf(elo), bucketOf(elo) - BUCKET, bucketOf(elo) + BUCKET]
       .filter(b => b >= 0);
 
@@ -162,7 +162,7 @@
       // Phase 1 — look for someone already waiting. This is deliberately short:
       // if every client spent the whole budget probing, nobody would ever be
       // waiting to be found and no two players could ever meet.
-      const probeUntil = Date.now() + (budgetMs || 10000) * PROBE_SHARE;
+      const probeUntil = Date.now() + (budgetMs || 30000) * PROBE_SHARE;
       for (const b of buckets) {
         for (let i = 1; i <= SLOTS; i++) {
           if (cancelled) return;
