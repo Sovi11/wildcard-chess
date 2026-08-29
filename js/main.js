@@ -705,6 +705,10 @@ function hideRoomBox() { if (roomBoxEl) roomBoxEl.classList.remove('show'); }
 function startOnlineGame(isHost, label, forcedColor) {
   if (netSession && netSession.cancel && netSession.settled !== true) netSession.settled = true;
   onlineActive = true;
+  WCSTATS.track('game_start', {
+    mode: 'online', opponent: 'human',
+    signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()),
+  });
   activeBot = null;
   ratedGame = false;              // friendlies never touch your rating
   resultRecorded = false;
@@ -1153,7 +1157,16 @@ if (passInput) passInput.addEventListener('keydown', onEnter);
 const closeAuthBtn = document.getElementById('closeAuth');
 if (closeAuthBtn) closeAuthBtn.addEventListener('click', closeAuthModal);
 if (authModalEl) authModalEl.addEventListener('click', function (e) { if (e.target === authModalEl) closeAuthModal(); });
-WCCLOUD.onChange(function (u) { if (u) closeAuthModal(); });
+let signedInTracked = false;
+WCCLOUD.onChange(function (u) {
+  if (!u) return;
+  closeAuthModal();
+  if (!signedInTracked) {                      // onChange can fire repeatedly
+    signedInTracked = true;
+    const created = u.created_at ? (Date.now() - new Date(u.created_at).getTime()) : 1e9;
+    WCSTATS.track(created < 60000 ? 'signup' : 'signin', {});
+  }
+});
 
 // ---- welcome screen and tutorial ------------------------------------------
 // Signed-out visitors land on a welcome screen with a real sign-in button
@@ -1170,12 +1183,15 @@ function closeWelcome() { if (welcomeEl) welcomeEl.classList.remove('show'); }
 // walkthrough, unskippably queued before anything else. The lobby follows it.
 function enterSite() {
   closeWelcome();
-  if (!tutSeen()) { markTutSeen(); WCTUT.open(openLobby); }
-  else openLobby();
+  if (!tutSeen()) {
+    markTutSeen();
+    WCSTATS.track('tutorial_start', {});
+    WCTUT.open(function () { WCSTATS.track('tutorial_done', {}); openLobby(); });
+  } else openLobby();
   updateAmbient();
 }
 function bindClick(id, fn) { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
-bindClick('welcomeGuest', enterSite);
+bindClick('welcomeGuest', function () { WCSTATS.track('enter', { as: 'guest' }); enterSite(); });
 bindClick('welcomeSignin', function () { openAuthModal(); });
 bindClick('welcomeHow', function () { WCTUT.open(updateAmbient); updateAmbient(); });
 bindClick('howBtn', function () { WCTUT.open(updateAmbient); updateAmbient(); });
@@ -1364,6 +1380,10 @@ function closeLobby() { if (cancelSearch) { cancelSearch(); cancelSearch = null;
 
 // Start a fresh rated game against a ladder bot. You are White, the bot is Black.
 function startMatch(botId) {
+  WCSTATS.track('game_start', {
+    mode: 'ranked', opponent: botId,
+    signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()),
+  });
   if (netSession && netSession.cancel) { netSession.cancel(); netSession = null; }
   WCNET.destroy(); onlineActive = false; myColor = null;
   activeBot = WCLADDER.liveBot(botId);
@@ -1384,6 +1404,10 @@ function startMatch(botId) {
 
 // Start an unrated mode: 'hotseat' (same screen) or 'link' (send a link).
 function startCasual(kind) {
+  WCSTATS.track('game_start', {
+    mode: kind, opponent: 'human',
+    signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()),
+  });
   if (netSession && netSession.cancel) { netSession.cancel(); netSession = null; }
   WCNET.destroy(); onlineActive = false; myColor = null;
   activeBot = null; ratedGame = false; resultRecorded = false;
@@ -1812,6 +1836,19 @@ function sync() {
     applyTutorVisibility();
     if (!endSounded) {
       endSounded = true;
+      // One game_end per game (endSounded is the existing once-only guard).
+      // boardMoves answers the design question: do people use the mechanic?
+      const me = localColor();
+      WCSTATS.track('game_end', {
+        result: game.winner ? (game.winner === me ? 'win' : 'loss') : 'draw',
+        reason: game.endReason || game.status,
+        plies: game.history.length,
+        boardMoves: gameActs.filter(function (a) { return a && a.kind !== 'm'; }).length,
+        vsBot: !!activeBot,
+        opponent: activeBot ? activeBot.id : 'human',
+        rated: !!ratedGame,
+        signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()),
+      });
       if (!game.winner) WCSOUND.play('draw');
       else if (botEnabled() || onlineActive) WCSOUND.play(game.winner === localColor() ? 'win' : 'lose');
       else WCSOUND.play('win');            // hotseat: somebody at this screen won
