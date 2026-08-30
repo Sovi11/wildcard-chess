@@ -16,19 +16,19 @@
   }
 
   /* camera rig: the board rides on this */
-  #cam { position:absolute; inset:0; z-index:1; transform-origin:540px 1050px;
+  #cam { position:absolute; inset:0; z-index:1; transform-origin:500px 1020px;
     transition:transform .7s cubic-bezier(.22,1,.36,1); }
   #cam.snap { transition:transform .14s cubic-bezier(.25,1.5,.4,1); }
 
   .cap {
-    position:absolute; left:40px; right:40px; text-align:center; z-index:6;
+    position:absolute; left:60px; right:180px; text-align:center; z-index:6;
     font-weight:900; color:var(--ink); line-height:.98; letter-spacing:-.01em;
     text-shadow:0 6px 30px rgba(0,0,0,.95), 0 0 14px rgba(0,0,0,.85);
     opacity:0;
   }
-  .cap.top { top:150px; font-size:150px; }
-  .cap.mid { top:44%; font-size:170px; }
-  .cap.bottom { bottom:130px; font-size:84px; }
+  .cap.top { top:265px; font-size:120px; }
+  .cap.mid { top:40%; font-size:138px; }
+  .cap.bottom { bottom:500px; font-size:72px; }
   .cap .gold { color:var(--accent); }
   .cap .red { color:var(--danger); }
   .cap .green { color:var(--ok); }
@@ -45,7 +45,7 @@
   #vignette { position:absolute; inset:0; z-index:4; pointer-events:none;
     background:radial-gradient(ellipse at 50% 46%, transparent 52%, rgba(0,0,0,.55) 100%); }
 
-  #boardWrap { position:absolute; left:50px; top:560px; width:980px; height:980px; opacity:0; transition:opacity .4s; }
+  #boardWrap { position:absolute; left:110px; top:630px; width:780px; height:780px; opacity:0; transition:opacity .4s; }
   #boardWrap.show { opacity:1; }
   #board { width:100%; height:100%; display:block; }
 
@@ -54,28 +54,34 @@
   .pc.w * { stroke:#26282e; stroke-width:1.1; }
   .pc.b * { stroke:#cfd2d8; stroke-width:.8; }
 
-  #cheese { position:absolute; left:0; right:0; top:42%; text-align:center; font-size:460px; z-index:5;
+  #cheese { position:absolute; left:0; right:0; top:38%; text-align:center; font-size:400px; z-index:5;
     opacity:0; transform:scale(.5) rotate(-14deg); transition:opacity .25s, transform .3s cubic-bezier(.2,1.8,.4,1); }
   #cheese.show { opacity:1; transform:scale(1) rotate(0); }
 
-  #counter { position:absolute; top:330px; left:0; right:0; text-align:center; z-index:6;
+  #counter { position:absolute; top:300px; left:60px; right:180px; text-align:center; z-index:6;
     font-size:78px; font-weight:900; color:var(--accent); opacity:0; font-variant-numeric:tabular-nums;
     text-shadow:0 4px 20px rgba(0,0,0,.9); }
   #counter.show { opacity:1; }
 
   #endcard { position:absolute; inset:0; z-index:10; background:var(--bg); display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:40px; opacity:0; transition:opacity .35s; }
+    align-items:center; justify-content:center; gap:34px; padding-bottom:380px; padding-right:120px; opacity:0; transition:opacity .35s; }
   #endcard.show { opacity:1; }
-  #endcard .mark { width:380px; height:440px; }
-  #endcard .wm { font-size:150px; font-weight:900; line-height:.85; text-align:center; color:var(--ink); }
+  #endcard .mark { width:310px; height:360px; }
+  #endcard .wm { font-size:128px; font-weight:900; line-height:.85; text-align:center; color:var(--ink); }
   #endcard .wm .l2 { color:var(--accent); }
   #endcard .tag { font-size:46px; color:var(--muted); font-weight:700; }
-  #endcard .url { font-size:74px; color:var(--accent); font-weight:900; letter-spacing:.03em; }
+  #endcard .url { font-size:66px; color:var(--accent); font-weight:900; letter-spacing:.03em; }
   #endcard .free { font-size:42px; color:var(--ink); opacity:.85; font-weight:700; }
 </style>
 </head>
 <body>
 <div id="stage">
+  <!-- ?safe=1 paints the platform-UI danger zones so the layout can be checked -->
+  <div id="safeGuide" style="display:none;position:absolute;inset:0;z-index:99;pointer-events:none">
+    <div style="position:absolute;left:0;right:0;top:0;height:220px;background:rgba(255,0,0,.30)"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:450px;background:rgba(255,0,0,.30)"></div>
+    <div style="position:absolute;right:0;top:220px;bottom:450px;width:180px;background:rgba(255,140,0,.25)"></div>
+  </div>
   <div id="cam">
     <div id="boardWrap"><svg id="board" xmlns="http://www.w3.org/2000/svg"></svg></div>
   </div>
@@ -563,6 +569,7 @@
     await endCard(5200, 'HOLLOW CHESS. hollow chess dot com.');
   }
 
+  if (new URLSearchParams(location.search).get('safe')) document.getElementById('safeGuide').style.display = '';
   const scene = new URLSearchParams(location.search).get('scene') || 'rook';
   window.SCENE_DONE = false;
   ({ rook: sceneRook, island: sceneIsland, escape: sceneEscape, cheese: sceneCheese, morph: sceneMorph }[scene] || sceneRook)()
