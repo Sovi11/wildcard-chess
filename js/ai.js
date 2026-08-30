@@ -30,6 +30,20 @@
     pawnAdv: 5,                               // cp per step of pawn advancement toward its edge
     frozenPawn: -18,                          // pawn with a hole directly ahead
     tempo: 8,
+    // Positional terms. A board that changes shape has no fixed squares, so
+    // "piece-square tables" here are computed against the board's CURRENT
+    // bounds rather than a static 8x8 grid.
+    centerN: 32,                              // knights love the middle of whatever board exists
+    centerB: 14,
+    centerQ: 6,
+    rookOpen: 22,                             // rook on a file with no pawns
+    rookSemi: 10,
+    bishopPair: 38,
+    passedPawn: 22,                           // per rank of advancement, scaled
+    doubledPawn: -16,
+    isolatedPawn: -14,
+    kingShelter: 26,                          // midgame: king away from the open middle
+    kingActive: 24,                           // endgame: king wants the middle
     // Personality. Root-only nudge (cp) toward or away from each board action;
     // deep eval is untouched, so a biased bot is still tactically sound.
     kindBias: { ac: 0, rc: 0, mc: 0 },
@@ -85,6 +99,8 @@
       this.killers = [];
       this.hist = new Map();
       this.tt = new Map();
+      this.cellVer = 0;                        // bumped whenever terrain changes
+      this.bv = -1;                            // version the bounds cache was built at
       this.initHash();
     }
 
@@ -110,6 +126,23 @@
         && this.wildUsed[col] < this.budget;
     }
     has(k) { return this.cells.has(k); }
+
+    // The board's current extent. Recomputed only when terrain actually moves,
+    // which is at most once every three plies — everything positional is scored
+    // relative to this, since there are no fixed squares in this variant.
+    bounds() {
+      if (this.bv === this.cellVer) return;
+      let minC = 1e9, maxC = -1e9, minR = 1e9, maxR = -1e9;
+      for (const k of this.cells) {
+        const c = upC(k), r = upR(k);
+        if (c < minC) minC = c;
+        if (c > maxC) maxC = c;
+        if (r < minR) minR = r;
+        if (r > maxR) maxR = r;
+      }
+      this.bMinC = minC; this.bMaxC = maxC; this.bMinR = minR; this.bMaxR = maxR;
+      this.bv = this.cellVer;
+    }
 
     // ---- position hashing (transposition table) ---------------------------
     // ha/hb are the "material + terrain" half, updated incrementally on every
@@ -236,9 +269,9 @@
         }
         this.xorPiece(m.to, np.t, side);                           // arrived (post-promotion)
       } else if (m.kind === 'ac' || m.kind === 'rc') {
-        this.xorCell(m.cell);
+        this.xorCell(m.cell); this.cellVer++;
       } else {
-        this.xorCell(m.from); this.xorCell(m.to);
+        this.xorCell(m.from); this.xorCell(m.to); this.cellVer++;
       }
       this.counts[side]++;
       this.turn = side === W ? B : W;
@@ -250,6 +283,7 @@
       this.counts[u.side]--;
       this.ep = u.prevEp;
       this.ha = u.ha; this.hb = u.hb;
+      if (u.kind !== 'm') this.cellVer++;       // terrain restored: bounds cache is stale
       if (u.kind === 'm') {
         const p = this.board.get(u.to);
         this.board.delete(u.to);
@@ -444,25 +478,70 @@
     evaluate() {
       const w = this.w;
       let score = 0;
+      this.bounds();
+      const cx = (this.bMinC + this.bMaxC) / 2, cy = (this.bMinR + this.bMaxR) / 2;
+      const hw = Math.max(1, (this.bMaxC - this.bMinC) / 2);
+      const hh = Math.max(1, (this.bMaxR - this.bMinR) / 2);
+      // 1.0 at the board's centre, 0.0 at its rim — the shape-agnostic stand-in
+      // for a piece-square table.
+      const central = (c, r) => 1 - (Math.abs(c - cx) / hw + Math.abs(r - cy) / hh) / 2;
+
+      // Pawn files, for structure terms. Built once per eval.
+      const pf = [new Map(), new Map()];       // [white, black] file -> count
+      let nonPawn = 0, bishops = [0, 0];
+      for (const [k, p] of this.board) {
+        if (p.t === PT.pawn) {
+          const c = upC(k);
+          pf[p.col].set(c, (pf[p.col].get(c) || 0) + 1);
+        } else if (p.t !== PT.king) {
+          nonPawn += w.material[p.t];
+          if (p.t === PT.bishop) bishops[p.col]++;
+        }
+      }
+      // Game phase: 1 = opening (lots of material), 0 = bare endgame. Kings
+      // want opposite things at the two extremes, so their term is tapered.
+      const phase = Math.max(0, Math.min(1, nonPawn / 6800));
+
+      if (bishops[W] >= 2) score += w.bishopPair;
+      if (bishops[B] >= 2) score -= w.bishopPair;
+
       for (const [k, p] of this.board) {
         const sign = p.col === W ? 1 : -1;
         score += sign * w.material[p.t];
         const c = upC(k), r = upR(k);
         if (p.t === PT.pawn) {
           const dir = p.col === W ? 1 : -1;
-          const aheadK = pack(c, r + dir);
-          // frozen: hole directly ahead (can still capture diagonally, but can't advance)
-          const holeAhead = !this.has(aheadK);
+          const holeAhead = !this.has(pack(c, r + dir));
           if (holeAhead) score += sign * w.frozenPawn;
           // advancement: fewer steps to the world's edge in this file = better
           let steps = 0, y = r + dir;
           while (this.has(pack(c, y)) && steps < 12) { steps++; y += dir; }
           score += sign * w.pawnAdv * Math.max(0, 8 - steps);
+
+          // structure
+          if ((pf[p.col].get(c) || 0) > 1) score += sign * w.doubledPawn;
+          if (!(pf[p.col].get(c - 1) || 0) && !(pf[p.col].get(c + 1) || 0)) {
+            score += sign * w.isolatedPawn;
+          }
+          // passed: no enemy pawn on this file or the two beside it, ahead of us
+          const foe = p.col === W ? B : W;
+          let passed = true;
+          for (let d = -1; d <= 1 && passed; d++) {
+            if (!(pf[foe].get(c + d) || 0)) continue;
+            for (const [kk, q] of this.board) {
+              if (q.t !== PT.pawn || q.col !== foe || upC(kk) !== c + d) continue;
+              if ((upR(kk) - r) * dir > 0) { passed = false; break; }
+            }
+          }
+          if (passed) score += sign * w.passedPawn * (1 - Math.max(0, Math.min(8, steps)) / 8);
         } else if (p.t !== PT.king) {
-          // mobility
           let mob = 0;
           if (p.t === PT.knight) {
-            for (const [dc, dr] of KNIGHT) { const tk = pack(c + dc, r + dr); if (this.has(tk) && (!this.board.get(tk) || this.board.get(tk).col !== p.col)) mob++; }
+            for (const [dc, dr] of KNIGHT) {
+              const tk = pack(c + dc, r + dr);
+              if (this.has(tk) && (!this.board.get(tk) || this.board.get(tk).col !== p.col)) mob++;
+            }
+            score += sign * w.centerN * central(c, r);
           } else {
             const dirs = p.t === PT.bishop ? DIAG : p.t === PT.rook ? ORTHO : N8;
             for (const [dc, dr] of dirs) {
@@ -473,13 +552,24 @@
                 mob++; x += dc; y2 += dr;
               }
             }
+            if (p.t === PT.bishop) score += sign * w.centerB * central(c, r);
+            else if (p.t === PT.queen) score += sign * w.centerQ * central(c, r);
+            else if (p.t === PT.rook) {
+              const own = pf[p.col].get(c) || 0;
+              const opp = pf[p.col === W ? B : W].get(c) || 0;
+              if (!own && !opp) score += sign * w.rookOpen;
+              else if (!own) score += sign * w.rookSemi;
+            }
           }
           score += sign * w.mobility * mob;
         } else {
-          // king ring: existing cells around king (terrain safety/escape room)
+          // terrain safety: how much floor the king still has around it
           let ring = 0;
           for (const [dc, dr] of N8) if (this.has(pack(c + dc, r + dr))) ring++;
           score += sign * w.kingRing * (ring - 5);
+          // tapered: hide in the opening, march in the endgame
+          const ctr = central(c, r);
+          score += sign * (phase * -w.kingShelter * ctr + (1 - phase) * w.kingActive * ctr);
         }
       }
       score += (this.turn === W ? 1 : -1) * w.tempo;

@@ -1607,7 +1607,7 @@ function reviewMatch(idx) {
 // highest depth, streaming eval + grades into the view as each ply lands.
 let revToken = 0;                 // bumping this cancels any in-flight analysis
 const REV_DEPTH = 7;              // analysis-grade: far deeper than any bot plays
-const REV_MOVETIME = 1500;
+const REV_MOVETIME = 2500;   // ~depth 6-7 per ply; it streams, so nothing blocks
 
 function openReview(acts, title) {
   const token = ++revToken;

@@ -32,7 +32,7 @@ the whole game as text.
 
 **Play:** https://hollowchess.com  (also at https://sovi11.github.io/wildcard-chess/)
 
-**Ranked:** hit *Find a match*. It looks for a real player for 10 seconds, then falls back
+**Ranked:** hit *Find a match*. It looks for a real player for 30 seconds (humans strictly preferred, and only paired within 250 rating points), then falls back
 to the resident pool so you are never left staring at an empty queue.
 
 **With a friend:**
@@ -207,8 +207,17 @@ The AI mirrors the rules rather than sharing them (deliberate: the rules engine 
 clarity, the search for speed), so `harness/` asserts they agree — every AI action is replayed
 through `engine.js` and any rejection is reported as `AI-ILLEGAL`.
 
-Search: iterative deepening → negamax + alpha-beta → quiescence (captures only) at the leaves.
-Move ordering by captured-piece value. ~270k nodes/sec; depth 4 in under a second.
+Search: iterative deepening negamax with alpha-beta, principal variation search,
+a transposition table, null-move pruning, late move reductions, check extensions,
+killer-move and history ordering, and a captures-only quiescence at the leaves.
+
+The transposition table needed a variant-specific design. Zobrist keys are
+generated **lazily per coordinate**, because this board can grow past its
+original 8x8 in any direction — there is no fixed square count to pre-table. The
+hash covers terrain, pieces, side to move, en passant, **and the board-turn
+phase**: wildcard eligibility changes which moves are legal, so it is part of a
+position's identity.  snapshots the hash into the undo record and
+ restores it verbatim, which is O(1) and cannot drift out of sync.
 
 The variant-specific problem is branching factor. A wildcard turn offers ~35 piece moves **plus**
 ~40 adds, ~30 removes and ~1200 square-moves. Full width is hopeless, so board actions are
@@ -216,9 +225,16 @@ The variant-specific problem is branching factor. A wildcard turn offers ~35 pie
 by stealing the square ahead of it, deny promotion by extending the world, open escape squares
 for my king. Piece moves stay full width.
 
-Evaluation is hand-written and terrain-aware: material, mobility (counted over *existing* cells,
-so holes reduce it), king ring (how much floor surrounds the king), pawn advancement measured as
-distance to the world's edge, and a penalty for pawns with a hole in front.
+Evaluation is hand-written and terrain-aware. A board that changes shape has no
+fixed squares, so the usual piece-square tables are replaced by terms computed
+against the board's **current bounds**: knights, bishops and queens are scored
+by how central they are on whatever board currently exists, and the king's term
+is tapered — it wants shelter while material is on, and the middle once it
+thins out. Alongside those: material, mobility counted over *existing* cells
+(holes reduce it), king ring (how much floor surrounds the king), pawn
+advancement measured as distance to the world's edge, a penalty for pawns with
+a hole in front, passed/doubled/isolated pawns, rooks on open files, and the
+bishop pair.
 
 ## Analysis harness
 
