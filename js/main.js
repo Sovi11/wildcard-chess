@@ -1606,8 +1606,8 @@ function reviewMatch(idx) {
 // the move list), while the engine works through the game behind it at its
 // highest depth, streaming eval + grades into the view as each ply lands.
 let revToken = 0;                 // bumping this cancels any in-flight analysis
-const REV_DEPTH = 5;              // Brutal-tier: the strongest search we ship
-const REV_MOVETIME = 900;
+const REV_DEPTH = 7;              // analysis-grade: far deeper than any bot plays
+const REV_MOVETIME = 1500;
 
 function openReview(acts, title) {
   const token = ++revToken;

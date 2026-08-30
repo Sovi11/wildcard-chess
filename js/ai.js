@@ -46,6 +46,21 @@
     };
   }
 
+  // ---- Zobrist keys -----------------------------------------------------
+  // Keys are generated lazily per coordinate, because this board can grow past
+  // its original 8x8 in any direction — there is no fixed square count to
+  // pre-table. Deterministic seed so runs are reproducible.
+  const zrand = rng(0x9E3779B9);
+  const zTable = new Map();
+  function zk(tag) {
+    let v = zTable.get(tag);
+    if (!v) {
+      v = [(zrand() * 4294967296) | 0, (zrand() * 4294967296) | 0];
+      zTable.set(tag, v);
+    }
+    return v;
+  }
+
   class Pos {
     // spec: { cells: [[c,r],...], pieces: [[c,r,typeName,colorName,hasMoved],...], turn, counts:{white,black} }
     constructor(spec, weights) {
@@ -67,6 +82,10 @@
       this.allowActions = (spec.rules && spec.rules.actions) || this.allowActions || null;
       this.w = weights || DEFAULT_WEIGHTS;
       this.nodes = 0;
+      this.killers = [];
+      this.hist = new Map();
+      this.tt = new Map();
+      this.initHash();
     }
 
     static fromGame(game, weights) {
@@ -91,6 +110,36 @@
         && this.wildUsed[col] < this.budget;
     }
     has(k) { return this.cells.has(k); }
+
+    // ---- position hashing (transposition table) ---------------------------
+    // ha/hb are the "material + terrain" half, updated incrementally on every
+    // make(). Side to move, en-passant and the board-turn phase are folded in
+    // at probe time, since they are cheap and change every ply.
+    xorPiece(k, t, col) {
+      const z = zk('p' + k + ':' + t + ':' + col);
+      this.ha ^= z[0]; this.hb ^= z[1];
+    }
+    xorCell(k) {
+      const z = zk('c' + k);
+      this.ha ^= z[0]; this.hb ^= z[1];
+    }
+    initHash() {
+      this.ha = 0; this.hb = 0;
+      for (const k of this.cells) this.xorCell(k);
+      for (const [k, q] of this.board) this.xorPiece(k, q.t, q.col);
+    }
+    hash() {
+      let a = this.ha, b = this.hb;
+      if (this.turn === B) { const z = zk('turn'); a ^= z[0]; b ^= z[1]; }
+      if (this.ep >= 0) { const z = zk('e' + this.ep); a ^= z[0]; b ^= z[1]; }
+      // Board-turn eligibility changes what is legal, so it must be part of
+      // the position's identity or the table would mix incompatible nodes.
+      const ph = (this.counts[0] + this.counts[1]) % this.cadence;
+      const zp = zk('h' + ph + ':' + (this.wildUsed[0] < this.budget ? 1 : 0)
+                     + (this.wildUsed[1] < this.budget ? 1 : 0));
+      a ^= zp[0]; b ^= zp[1];
+      return { a: a >>> 0, b: b >>> 0 };
+    }
 
     // ---- attacks ----------------------------------------------------------
     attacked(k, by) {
@@ -141,6 +190,7 @@
       const side = this.turn;
       const u = { kind: m.kind, side };
       u.prevEp = this.ep;
+      u.ha = this.ha; u.hb = this.hb;      // unmake restores these verbatim
       if (m.kind === 'm') {
         const p = this.board.get(m.from);
         u.from = m.from; u.to = m.to;
@@ -174,6 +224,22 @@
       else if (m.kind === 'rc') { this.cells.delete(m.cell); u.cell = m.cell; this.wildUsed[side]++; }
       else { this.cells.delete(m.from); this.cells.add(m.to); u.from = m.from; u.to = m.to; this.wildUsed[side]++; }
       if (m.kind !== 'm') this.ep = -1;
+      // Hash delta, read off the undo record now that the board is settled.
+      if (m.kind === 'm') {
+        const np = this.board.get(m.to);
+        this.xorPiece(m.from, u.wasT, side);                       // left the source
+        if (u.captured) this.xorPiece(m.to, u.captured.t, u.captured.col);
+        if (u.epVictim) this.xorPiece(u.epVictimSq, u.epVictim.t, u.epVictim.col);
+        if (u.rookFrom !== undefined) {
+          this.xorPiece(u.rookFrom, PT.rook, side);
+          this.xorPiece(u.rookTo, PT.rook, side);
+        }
+        this.xorPiece(m.to, np.t, side);                           // arrived (post-promotion)
+      } else if (m.kind === 'ac' || m.kind === 'rc') {
+        this.xorCell(m.cell);
+      } else {
+        this.xorCell(m.from); this.xorCell(m.to);
+      }
       this.counts[side]++;
       this.turn = side === W ? B : W;
       return u;
@@ -183,6 +249,7 @@
       this.turn = u.side;
       this.counts[u.side]--;
       this.ep = u.prevEp;
+      this.ha = u.ha; this.hb = u.hb;
       if (u.kind === 'm') {
         const p = this.board.get(u.to);
         this.board.delete(u.to);
@@ -421,7 +488,6 @@
 
     // ---- search -----------------------------------------------------------
     quiesce(alpha, beta, colorSign) {
-      this.nodes++;
       const stand = colorSign * this.evaluate();
       if (stand >= beta) return beta;
       if (stand > alpha) alpha = stand;
@@ -438,27 +504,136 @@
       return alpha;
     }
 
+    // ---- move ordering -------------------------------------------------
+    // A stable integer identity for a move, so killers and history can be
+    // remembered across nodes without allocating.
+    mkey(m) {
+      const a = m.from !== undefined ? m.from : (m.cell !== undefined ? m.cell : 0);
+      const b = m.to !== undefined ? m.to : 0;
+      const k = m.kind === 'm' ? 0 : m.kind === 'mc' ? 1 : m.kind === 'ac' ? 2 : 3;
+      return ((k * 262144) + a) * 262144 + b;
+    }
+
+    // Best-first ordering is what makes alpha-beta actually cut: the hash move,
+    // then captures by victim value, then moves that caused a cutoff at this
+    // ply before (killers), then moves good anywhere so far (history).
+    order(moves, ply, ttKey) {
+      const kl = this.killers[ply];
+      const k1 = kl ? kl[0] : 0, k2 = kl ? kl[1] : 0;
+      for (const m of moves) {
+        const key = this.mkey(m);
+        let sc;
+        if (ttKey && key === ttKey) sc = 1e9;
+        else if (m.cap) sc = 1e6 + m.cap;
+        else if (key === k1) sc = 9e5;
+        else if (key === k2) sc = 8e5;
+        else sc = (this.hist.get(key) || 0) + (m.s || 0);
+        m._o = sc;
+      }
+      moves.sort((a, b) => b._o - a._o);
+    }
+
+    // Null-move pruning is unsound in zugzwang, which needs real material.
+    hasNonPawn(side) {
+      for (const q of this.board.values()) {
+        if (q.col === side && q.t !== PT.pawn && q.t !== PT.king) return true;
+      }
+      return false;
+    }
+
+    makeNull() {
+      const u = { ep: this.ep, side: this.turn };
+      this.ep = -1;
+      this.counts[this.turn]++;      // keep the board-turn cadence coherent
+      this.turn = this.turn === W ? B : W;
+      return u;
+    }
+    unmakeNull(u) {
+      this.turn = u.side;
+      this.counts[u.side]--;
+      this.ep = u.ep;
+    }
+
     negamax(depth, alpha, beta, colorSign, ply, K, deadline) {
-      if (deadline && this.nodes % 2048 === 0 && Date.now() > deadline) throw 'TIME';
-      if (depth === 0) return this.quiesce(alpha, beta, colorSign);
-      this.nodes++;
+      if (deadline && (this.nodes & 2047) === 0 && Date.now() > deadline) throw 'TIME';
       const side = this.turn;
+      const inChk = this.inCheck(side);
+      if (inChk) depth++;                                  // check extension
+      if (depth <= 0) return this.quiesce(alpha, beta, colorSign);
+      this.nodes++;
+
+      const alphaOrig = alpha;
+
+      // ---- transposition table probe ----
+      const h = this.hash();
+      const te = this.tt.get(h.a);
+      let ttMoveKey = 0;
+      if (te && te.b === h.b) {
+        ttMoveKey = te.mk;
+        if (te.depth >= depth) {
+          if (te.flag === 0) return te.score;                         // exact
+          if (te.flag === 1) { if (te.score > alpha) alpha = te.score; }   // lower
+          else if (te.flag === 2) { if (te.score < beta) beta = te.score; } // upper
+          if (alpha >= beta) return te.score;
+        }
+      }
+
+      // ---- null move pruning ----
+      // If skipping a turn still leaves the opponent unable to reach beta, this
+      // node is far too good for them and can be cut without searching it.
+      if (!inChk && depth >= 3 && Math.abs(beta) < MATE - 200 && this.hasNonPawn(side)) {
+        const R = depth > 6 ? 3 : 2;
+        const nu = this.makeNull();
+        const nv = -this.negamax(depth - 1 - R, -beta, -beta + 1, -colorSign, ply + 1, K, deadline);
+        this.unmakeNull(nu);
+        if (nv >= beta) return beta;
+      }
+
       const moves = this.pieceMoves(false);
       if (this.eligible(side)) moves.push(...this.wildcardMoves(K));
-      moves.sort((a, b) => (b.cap || b.s || 0) - (a.cap || a.s || 0));
+      this.order(moves, ply, ttMoveKey);
 
-      let best = -Infinity, anyLegal = false;
+      let best = -Infinity, bestMove = 0, anyLegal = false, i = 0;
       for (const m of moves) {
         const u = this.make(m);
         if (this.inCheck(side)) { this.unmake(u); continue; }
         anyLegal = true;
-        const s = -this.negamax(depth - 1, -beta, -alpha, -colorSign, ply + 1, K, deadline);
+        const quiet = !m.cap;
+        let s;
+        if (i === 0) {
+          s = -this.negamax(depth - 1, -beta, -alpha, -colorSign, ply + 1, K, deadline);
+        } else {
+          // Late move reduction: quiet moves this far down the order are rarely
+          // best, so look shallower first and re-search only on a surprise.
+          let red = 0;
+          if (quiet && depth >= 3 && i >= 4) red = i >= 8 ? 2 : 1;
+          s = -this.negamax(depth - 1 - red, -alpha - 1, -alpha, -colorSign, ply + 1, K, deadline);
+          if (s > alpha && (red > 0 || s < beta)) {         // PVS / LMR re-search
+            s = -this.negamax(depth - 1, -beta, -alpha, -colorSign, ply + 1, K, deadline);
+          }
+        }
         this.unmake(u);
-        if (s > best) best = s;
+        i++;
+        if (s > best) { best = s; bestMove = this.mkey(m); }
         if (s > alpha) alpha = s;
-        if (alpha >= beta) break;
+        if (alpha >= beta) {
+          if (quiet) {                                     // remember what cut
+            const key = this.mkey(m);
+            const ks = this.killers[ply] || (this.killers[ply] = [0, 0]);
+            if (ks[0] !== key) { ks[1] = ks[0]; ks[0] = key; }
+            this.hist.set(key, (this.hist.get(key) || 0) + depth * depth);
+          }
+          break;
+        }
       }
-      if (!anyLegal) return this.inCheck(side) ? -MATE + ply : 0;
+      if (!anyLegal) return inChk ? -MATE + ply : 0;
+
+      if (this.tt.size < 400000) {
+        this.tt.set(h.a, {
+          b: h.b, depth: depth, score: best, mk: bestMove,
+          flag: best <= alphaOrig ? 2 : (best >= beta ? 1 : 0),
+        });
+      }
       return best;
     }
 
@@ -471,6 +646,9 @@
       const jitter = opts.jitter || 0;
       const rand = rng(opts.seed || 1);
       this.nodes = 0;
+      this.killers = [];
+      this.hist = new Map();
+      this.tt = new Map();
 
       const side = this.turn;
       const colorSign = side === W ? 1 : -1;
@@ -479,28 +657,39 @@
 
       const kb = this.w.kindBias || {};
       const adjFor = (m) => (m.kind === 'm' ? 0 : (kb[m.kind] || 0));
+      // Personality bots re-rank by kindBias after searching, so a narrow window
+      // could prune a move their bias would still have preferred. They search
+      // full-width; the unbiased analysis engine gets the fast path.
+      const biased = !!(kb.ac || kb.rc || kb.mc) || jitter > 0;
+
       let bestMove = rootMoves[0], bestScore = -Infinity, lastDepth = 0;
       for (let d = 1; d <= maxDepth; d++) {
         let curBest = null, curScore = -Infinity;
         try {
           const scored = [];
-          let curRaw = -Infinity;
+          let curRaw = -Infinity, alpha = -Infinity, n = 0;
           for (const m of rootMoves) {
             const u = this.make(m);
-            const s = -this.negamax(d - 1, -Infinity, Infinity, -colorSign, 1, K, deadline);
+            let s;
+            if (biased || n === 0) {
+              s = -this.negamax(d - 1, -Infinity, -alpha, -colorSign, 1, K, deadline);
+            } else {
+              s = -this.negamax(d - 1, -alpha - 1, -alpha, -colorSign, 1, K, deadline);
+              if (s > alpha) s = -this.negamax(d - 1, -Infinity, -alpha, -colorSign, 1, K, deadline);
+            }
             this.unmake(u);
+            n++;
             const sAdj = s + adjFor(m);
             scored.push({ m, s: sAdj, raw: s });
             if (sAdj > curScore) { curScore = sAdj; curBest = m; curRaw = s; }
+            if (!biased && s > alpha) alpha = s;
           }
-          // root jitter: pick among near-best for self-play variety
           if (jitter > 0) {
             const near = scored.filter(x => x.s >= curScore - jitter);
             const pick = near[Math.floor(rand() * near.length)];
             curBest = pick.m; curScore = pick.s;
           }
           bestMove = curBest; bestScore = curRaw; lastDepth = d;
-          // order root moves by score for next iteration
           scored.sort((a, b) => b.s - a.s);
           rootMoves.length = 0; rootMoves.push(...scored.map(x => x.m));
           if (Math.abs(curScore) > MATE - 100) break;

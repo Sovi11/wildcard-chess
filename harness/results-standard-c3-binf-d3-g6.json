@@ -1,0 +1,155 @@
+{
+  "cfg": {
+    "depth": 3,
+    "K": 10,
+    "jitter": 15,
+    "maxPlies": 200,
+    "setup": "standard",
+    "cadence": 3,
+    "budget": null,
+    "allowActions": null
+  },
+  "summary": {
+    "n": 6,
+    "wins": {
+      "white": 0,
+      "black": 3,
+      "draw": 3
+    },
+    "term": {
+      "move-cap": 3,
+      "checkmate": 3
+    },
+    "avgPlies": 181.3,
+    "avgCells": 64.2,
+    "wildPerGame": {
+      "ac": 0.7,
+      "rc": 0.5,
+      "mc": 28.7
+    },
+    "decisiveRate": 50,
+    "illegal": 0
+  },
+  "games": [
+    {
+      "idx": 0,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 15
+        },
+        "black": {
+          "ac": 1,
+          "rc": 0,
+          "mc": 16
+        }
+      },
+      "cellsEnd": 65,
+      "aiIllegal": 0
+    },
+    {
+      "idx": 1,
+      "plies": 200,
+      "result": "black",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 18
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 17
+        }
+      },
+      "cellsEnd": 64,
+      "aiIllegal": 0
+    },
+    {
+      "idx": 2,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 2,
+          "rc": 0,
+          "mc": 13
+        },
+        "black": {
+          "ac": 1,
+          "rc": 1,
+          "mc": 17
+        }
+      },
+      "cellsEnd": 66,
+      "aiIllegal": 0
+    },
+    {
+      "idx": 3,
+      "plies": 194,
+      "result": "black",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 16
+        },
+        "black": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 11
+        }
+      },
+      "cellsEnd": 64,
+      "aiIllegal": 0
+    },
+    {
+      "idx": 4,
+      "plies": 94,
+      "result": "black",
+      "termination": "checkmate",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 4
+        },
+        "black": {
+          "ac": 0,
+          "rc": 1,
+          "mc": 4
+        }
+      },
+      "cellsEnd": 63,
+      "aiIllegal": 0
+    },
+    {
+      "idx": 5,
+      "plies": 200,
+      "result": "draw",
+      "termination": "move-cap",
+      "wildcards": {
+        "white": {
+          "ac": 0,
+          "rc": 0,
+          "mc": 19
+        },
+        "black": {
+          "ac": 0,
+          "rc": 1,
+          "mc": 22
+        }
+      },
+      "cellsEnd": 63,
+      "aiIllegal": 0
+    }
+  ]
+}

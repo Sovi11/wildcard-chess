@@ -14,16 +14,14 @@ const WCAI = require(path.join(__dirname, '..', 'js', 'ai.js'));
 
 const GAMES = +process.argv[2] || 8;
 const PLY_CAP = 240;
-const SF_MOVETIME = 200;
+const SF_MOVETIME = 300;
 
 // Our contenders: the LEVELS dials passed straight to chooseMoveFor.
 const OURS = [
-  { name: 'L1-beginner', dials: WCAI.levelById(1) },
-  { name: 'L3-medium', dials: WCAI.levelById(3) },
-  { name: 'L5-brutal', dials: WCAI.levelById(5) },
+  { name: 'd6-analysis', dials: { depth: 6, K: 12, movetime: 1500, jitter: 0, blunder: 0 } },
 ];
 // SF opponents. 1320 is the engine's UCI_Elo floor.
-const SF_ELOS = [1320, 2000];
+const SF_ELOS = [2200, 2500];
 
 // ---- stockfish wrapper (npm stockfish v18) ---------------------------------
 // This emscripten build binds its output to process.stdout at script-eval
