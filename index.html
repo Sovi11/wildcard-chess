@@ -25,7 +25,7 @@
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=42" />
+  <link rel="stylesheet" href="styles.css?v=43" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -276,12 +276,42 @@
     </div>
   </div>
 
+  <div id="feedback" class="lobby auth-modal">
+    <div class="lobby-inner auth-inner">
+      <h2 class="lobby-title">Tell me what you think</h2>
+      <p class="lobby-sub">This is a one-person project and it is early. Anything at all helps — confusing bits, bugs, ideas, or just whether it was fun.</p>
+
+      <label class="auth-label" for="fbKind">What is this about?</label>
+      <select id="fbKind" class="share-input auth-field">
+        <option value="fun">Whether it is fun / the rules</option>
+        <option value="bug">Something is broken</option>
+        <option value="confusing">Something was confusing</option>
+        <option value="idea">An idea or feature request</option>
+        <option value="other">Something else</option>
+      </select>
+
+      <label class="auth-label" for="fbText">Your feedback</label>
+      <textarea id="fbText" class="share-input fb-text" maxlength="1200"
+                placeholder="Be blunt — it is more useful than being nice."></textarea>
+
+      <label class="auth-label" for="fbContact">Email <span style="color:var(--muted);font-weight:400">(optional — only if you want a reply)</span></label>
+      <input id="fbContact" class="share-input auth-field" type="email" placeholder="you@example.com" />
+
+      <p id="fbMsg" class="auth-msg">Sent straight to the developer. No account needed.</p>
+      <div class="lobby-foot">
+        <button id="fbCancel" class="ghost-btn">Cancel</button>
+        <button id="fbSend" class="share-btn auth-send">Send feedback</button>
+      </div>
+    </div>
+  </div>
+
   <div class="app">
     <header>
       <h1>Hollow&nbsp;Chess <span class="sub">the board itself is fair game</span></h1>
       <div class="head-right">
         <span class="elo-chip" id="eloChip" title="Your rating">★ 500</span>
         <button id="soundBtn" class="lobby-btn ghosty sound-btn" title="Sound">🔊</button>
+        <button id="feedbackBtn" class="lobby-btn ghosty" title="Send feedback">💬 Feedback</button>
         <button id="openProfileTop" class="lobby-btn ghosty">☰ Profile</button>
         <button id="openLobby" class="lobby-btn">⚔ New match</button>
       </div>
@@ -409,22 +439,22 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=42"></script>
-  <script src="js/stats.js?v=42"></script>
-  <script src="js/cloud.js?v=42"></script>
-  <script src="js/engine.js?v=42"></script>
-  <script src="js/pieces.js?v=42"></script>
-  <script src="js/themes.js?v=42"></script>
-  <script src="js/sound.js?v=42"></script>
-  <script src="js/tutorial.js?v=42"></script>
-  <script src="js/ai.js?v=42"></script>
-  <script src="js/ladder.js?v=42"></script>
+  <script src="js/config.js?v=43"></script>
+  <script src="js/stats.js?v=43"></script>
+  <script src="js/cloud.js?v=43"></script>
+  <script src="js/engine.js?v=43"></script>
+  <script src="js/pieces.js?v=43"></script>
+  <script src="js/themes.js?v=43"></script>
+  <script src="js/sound.js?v=43"></script>
+  <script src="js/tutorial.js?v=43"></script>
+  <script src="js/ai.js?v=43"></script>
+  <script src="js/ladder.js?v=43"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=42"></script>
-  <script src="js/net.js?v=42"></script>
-  <script src="js/share.js?v=42"></script>
-  <script src="js/analysis.js?v=42"></script>
-  <script src="js/main.js?v=42"></script>
+  <script src="js/matchmaking.js?v=43"></script>
+  <script src="js/net.js?v=43"></script>
+  <script src="js/share.js?v=43"></script>
+  <script src="js/analysis.js?v=43"></script>
+  <script src="js/main.js?v=43"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

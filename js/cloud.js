@@ -204,7 +204,25 @@
     return data[0];
   }
 
+  // ---- feedback ------------------------------------------------------------
+  // Insert-only, no account required. Context (version, screen, signed-in) is
+  // attached automatically so a bug report is actionable without interrogating
+  // the reporter.
+  async function sendFeedback(entry) {
+    if (!client) return { ok: false, error: 'cloud off' };
+    const row = {
+      kind: String(entry.kind || 'other').slice(0, 24),
+      body: String(entry.body || '').slice(0, 1200),
+      contact: String(entry.contact || '').slice(0, 120) || null,
+      context: entry.context || {},
+    };
+    const { error } = await client.from('feedback').insert(row);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  }
+
   window.WCCLOUD = {
+    sendFeedback,
     configured, enabled, init, signIn, signInWithEmail, hasGoogle, providerList,
     signInWithPassword, signUpWithPassword, resetPassword,
     signOut, currentUser, onChange,

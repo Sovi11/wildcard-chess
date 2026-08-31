@@ -1220,6 +1220,67 @@ WCCLOUD.onChange(function (u) {
   }
 });
 
+// ---- feedback --------------------------------------------------------------
+// A one-person project needs to hear from players more than it needs anything
+// else, so the button is in the header and asking costs no account. Context is
+// attached automatically: nobody remembers their build number.
+const fbEl = document.getElementById('feedback');
+
+function openFeedback() {
+  if (!fbEl) return;
+  const msg = document.getElementById('fbMsg');
+  const send = document.getElementById('fbSend');
+  if (msg) msg.textContent = WCCLOUD.enabled()
+    ? 'Sent straight to the developer. No account needed.'
+    : 'Offline right now — feedback needs a connection.';
+  if (send) { send.disabled = false; send.textContent = 'Send feedback'; }
+  fbEl.classList.add('show');
+  setTimeout(function () { const t = document.getElementById('fbText'); if (t) t.focus(); }, 60);
+}
+function closeFeedback() { if (fbEl) fbEl.classList.remove('show'); }
+
+async function submitFeedback() {
+  const body = (document.getElementById('fbText').value || '').trim();
+  const msg = document.getElementById('fbMsg');
+  const send = document.getElementById('fbSend');
+  if (body.length < 4) {
+    msg.textContent = 'Write a little more and I can actually act on it.';
+    document.getElementById('fbText').focus();
+    return;
+  }
+  send.disabled = true; send.textContent = 'Sending…';
+  const u = WCCLOUD.currentUser && WCCLOUD.currentUser();
+  const p = WCLADDER.getProfile();
+  const r = await WCCLOUD.sendFeedback({
+    kind: document.getElementById('fbKind').value,
+    body: body,
+    contact: (document.getElementById('fbContact').value || '').trim(),
+    context: {
+      elo: p.elo, games: p.wins + p.losses + p.draws,
+      signedIn: !!u, screen: window.innerWidth + 'x' + window.innerHeight,
+      ua: (navigator.userAgent || '').slice(0, 180),
+      ver: (document.querySelector('script[src*="main.js"]') || {}).src || '',
+    },
+  });
+  if (r.ok) {
+    msg.textContent = 'Thank you — genuinely. This is read.';
+    send.textContent = 'Sent ✓';
+    document.getElementById('fbText').value = '';
+    WCSTATS.track('feedback', { kind: document.getElementById('fbKind').value });
+    setTimeout(closeFeedback, 1400);
+  } else {
+    msg.textContent = /relation|table|schema/i.test(r.error)
+      ? 'Feedback storage is not set up yet (see SUPABASE_SETUP.md).'
+      : 'Could not send: ' + r.error;
+    send.disabled = false; send.textContent = 'Send feedback';
+  }
+}
+
+bindClick('feedbackBtn', openFeedback);
+bindClick('fbCancel', closeFeedback);
+bindClick('fbSend', submitFeedback);
+if (fbEl) fbEl.addEventListener('click', function (e) { if (e.target === fbEl) closeFeedback(); });
+
 // ---- welcome screen and tutorial ------------------------------------------
 // Signed-out visitors land on a welcome screen with a real sign-in button
 // (one tap to skip — no login wall). First-timers then get the walkthrough.

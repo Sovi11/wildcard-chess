@@ -133,3 +133,38 @@ these fields and everything else keeps working:
 alter table profiles add column if not exists dob date;
 alter table profiles add column if not exists chess_level text;
 ```
+
+## 6. In-game feedback
+
+The ⌨ Feedback button in the header writes here. Run once in the SQL editor:
+
+```sql
+create table if not exists feedback (
+  id      bigserial primary key,
+  kind    text not null,
+  body    text not null,
+  contact text,
+  context jsonb not null default '{}'::jsonb,
+  at      timestamptz not null default now()
+);
+
+alter table feedback enable row level security;
+
+-- Anyone may SEND feedback; nobody may read it back with the public key.
+drop policy if exists "anyone can send feedback" on feedback;
+create policy "anyone can send feedback" on feedback
+  for insert to anon
+  with check (
+    length(body) between 4 and 1200
+    and kind in ('fun','bug','confusing','idea','other')
+  );
+
+create index if not exists feedback_at_idx on feedback (at desc);
+```
+
+Read what comes in:
+
+```sql
+select at, kind, body, contact, context->>'elo' as elo, context->>'screen' as screen
+from feedback order by at desc limit 50;
+```
