@@ -42,25 +42,27 @@ async function renderBrand(browser) {
   console.log('brand: logo-512.png, logo-192.png');
 }
 
-async function recordScene(browser, scene) {
+async function recordScene(browser, scene, square) {
+  const W = 1080, H = square ? 1080 : 1920;
+  const name = scene + (square ? '-sq' : '');
   const ctx = await browser.newContext({
-    viewport: { width: 1080, height: 1920 },
+    viewport: { width: W, height: H },
     deviceScaleFactor: 1,
-    recordVideo: { dir: SHORTS_OUT, size: { width: 1080, height: 1920 } },
+    recordVideo: { dir: SHORTS_OUT, size: { width: W, height: H } },
   });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/shorts/shorts.html?scene=' + scene);
+  await page.goto(BASE + '/shorts/shorts.html?scene=' + scene + (square ? '&fmt=square' : ''));
   await page.waitForFunction('window.SCENE_DONE === true', null, { timeout: 180000 });
   const beats = await page.evaluate('window.SCENE_BEATS || []');
   await page.waitForTimeout(300);
   const video = page.video();
   await ctx.close();                       // flushes the webm
   const raw = await video.path();
-  const mp4 = path.join(SHORTS_OUT, scene + '-video.mp4');
+  const mp4 = path.join(SHORTS_OUT, name + '-video.mp4');
   ffmpeg(['-i', raw, '-r', '30', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '19', '-an', mp4]);
   fs.unlinkSync(raw);
-  fs.writeFileSync(path.join(SHORTS_OUT, scene + '.beats.json'), JSON.stringify(beats, null, 1));
-  console.log('short recorded:', scene, '(' + beats.length + ' beats)');
+  fs.writeFileSync(path.join(SHORTS_OUT, name + '.beats.json'), JSON.stringify(beats, null, 1));
+  console.log('short recorded:', name, '(' + beats.length + ' beats)');
 }
 
 const SCENES = ['rook', 'island', 'escape', 'cheese', 'morph'];
@@ -73,7 +75,8 @@ const SCENES = ['rook', 'island', 'escape', 'cheese', 'morph'];
     if (what === 'brand' || what === 'all') await renderBrand(browser);
     if (what === 'shorts' || what === 'all') {
       const only = process.argv[3];
-      for (const scene of (only ? [only] : SCENES)) await recordScene(browser, scene);
+      const square = process.argv.includes('--square');
+      for (const scene of (only ? [only] : SCENES)) await recordScene(browser, scene, square);
     }
   } finally {
     await browser.close();

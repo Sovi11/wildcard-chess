@@ -188,5 +188,10 @@ function mixScene(scene) {
 }
 
 const only = process.argv[2];
-for (const scene of (only ? [only] : ['rook', 'island', 'escape', 'cheese', 'morph'])) mixScene(scene);
+const BASE_SCENES = ['rook', 'island', 'escape', 'cheese', 'morph'];
+// '--square' mixes the 1:1 feed cuts instead of the 9:16 ones.
+const list = only && only !== '--square'
+  ? [only]
+  : BASE_SCENES.map((x) => x + (process.argv.includes('--square') ? '-sq' : ''));
+for (const scene of list) mixScene(scene);
 console.log('audio done.');

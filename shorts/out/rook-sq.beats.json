@@ -1,0 +1,58 @@
+[
+ {
+  "t": 0,
+  "sync": true
+ },
+ {
+  "t": 0.8094000000000233,
+  "vo": "THE ROOK."
+ },
+ {
+  "t": 0.8094000000000233,
+  "sfx": "braam"
+ },
+ {
+  "t": 2.91820000000007,
+  "vo": "Eight squares. One straight line. NOTHING stops it."
+ },
+ {
+  "t": 5.530400000000023,
+  "sfx": "whoosh"
+ },
+ {
+  "t": 6.43720000000007,
+  "sfx": "hit"
+ },
+ {
+  "t": 6.796099999999977,
+  "vo": "Until now."
+ },
+ {
+  "t": 6.796099999999977,
+  "sfx": "braam"
+ },
+ {
+  "t": 6.796599999999977,
+  "sfx": "lift"
+ },
+ {
+  "t": 7.752400000000024,
+  "sfx": "hit"
+ },
+ {
+  "t": 8.658900000000024,
+  "vo": "Even the rook... stops... at the VOID."
+ },
+ {
+  "t": 13.969099999999976,
+  "sfx": "hit"
+ },
+ {
+  "t": 13.969099999999976,
+  "vo": "HOLLOW CHESS. The board is the weapon. Play free at hollow chess dot com."
+ },
+ {
+  "t": 13.969099999999976,
+  "sfx": "braam"
+ }
+]

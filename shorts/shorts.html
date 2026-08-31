@@ -72,6 +72,25 @@
   #endcard .tag { font-size:46px; color:var(--muted); font-weight:700; }
   #endcard .url { font-size:66px; color:var(--accent); font-weight:900; letter-spacing:.03em; }
   #endcard .free { font-size:42px; color:var(--ink); opacity:.85; font-weight:700; }
+
+  /* ---- square (1:1) variant, for Instagram feed posts: ?fmt=square ---- */
+  body.sq, body.sq #stage { width:1080px; height:1080px; }
+  body.sq .cap { left:50px; right:50px; }
+  body.sq .cap.top { top:70px; font-size:92px; }
+  body.sq .cap.mid { top:36%; font-size:104px; }
+  body.sq .cap.bottom { bottom:56px; font-size:52px; }
+  body.sq #cam { transform-origin:540px 580px; }
+  body.sq #boardWrap { left:230px; top:268px; width:620px; height:620px; }
+  body.sq #cheese { top:26%; font-size:300px; }
+  body.sq #counter { top:172px; left:50px; right:50px; font-size:54px; }
+  body.sq #vignette { background:radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.5) 100%); }
+  body.sq #endcard { gap:20px; padding-bottom:0; padding-right:0; }
+  body.sq #endcard .mark { width:205px; height:238px; }
+  body.sq #endcard .wm { font-size:92px; }
+  body.sq #endcard .tag { font-size:31px; }
+  body.sq #endcard .url { font-size:48px; }
+  body.sq #endcard .free { font-size:28px; }
+  body.sq #safeGuide { display:none !important; }   /* feed posts have no overlay UI */
 </style>
 </head>
 <body>
@@ -569,7 +588,9 @@
     await endCard(5200, 'HOLLOW CHESS. hollow chess dot com.');
   }
 
-  if (new URLSearchParams(location.search).get('safe')) document.getElementById('safeGuide').style.display = '';
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('fmt') === 'square') document.body.classList.add('sq');
+  if (qs.get('safe')) document.getElementById('safeGuide').style.display = '';
   const scene = new URLSearchParams(location.search).get('scene') || 'rook';
   window.SCENE_DONE = false;
   ({ rook: sceneRook, island: sceneIsland, escape: sceneEscape, cheese: sceneCheese, morph: sceneMorph }[scene] || sceneRook)()
