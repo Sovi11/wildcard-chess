@@ -25,7 +25,7 @@
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=45" />
+  <link rel="stylesheet" href="styles.css?v=46" />
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -53,14 +53,15 @@
       <div class="queue-box">
         <button id="findMatch" class="find-btn">
           <span class="find-title">Find a match</span>
-          <span class="find-sub">Ranked · you are placed against someone near your rating</span>
+          <span class="find-sub">Ranked · a real player if one is around, otherwise the pool</span>
         </button>
         <div id="searchState" class="search-state">
           <div class="search-spin"></div>
           <div class="search-text">
-            <div id="searchLine" class="search-line">Searching for an opponent…</div>
+            <div id="searchLine" class="search-line">Looking for a human opponent…</div>
             <div id="searchBand" class="search-band"></div>
           </div>
+          <button id="playBotNow" class="share-btn">Play now</button>
           <button id="cancelSearch" class="ghost-btn">Cancel</button>
         </div>
         <div id="matchFound" class="match-found">
@@ -204,12 +205,12 @@
       </div>
       <h2 class="welcome-title">Hollow Chess</h2>
       <p class="welcome-tag">Chess, except the board itself is fair game. Lift squares, tear holes in your opponent's plans, checkmate anyway.</p>
-      <button id="welcomeSignin" class="find-btn welcome-btn">
-        <span class="find-title">Sign in</span>
-        <span class="find-sub">Your rating and games follow you to any device</span>
+      <button id="welcomeGuest" class="find-btn welcome-btn">
+        <span class="find-title">Play now</span>
+        <span class="find-sub">Free · no account · straight to a board</span>
       </button>
-      <button id="welcomeGuest" class="welcome-guest">Play as guest</button>
       <button id="welcomeHow" class="ghost-btn welcome-how">✦ How to play — 60-second tour</button>
+      <button id="welcomeSignin" class="welcome-signin-link">or sign in to save your rating</button>
     </div>
   </div>
 
@@ -447,22 +448,22 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=45"></script>
-  <script src="js/stats.js?v=45"></script>
-  <script src="js/cloud.js?v=45"></script>
-  <script src="js/engine.js?v=45"></script>
-  <script src="js/pieces.js?v=45"></script>
-  <script src="js/themes.js?v=45"></script>
-  <script src="js/sound.js?v=45"></script>
-  <script src="js/tutorial.js?v=45"></script>
-  <script src="js/ai.js?v=45"></script>
-  <script src="js/ladder.js?v=45"></script>
+  <script src="js/config.js?v=46"></script>
+  <script src="js/stats.js?v=46"></script>
+  <script src="js/cloud.js?v=46"></script>
+  <script src="js/engine.js?v=46"></script>
+  <script src="js/pieces.js?v=46"></script>
+  <script src="js/themes.js?v=46"></script>
+  <script src="js/sound.js?v=46"></script>
+  <script src="js/tutorial.js?v=46"></script>
+  <script src="js/ai.js?v=46"></script>
+  <script src="js/ladder.js?v=46"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=45"></script>
-  <script src="js/net.js?v=45"></script>
-  <script src="js/share.js?v=45"></script>
-  <script src="js/analysis.js?v=45"></script>
-  <script src="js/main.js?v=45"></script>
+  <script src="js/matchmaking.js?v=46"></script>
+  <script src="js/net.js?v=46"></script>
+  <script src="js/share.js?v=46"></script>
+  <script src="js/analysis.js?v=46"></script>
+  <script src="js/main.js?v=46"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

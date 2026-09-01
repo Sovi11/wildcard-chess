@@ -785,3 +785,12 @@ body.light .tut-sq.lift { filter: drop-shadow(0 .1px .1px rgba(40,50,70,.3)); }
 body.light #board .pc.w { color: #fbfaf6; --pc-line: #5a6070; }
 
 .support-link { text-decoration: none; display: inline-flex; align-items: center; }
+
+/* Welcome screen: playing is the primary action, signing in is a quiet
+   secondary. The reverse read as a login wall and bounced 58% of arrivals. */
+.welcome-signin-link {
+  display: block; width: 100%; margin-top: 14px; padding: 6px;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 13.5px; color: var(--muted); text-decoration: underline;
+}
+.welcome-signin-link:hover { color: var(--accent-text); }

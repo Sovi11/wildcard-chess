@@ -1512,6 +1512,18 @@ function showFound(opp, isHuman) {
   setTimeout(function () { startMatch(opp.id); }, 900);
 }
 
+// Waiting 30s for a human nobody can supply is the fastest way to lose a new
+// player. The human search still runs its full window, but this lets anyone
+// skip straight to an opponent — the wait becomes optional, not imposed.
+const playBotNowBtn = document.getElementById('playBotNow');
+if (playBotNowBtn) playBotNowBtn.addEventListener('click', function () {
+  if (cancelSearch) { cancelSearch(); cancelSearch = null; }
+  if (netSession && netSession.cancel) { netSession.cancel(); netSession = null; }
+  matchmadeEloGate = null;
+  WCSTATS.track('skip_wait', {});
+  searchPool(WCLADDER.getProfile().elo);
+});
+
 if (findBtn) findBtn.addEventListener('click', beginSearch);
 if (cancelSearchBtn) cancelSearchBtn.addEventListener('click', resetQueueUI);
 function closeLobby() { if (cancelSearch) { cancelSearch(); cancelSearch = null; } lobbyEl.classList.remove('show'); updateAmbient(); }
