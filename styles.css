@@ -783,3 +783,5 @@ body.light .state { background: #c62f24; }
 body.light .selcell { filter: drop-shadow(0 .09px .12px rgba(40,50,70,.35)); }
 body.light .tut-sq.lift { filter: drop-shadow(0 .1px .1px rgba(40,50,70,.3)); }
 body.light #board .pc.w { color: #fbfaf6; --pc-line: #5a6070; }
+
+.support-link { text-decoration: none; display: inline-flex; align-items: center; }

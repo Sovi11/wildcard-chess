@@ -13,4 +13,11 @@
 window.WCCONFIG = {
   supabaseUrl: 'https://ykmenwvniegyhxzxsvod.supabase.co',
   supabaseKey: 'sb_publishable_9NxzkNF1Yw4PApU78NKWbg_s_WX0aXk',
+
+  // Ko-fi handle for the Support link (e.g. 'hollowchess'). Empty = link hidden.
+  // Deliberately labelled SUPPORT, not donation: under Indian law an unrequited
+  // foreign gift is a 'foreign contribution', while payment for a digital good
+  // or acknowledgement is ordinary export income — and PayPal India only
+  // processes the latter. Supporters get a credit, so it is the latter.
+  kofi: '',
 };

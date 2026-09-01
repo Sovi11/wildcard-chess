@@ -1287,6 +1287,18 @@ async function submitFeedback() {
   }
 }
 
+// Support link: only appears once a Ko-fi handle is configured, so the game
+// never shows a dead or premature ask.
+(function () {
+  const el = document.getElementById('supportLink');
+  const handle = (window.WCCONFIG && window.WCCONFIG.kofi) || '';
+  if (el && handle) {
+    el.href = 'https://ko-fi.com/' + handle;
+    el.style.display = '';
+    el.addEventListener('click', function () { WCSTATS.track('support_click', {}); });
+  }
+})();
+
 bindClick('feedbackBtn', openFeedback);
 bindClick('fbCancel', closeFeedback);
 bindClick('fbSend', submitFeedback);

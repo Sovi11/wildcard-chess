@@ -583,7 +583,12 @@
       if (stand > alpha) alpha = stand;
       const caps = this.pieceMoves(true).sort((a, b) => b.cap - a.cap);
       const side = this.turn;
+      // Delta pruning: if winning the captured piece outright still leaves us
+      // far below alpha, the capture cannot rescue this line. Skipped in very
+      // sharp positions (a big swing already on the board) to stay safe.
+      const DELTA = 120;
       for (const m of caps) {
+        if (m.cap && stand + m.cap + DELTA < alpha) continue;
         const u = this.make(m);
         if (this.inCheck(side)) { this.unmake(u); continue; }
         const s = -this.quiesce(-beta, -alpha, -colorSign);
@@ -666,6 +671,14 @@
           else if (te.flag === 2) { if (te.score < beta) beta = te.score; } // upper
           if (alpha >= beta) return te.score;
         }
+      }
+
+      // ---- reverse futility ----
+      // Shallow node standing far ABOVE beta even after conceding a healthy
+      // margin: the opponent will avoid this line, so do not spend nodes on it.
+      if (!inChk && depth <= 3 && Math.abs(beta) < MATE - 200) {
+        const stat = colorSign * this.evaluate();
+        if (stat - 130 * depth >= beta) return beta;
       }
 
       // ---- null move pruning ----
@@ -757,7 +770,16 @@
         let curBest = null, curScore = -Infinity;
         try {
           const scored = [];
-          let curRaw = -Infinity, alpha = -Infinity, n = 0;
+          // Aspiration window: after depth 3 the score rarely moves far between
+          // iterations, so search a narrow band around the last one and widen
+          // only if it falls outside. Unbiased searches only — a personality
+          // bot re-ranks by kindBias afterwards, and a narrow window could have
+          // pruned the move its bias would have chosen.
+          let lo = -Infinity, hi = Infinity;
+          if (!biased && d >= 4 && Math.abs(bestScore) < MATE - 200) {
+            lo = bestScore - 45; hi = bestScore + 45;
+          }
+          let curRaw = -Infinity, alpha = lo, n = 0;
           for (const m of rootMoves) {
             const u = this.make(m);
             let s;
@@ -773,6 +795,24 @@
             scored.push({ m, s: sAdj, raw: s });
             if (sAdj > curScore) { curScore = sAdj; curBest = m; curRaw = s; }
             if (!biased && s > alpha) alpha = s;
+          }
+          // The window was too tight — nothing landed inside it. Redo this
+          // depth full-width rather than trusting a bounded score.
+          if (lo !== -Infinity && (curScore <= lo || curScore >= hi)) {
+            const wide = [];
+            let wAlpha = -Infinity, wBest = null, wScore = -Infinity, wRaw = -Infinity, k = 0;
+            for (const m of rootMoves) {
+              const u = this.make(m);
+              const sc = -this.negamax(d - 1, -Infinity, -wAlpha, -colorSign, 1, K, deadline);
+              this.unmake(u);
+              k++;
+              const a2 = sc + adjFor(m);
+              wide.push({ m, s: a2, raw: sc });
+              if (a2 > wScore) { wScore = a2; wBest = m; wRaw = sc; }
+              if (sc > wAlpha) wAlpha = sc;
+            }
+            scored.length = 0; scored.push(...wide);
+            curScore = wScore; curBest = wBest; curRaw = wRaw;
           }
           if (jitter > 0) {
             const near = scored.filter(x => x.s >= curScore - jitter);
