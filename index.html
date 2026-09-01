@@ -9,7 +9,10 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <title>Hollow Chess — chess where the board itself is fair game</title>
-  <meta name="description" content="Chess with a twist: every third turn you can pick up an empty square and move it somewhere else. Holes block bishops and rooks. Play free in your browser — ranked ladder, bots with personalities, or live against a friend with one link." />
+  <meta name="description" content="Free chess variant where you move the board itself. Every third turn, lift an empty square and drop it elsewhere - holes block bishops and rooks. No account." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="apple-mobile-web-app-title" content="Hollow Chess" />
   <link rel="canonical" href="https://hollowchess.com/" />
 
   <meta property="og:type" content="website" />
@@ -25,7 +28,41 @@
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=46" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://unpkg.com" crossorigin />
+  <link rel="stylesheet" href="styles.css?v=47" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://hollowchess.com/#website",
+        "url": "https://hollowchess.com/",
+        "name": "Hollow Chess",
+        "description": "A free chess variant where the board itself can be moved.",
+        "inLanguage": "en"
+      },
+      {
+        "@type": ["VideoGame", "WebApplication"],
+        "@id": "https://hollowchess.com/#game",
+        "name": "Hollow Chess",
+        "url": "https://hollowchess.com/",
+        "description": "A chess variant where every third turn you may move an empty square of the board instead of a piece. Holes block bishops, rooks and queens. Win by checkmate.",
+        "applicationCategory": "GameApplication",
+        "genre": ["Chess", "Strategy", "Board Game"],
+        "operatingSystem": "Any (web browser)",
+        "browserRequirements": "Requires JavaScript",
+        "gamePlatform": "Web browser",
+        "playMode": ["SinglePlayer", "MultiPlayer"],
+        "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 2 },
+        "image": "https://hollowchess.com/icons/og-card.png",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "isAccessibleForFree": true
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <div id="lobby" class="lobby">
@@ -444,26 +481,57 @@
           <button id="howBtn" class="ghost-btn" style="margin-top:8px">✦ Replay the walkthrough</button>
         </details>
       </aside>
+
+      <section class="seo-content">
+        <h2>What is Hollow Chess?</h2>
+        <p>Hollow Chess is a free <strong>chess variant</strong> where the board itself is a piece you can
+          move. It plays by standard chess rules &mdash; same pieces, same moves, win by checkmate &mdash;
+          with one addition: <strong>every third turn is a board turn</strong>. On a board turn you may move
+          a piece as normal, or pick up an empty square and reattach it anywhere along the edge of the board.</p>
+        <p>The square you lift leaves a <strong>hole</strong>, and holes block sliding pieces. A bishop cannot
+          see through one. Neither can a rook or a queen. So you can defend by deleting the ground an attack
+          travels over, and escape check by reshaping the board instead of moving your king.</p>
+
+        <h2>How is it different from normal chess?</h2>
+        <ul>
+          <li><strong>The board is not fixed.</strong> It grows, shrinks and changes shape as you play.</li>
+          <li><strong>Holes block lines.</strong> Bishops, rooks and queens cannot slide across a hole. Knights jump them.</li>
+          <li><strong>Promotion moves.</strong> Pawns promote at the edge of the world &mdash; extend the board and they must march further.</li>
+          <li><strong>Check has a second escape.</strong> On a board turn you can cut the attacker&rsquo;s line rather than run.</li>
+        </ul>
+
+        <h2>Ways to play</h2>
+        <ul>
+          <li><strong>Against bots</strong> &mdash; a ladder of opponents from beginner to brutal, no account needed.</li>
+          <li><strong>Ranked online</strong> &mdash; matched against a player near your rating.</li>
+          <li><strong>With a friend by link</strong> &mdash; send one link and play live in the browser.</li>
+          <li><strong>Two players, one screen</strong> &mdash; offline hotseat.</li>
+          <li><strong>Correspondence</strong> &mdash; trade links a move at a time.</li>
+        </ul>
+
+        <p>Hollow Chess is free, runs in any browser on desktop or mobile, and needs no download and no
+          sign-up. It installs as an app if you want it to.</p>
+      </section>
     </main>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/config.js?v=46"></script>
-  <script src="js/stats.js?v=46"></script>
-  <script src="js/cloud.js?v=46"></script>
-  <script src="js/engine.js?v=46"></script>
-  <script src="js/pieces.js?v=46"></script>
-  <script src="js/themes.js?v=46"></script>
-  <script src="js/sound.js?v=46"></script>
-  <script src="js/tutorial.js?v=46"></script>
-  <script src="js/ai.js?v=46"></script>
-  <script src="js/ladder.js?v=46"></script>
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/matchmaking.js?v=46"></script>
-  <script src="js/net.js?v=46"></script>
-  <script src="js/share.js?v=46"></script>
-  <script src="js/analysis.js?v=46"></script>
-  <script src="js/main.js?v=46"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script defer src="js/config.js?v=47"></script>
+  <script defer src="js/stats.js?v=47"></script>
+  <script defer src="js/cloud.js?v=47"></script>
+  <script defer src="js/engine.js?v=47"></script>
+  <script defer src="js/pieces.js?v=47"></script>
+  <script defer src="js/themes.js?v=47"></script>
+  <script defer src="js/sound.js?v=47"></script>
+  <script defer src="js/tutorial.js?v=47"></script>
+  <script defer src="js/ai.js?v=47"></script>
+  <script defer src="js/ladder.js?v=47"></script>
+  <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script defer src="js/matchmaking.js?v=47"></script>
+  <script defer src="js/net.js?v=47"></script>
+  <script defer src="js/share.js?v=47"></script>
+  <script defer src="js/analysis.js?v=47"></script>
+  <script defer src="js/main.js?v=47"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

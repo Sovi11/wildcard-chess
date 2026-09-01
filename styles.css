@@ -794,3 +794,17 @@ body.light #board .pc.w { color: #fbfaf6; --pc-line: #5a6070; }
   font-family: inherit; font-size: 13.5px; color: var(--muted); text-decoration: underline;
 }
 .welcome-signin-link:hover { color: var(--accent-text); }
+
+/* Indexable prose. The game is the product, so this sits quietly below it —
+   but it is what Google actually has to rank, and it carries the phrases
+   people search for ("chess variant", "move the board", "holes block"). */
+.seo-content {
+  max-width: 720px; margin: 44px auto 0; padding: 26px 16px 40px;
+  border-top: 1px solid var(--line);
+  font-size: 14.5px; line-height: 1.7; color: var(--muted);
+}
+.seo-content h2 { font-size: 17px; color: var(--ink); margin: 24px 0 8px; }
+.seo-content h2:first-child { margin-top: 0; }
+.seo-content strong { color: var(--ink); }
+.seo-content ul { padding-left: 20px; margin: 0; }
+.seo-content li { margin-bottom: 6px; }
