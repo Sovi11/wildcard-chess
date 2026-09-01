@@ -1111,7 +1111,15 @@ function closeAuthModal() { if (authModalEl) authModalEl.classList.remove('show'
 
 if (authBtn) authBtn.addEventListener('click', async function () {
   if (!WCCLOUD.enabled()) return;
-  if (WCCLOUD.currentUser()) { await WCCLOUD.signOut(); paintAuth(); return; }
+  if (WCCLOUD.currentUser()) {
+    await WCCLOUD.signOut();
+    // Signing out hands the browser back to whoever is next. Their rating and
+    // history are safe in the cloud; leaving them on the device is the leak.
+    resetDeviceProfile();
+    setLastUid('');
+    paintProfile(); renderLeaderboard(); paintAuth();
+    return;
+  }
   openAuthModal();
 });
 
@@ -1210,6 +1218,13 @@ let signedInTracked = false;
 WCCLOUD.onChange(function (u) {
   if (!u) return;
   closeAuthModal();
+  // A different account than the one this device last held? Clear the previous
+  // player's profile BEFORE the cloud sync, or their rating and name would show
+  // for a moment (or stick, if the new account has no row yet).
+  const prev = lastUid();
+  if (prev && prev !== u.id) resetDeviceProfile();
+  setLastUid(u.id);
+
   let freshSignup = false;
   if (!signedInTracked) {                      // onChange can fire repeatedly
     signedInTracked = true;
@@ -1310,6 +1325,31 @@ if (fbEl) fbEl.addEventListener('click', function (e) { if (e.target === fbEl) c
 // Never shown when arriving on a room or game link: nothing gets between a
 // player and their friend's game.
 const welcomeEl = document.getElementById('welcome');
+
+// ---- device vs account state -----------------------------------------------
+// localStorage belongs to the BROWSER; a profile belongs to an ACCOUNT. If two
+// people sign in on the same device, or one person switches accounts, the
+// device-local rating, name, history and "tutorial seen" flag are the previous
+// account's and must not carry over. Nothing else in the app reconciles that.
+const UIDKEY = 'wildcardchess.uid.v1';
+const lastUid = function () {
+  try { return localStorage.getItem(UIDKEY) || ''; } catch (e) { return ''; }
+};
+const setLastUid = function (v) {
+  try { if (v) localStorage.setItem(UIDKEY, v); else localStorage.removeItem(UIDKEY); } catch (e) {}
+};
+
+// Wipe every piece of per-player device state. The cloud copy is untouched, so
+// the departing account loses nothing — it just stops leaking onto this device.
+function resetDeviceProfile() {
+  try {
+    WCLADDER.resetProfile();                       // rating, record, game history, bot drift
+    localStorage.removeItem(TUTKEY);               // a different person gets the tour
+    localStorage.removeItem(OBSKIP);               // and the onboarding questions
+    localStorage.removeItem('wildcardchess.namemig.v1');
+  } catch (e) {}
+  signedInTracked = false;
+}
 const TUTKEY = 'wildcardchess.tut.v2';   // v2: re-show once after tutorial-flow fixes
 const tutSeen = function () { try { return localStorage.getItem(TUTKEY) === '1'; } catch (e) { return true; } };
 const markTutSeen = function () { try { localStorage.setItem(TUTKEY, '1'); } catch (e) {} };
