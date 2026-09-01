@@ -58,6 +58,8 @@
     return current;
   }
 
+  const isLight = () => document.body.classList.contains('light');
+
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(current)); } catch (e) {}
   }
@@ -69,7 +71,11 @@
     const r = document.documentElement.style;
     r.setProperty('--sq-light', t.light);
     r.setProperty('--sq-dark', t.dark);
-    r.setProperty('--board-void', t.void);
+    // The void (off-board space and holes) is near-black per board theme, which
+    // reads as a heavy frame on a light page. In light mode use a soft neutral
+    // instead. This is set as an inline style on :root, so a CSS override in
+    // body.light could not win — it has to be decided here.
+    r.setProperty('--board-void', isLight() ? (t.voidLight || '#dfe3ea') : t.void);
     r.setProperty('--lbl-edge', t.label);
     r.setProperty('--grid', t.grid);
     r.setProperty('--pc-hat-w', t.hatW || 'currentColor');
@@ -82,5 +88,33 @@
 
   const get = () => ({ board: current.board, pieces: current.pieces });
 
-  window.WCTHEME = { BOARD_THEMES, load, apply, get };
+
+  // ---- page mode (dark / light) --------------------------------------------
+  // Separate from the BOARD theme: the board keeps its own square colours in
+  // either mode. Defaults to the OS preference on first visit, then whatever
+  // the player last chose.
+  const MODEKEY = 'wildcardchess.mode.v1';
+  function prefersLight() {
+    try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches; }
+    catch (e) { return false; }
+  }
+  function getMode() {
+    try {
+      const v = localStorage.getItem(MODEKEY);
+      if (v === 'light' || v === 'dark') return v;
+    } catch (e) {}
+    return prefersLight() ? 'light' : 'dark';
+  }
+  function applyMode(mode) {
+    const m = mode || getMode();
+    document.body.classList.toggle('light', m === 'light');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', m === 'light' ? '#eef0f4' : '#14161b');
+    try { localStorage.setItem(MODEKEY, m); } catch (e) {}
+    apply();                       // re-pick the void for the new mode
+    return m;
+  }
+
+  window.WCTHEME = {
+    getMode, applyMode, BOARD_THEMES, load, apply, get };
 })();

@@ -27,6 +27,7 @@ let gameActs = [];          // every action this game, so it can be replayed lat
 // Piece symbols are namespaced by the active set: pc-classic-pawn, pc-gnome-rook…
 WCTHEME.load();
 WCTHEME.apply();
+WCTHEME.applyMode();          // dark/light before first paint, no flash
 const symFor = (type) => 'pc-' + WCTHEME.get().pieces + '-' + type;
 const mod2 = (n) => ((n % 2) + 2) % 2;
 
@@ -882,6 +883,16 @@ if (cancelRoomBtn) cancelRoomBtn.addEventListener('click', function () {
 const themeBoardEl = document.getElementById('themeBoard');
 const themePiecesEl = document.getElementById('themePieces');
 const themeHintEl = document.getElementById('themeHint');
+
+// Page mode is applied before first paint below; this wires the selector.
+const themeModeEl = document.getElementById('themeMode');
+if (themeModeEl) {
+  themeModeEl.value = WCTHEME.getMode();
+  themeModeEl.addEventListener('change', function () {
+    WCTHEME.applyMode(themeModeEl.value);
+    render();
+  });
+}
 
 function initAppearance() {
   if (!themeBoardEl || !themePiecesEl) return;
