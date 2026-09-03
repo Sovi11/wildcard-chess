@@ -255,6 +255,23 @@ The set is tiered accordingly:
 - **mate-in-2, `t ≡ 0`** — *they* tear up the floor to escape, and you mate anyway.
 - **mate-in-3** — both players reshape the board inside the solution.
 
+### Ratings
+
+Two ratings play each other, the way chess.com does it. You have a puzzle
+rating (starts at 1000); every puzzle has one, seeded offline from its depth
+and how many legal actions were on the board at the root — the key move being
+one of ~1,500 on an 8×8 board turn is a different ask from one of ~25 on a
+quiet ply. Each **first** attempt at a puzzle is an Elo game between the two: a
+clean solve (no wrong move, no hint) takes points off the puzzle, anything
+else takes points off you. Later attempts change nothing, so nothing can be
+farmed. Puzzle ratings drift toward the truth as people attempt them —
+difficulty is measured, not assigned.
+
+Signed in, the maths runs server-side in `hc_puzzle_attempt`
+(`sql/puzzles.sql`, security definer — the public key can report an attempt
+but never write a rating) and the account's rating follows you between
+devices. Signed out, the same maths runs locally against the seeds.
+
 ### Where the set stands
 
 The shipped set is **26 puzzles — 8 mate-in-1 and 18 mate-in-2 — every one of

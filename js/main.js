@@ -996,6 +996,7 @@ async function syncProfileDown() {
       // If the union grew past what the cloud had, push it back up.
       const beforeN = Object.keys((remote.puzzles && remote.puzzles.solved) || {}).length;
       const merged = WCPUZZLE.mergeProgress(remote.puzzles);
+      if (remote.puzzle_rating > 0) WCPUZZLE.setRating(remote.puzzle_rating);   // server's column wins
       if (Object.keys(merged.solved).length > beforeN) syncProfileUp();
     } else {
       await WCCLOUD.saveProfile(Object.assign({}, local, { puzzles: WCPUZZLE.progress() }));
@@ -2116,7 +2117,7 @@ function paintPuzzle() {
   const st = WCPUZZLE.state();
   if (!st) return;
   const p = WCPUZZLE.current();
-  pzEl.count.textContent = 'Puzzle ' + (st.index + 1) + ' of ' + st.total;
+  pzEl.count.textContent = 'Puzzle ' + (st.index + 1) + ' of ' + st.total + ' · rated ' + st.puzzleRating;
   const side = p.turn === 'white' ? 'White' : 'Black';
   pzEl.goal.textContent = side + ' to play. Mate in ' + st.mateIn + '.';
   // Themes are shown AFTER the solve. Before it, "the key move is a board
@@ -2129,7 +2130,14 @@ function paintPuzzle() {
     .join('');
   const pr = WCPUZZLE.progress();
   const solved = Object.keys(pr.solved || {}).length;
-  pzEl.progress.innerHTML = '<b>' + solved + '</b> of <b>' + st.total + '</b> solved' +
+  // your rating, with this attempt's result if it produced one; a puzzle you
+  // already rated says so instead of pretending a replay counts
+  const d = st.settle ? st.settle.delta : null;
+  const deltaTxt = d == null ? '' : ' <b class="' + (d >= 0 ? 'pz-up' : 'pz-down') + '">' + (d >= 0 ? '+' : '') + d + '</b>';
+  const ratingTxt = 'Your rating <b>' + st.rating + '</b>' + deltaTxt +
+    (st.alreadyRated && !st.settle ? ' <span class="pz-note">(already rated)</span>' : '');
+  pzEl.progress.innerHTML = ratingTxt + '<br>' +
+    '<b>' + solved + '</b> of <b>' + st.total + '</b> solved' +
     (pr.streak ? ' · streak <b>' + pr.streak + '</b>' : '') +
     (pr.best ? ' · best <b>' + pr.best + '</b>' : '');
   document.body.classList.toggle('puzzle-solved', !!st.finished);
@@ -2162,6 +2170,8 @@ async function startPuzzles() {
   ui.banner.classList.remove('show');
   WCSTATS.track('puzzle_start', { total: WCPUZZLE.count() });
   loadPuzzle(function () { return WCPUZZLE.nextUnsolved(); });
+  // live ratings arrive after first paint; seeds cover the gap
+  if (WCCLOUD.enabled()) WCCLOUD.puzzleRatings().then(function (m) { WCPUZZLE.setPuzzleRatings(m); if (puzzleMode) paintPuzzle(); });
 }
 
 function exitPuzzles() {
@@ -2170,6 +2180,23 @@ function exitPuzzles() {
   document.body.classList.remove('puzzle-mode', 'puzzle-solved');
   hintMove = null;
   startCasual('hotseat');
+}
+
+// A rating game just settled locally. Signed in, the server is the authority:
+// it re-runs the maths against the live puzzle rating and rates only the first
+// attempt, and its answer overwrites the local one. Signed out, local stands.
+function afterRated(r) {
+  if (!r) return;
+  WCSTATS.track('puzzle_rated', { id: r.puzzleId, score: r.score, delta: r.delta, hinted: r.hinted });
+  if (!WCCLOUD.enabled() || !WCCLOUD.currentUser()) return;
+  WCCLOUD.recordPuzzleAttempt(r).then(function (srv) {
+    if (!srv) return;
+    if (srv.player_rating > 0) WCPUZZLE.setRating(srv.player_rating);
+    if (srv.puzzle_rating > 0) WCPUZZLE.setPuzzleRating(r.puzzleId, srv.puzzle_rating);
+    if (srv.rated && r.delta !== srv.delta) r.delta = srv.delta;   // show the server's number
+    paintPuzzle();
+    syncProfileUp();
+  });
 }
 
 // Grade the action that just landed. A miss rewinds to the position as it was
@@ -2181,6 +2208,7 @@ function puzzleSubmit(gm) {
   if (!res.ok && res.state === 'wrong') {
     WCSOUND.play('wrong');
     pzSay(res.message, 'bad');
+    afterRated(res.rated);
     sync(); render(); paintPuzzle();
     return;
   }
@@ -2200,6 +2228,7 @@ function puzzleSubmit(gm) {
     WCSOUND.play('win');
     pzSay(before && before.failed ? 'Solved.' : 'Solved, first try.', 'done');
     WCSTATS.track('puzzle_solved', { id: before && before.id, mateIn: before && before.mateIn, clean: !(before && before.failed) });
+    afterRated(res.rated);
     syncProfileUp();                            // a solve follows the account, like a rating change
   }
   sync(); render(); paintPuzzle();
@@ -2218,11 +2247,12 @@ if (pzEl.hint) pzEl.hint.addEventListener('click', function () {
   pzHintLevel++;
   const h = WCPUZZLE.hint(pzHintLevel);
   if (!h) return;
-  if (typeof h === 'string') { pzSay(h); return; }
+  afterRated(h.rated);                          // the first hint costs the rating game
+  if (h.text) { pzSay(h.text); paintPuzzle(); return; }
   // level 3: draw it on the board, using the tutor's own arrow overlay
   hintMove = gameToHint(h.reveal);
   pzSay('The move is ' + WCPUZZLE.actionText(h.reveal) + '.');
-  render();
+  render(); paintPuzzle();
 });
 
 // The hint overlay in render() speaks the AI's move shape; puzzles speak the

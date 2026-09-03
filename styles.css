@@ -722,6 +722,9 @@ body.puzzle-mode #newGame { display: none; }
 .pz-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 10px; }
 .pz-progress { font-size: 12px; color: var(--muted); }
 .pz-progress b { color: var(--ink); }
+.pz-progress .pz-up { color: #1f7a1f; }
+.pz-progress .pz-down { color: #b32419; }
+.pz-progress .pz-note { color: var(--muted); font-size: 11px; }
 .mode-card.mode-wide { grid-column: 1 / -1; }
 /* A solved puzzle's board is done. The result is on the panel, so the game's
    own end-of-game banner would be saying it twice on top of the position. */

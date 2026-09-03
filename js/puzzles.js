@@ -37,13 +37,22 @@
   let host = null;              // { game, render, sync, onState }
   let failed = false;           // missed at least once on this puzzle
   let finished = false;
+  let hinted = false;           // asked for a hint on this puzzle
+  let startedAt = 0;
+  let lastSettle = null;        // the rating game this attempt produced, if any
+  let cloudRatings = {};        // puzzle id -> live rating from the server
 
   function attach(h) { host = h; }
 
   // ---- progress (local only; puzzles are practice, not rating) ------------
+  const FRESH = () => ({ solved: {}, streak: 0, best: 0, rating: 1000, rated: {} });
   function readProgress() {
-    try { return JSON.parse(localStorage.getItem(KEY)) || { solved: {}, streak: 0, best: 0 }; }
-    catch (e) { return { solved: {}, streak: 0, best: 0 }; }
+    try {
+      const p = JSON.parse(localStorage.getItem(KEY)) || FRESH();
+      if (!p.rated) p.rated = {};
+      if (!(p.rating > 0)) p.rating = 1000;
+      return p;
+    } catch (e) { return FRESH(); }
   }
   function writeProgress(p) { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {} }
   function progress() { return readProgress(); }
@@ -121,7 +130,8 @@
 
   function start(i) {
     if (!host || i < 0 || i >= all.length) return null;
-    idx = i; step = 0; failed = false; finished = false;
+    idx = i; step = 0; failed = false; finished = false; hinted = false;
+    lastSettle = null; startedAt = Date.now();
     place(all[i]);
     return all[i];
   }
@@ -138,6 +148,40 @@
     return start(i >= 0 ? i : (idx + 1) % all.length);
   }
   function next() { return start((idx + 1) % Math.max(1, all.length)); }
+
+  // ---- rating -------------------------------------------------------------
+  // Two ratings play each other, chess.com-style. Yours starts at 1000; each
+  // puzzle's starts at a seed computed offline and drifts as people attempt it
+  // (that part lives on the server — see sql/puzzles.sql). An attempt is rated
+  // ONCE, at its first decisive moment: a wrong move or a hint is a loss, a
+  // clean finish is a win. Later attempts at the same puzzle change nothing,
+  // so nothing can be farmed. When signed out the same maths runs locally
+  // against the seed; when signed in the server's answer overwrites it.
+  const K_PLAYER = 32;
+  const ratingOf = (p) => (p && (cloudRatings[p.id] || p.rating)) || 1000;
+  const rating = () => readProgress().rating;
+  function setRating(n) { if (n > 0) { const pr = readProgress(); pr.rating = Math.round(n); writeProgress(pr); } }
+  function setPuzzleRatings(map) { cloudRatings = map || {}; }
+  function setPuzzleRating(id, r) { if (id && r > 0) cloudRatings[id] = r; }
+
+  function settle(score) {
+    const p = current();
+    if (!p) return null;
+    const pr = readProgress();
+    if (pr.rated[p.id]) return null;                    // first attempt only
+    const rp = pr.rating, rq = ratingOf(p);
+    const expected = 1 / (1 + Math.pow(10, (rq - rp) / 400));
+    const delta = Math.round(K_PLAYER * (score - expected));
+    pr.rating = Math.max(100, rp + delta);
+    pr.rated[p.id] = { score, at: Date.now() };
+    writeProgress(pr);
+    lastSettle = {
+      puzzleId: p.id, seed: p.rating || 1000, score, delta,
+      rating: pr.rating, puzzleRating: rq,
+      solved: score === 1, clean: !failed, hinted, ms: Date.now() - startedAt,
+    };
+    return lastSettle;
+  }
 
   // ---- grading ------------------------------------------------------------
   const sameAction = (a, b) => !!a && !!b && a.kind === b.kind &&
@@ -180,7 +224,7 @@
     if (!sameAction(action, want)) {
       failed = true;
       rewind();
-      return { ok: false, state: 'wrong', message: missMessage(action, want) };
+      return { ok: false, state: 'wrong', message: missMessage(action, want), rated: settle(0) };
     }
     step++;
     // Their reply is handed back rather than applied here, so the caller can
@@ -193,7 +237,9 @@
     }
     finished = true;
     record(p, !failed);
-    return { ok: true, state: 'solved', message: 'Checkmate. Puzzle solved.' };
+    // a clean, unhinted solve is the win; anything else already settled as a loss
+    const rated = (!failed && !hinted) ? settle(1) : null;
+    return { ok: true, state: 'solved', message: 'Checkmate. Puzzle solved.', rated };
   }
 
   // Rebuild the position and replay the confirmed part of the line.
@@ -221,14 +267,16 @@
   function hint(level) {
     const want = expected();
     if (!want) return null;
+    hinted = true;
+    const rated = settle(0);                              // the first hint is the loss; null after
     if (level <= 1) {
-      return want.kind === 'm' ? 'It is a piece move.' : 'It is a board move — a square of the world has to move.';
+      return { text: want.kind === 'm' ? 'It is a piece move.' : 'It is a board move — a square of the world has to move.', rated };
     }
     if (level === 2) {
       const at = want.cell || want.from;
-      return 'It starts at ' + sq(at.c, at.r) + '.';
+      return { text: 'It starts at ' + sq(at.c, at.r) + '.', rated };
     }
-    return { reveal: want };
+    return { reveal: want, rated };
   }
 
   function fileLabel(c) { return c >= 0 && c <= 25 ? String.fromCharCode(97 + c) : '(' + c + ')'; }
@@ -271,6 +319,9 @@
       best: Math.max(local.best | 0, remote.best | 0),
       // the streak belongs to whichever side solved something more recently
       streak: latest(local) >= latest(remote) ? (local.streak | 0) : (remote.streak | 0),
+      // the account's rating is authoritative once it has one
+      rating: remote.rating > 0 ? remote.rating : local.rating,
+      rated: Object.assign({}, remote.rated || {}, local.rated || {}),
     };
     writeProgress(merged);
     return merged;
@@ -295,12 +346,16 @@
       movesLeft: p.mateIn - step, step, failed, finished,
       index: idx, total: all.length,
       solved: !!readProgress().solved[p.id],
+      hinted, rating: readProgress().rating, puzzleRating: ratingOf(p),
+      settle: lastSettle,
+      alreadyRated: !!readProgress().rated[p.id],
     };
   }
 
   window.WCPUZZLE = {
     attach, load, list, count, start, startById, next, nextUnsolved,
     current, active, expected, submit, playReply, hint, state, progress, mergeProgress, exit,
-    actionText, sameAction, retry: function () { const p = current(); if (p) { step = 0; failed = true; finished = false; place(p); } },
+    rating, setRating, ratingOf, setPuzzleRatings, setPuzzleRating,
+    actionText, sameAction, retry: function () { const p = current(); if (p) { step = 0; failed = true; finished = false; hinted = false; place(p); } },
   };
 })();

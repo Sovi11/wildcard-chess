@@ -140,7 +140,17 @@ best streak) so it follows the account between devices. Without the column the
 game still works; progress just stays on the device, exactly like the rating
 does when signed out.
 
-## 6. In-game feedback
+## 6. Puzzle ratings
+
+Run [`sql/puzzles.sql`](sql/puzzles.sql) once in the SQL editor. It adds
+`profiles.puzzle_rating`, a `puzzles` table (one rating per puzzle, calibrated
+from attempts) and `puzzle_attempts`, plus the `hc_puzzle_attempt` function
+that does the Elo maths server-side — the public key can report an attempt but
+never write a rating. Only a player's *first* attempt at a puzzle is rated, so
+nothing can be farmed. Signed-out players get a local rating against the
+puzzles' seed ratings, and the cloud rating takes over when they sign in.
+
+## 7. In-game feedback
 
 The ⌨ Feedback button in the header writes here. Run once in the SQL editor:
 

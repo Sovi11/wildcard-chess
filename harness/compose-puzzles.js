@@ -47,6 +47,17 @@ function island(w, h, holes) {
   for (let c = 0; c < w; c++) for (let r = 0; r < h; r++) cells.push(c + ',' + r);
   return holes ? cells.filter((k) => holes.indexOf(k) < 0) : cells;
 }
+// --board=8x8 composes on the real board: a full 8x8 with a few squares torn
+// out, so the position looks like a game rather than a study. The branching
+// factor is ~4x an island's, so the proof budgets below are scaled to match.
+const BOARD = arg('board', 'islands');
+function island8() {
+  const holes = new Set();
+  const n = 2 + Math.floor(rnd() * 5);              // 2..6 holes
+  while (holes.size < n) holes.add(Math.floor(rnd() * 8) + ',' + Math.floor(rnd() * 8));
+  return { name: '8x8 -' + n, cells: island(8, 8, [...holes]) };
+}
+const pickShape = () => (BOARD === '8x8' ? island8() : pick(SHAPES));
 const SHAPES = [
   { name: '5x5', cells: island(5, 5) },
   { name: '5x5 nicked', cells: island(5, 5, ['0,4', '4,0']) },
@@ -116,7 +127,7 @@ const cheb = (a, b) => {
 };
 
 function randomPosition(depth) {
-  const shape = pick(SHAPES);
+  const shape = pickShape();
   const cast = pick(CASTS);
   const start = pick(startsFor(depth));
   const solver = start.turn;
@@ -158,7 +169,7 @@ const ORTHO = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const DIAG = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
 
 function bridgePosition(depth) {
-  const shape = pick(SHAPES);
+  const shape = pickShape();
   const start = pick(startsFor(depth));
   const solver = start.turn, defender = solver === 'white' ? 'black' : 'white';
   const cellSet = new Set(shape.cells);
@@ -197,6 +208,21 @@ function bridgePosition(depth) {
   const pieces = {};
   pieces[dk] = ['king', defender];
   pieces[slideK] = [diag ? pick(['bishop', 'queen']) : pick(['rook', 'queen']), solver];
+  // On 8x8 a three-piece position looks like a study. Dress it: a couple of
+  // pawns each and a spare piece, placed away from the king so they are scenery
+  // for the eye but still real for the prover (they can block, capture, defend).
+  if (BOARD === '8x8') {
+    const spare = shuffled(shape.cells.filter((k) => k !== dk && k !== slideK && k !== from && k !== holeK && cheb(k, dk) >= 3));
+    const extras = [['pawn', solver], ['pawn', solver], ['pawn', defender], ['pawn', defender], [pick(['knight', 'bishop', 'rook']), defender]];
+    let i = 0;
+    for (const [t, col] of extras) {
+      if (rnd() < 0.35 || i >= spare.length) continue;
+      const k = spare[i++];
+      const r = +k.split(',')[1];
+      if (t === 'pawn' && (r === 0 || r === 7)) continue;   // no pawns on the back ranks
+      pieces[k] = [t, col];
+    }
+  }
 
   // solver king: on the board, not adjacent to either king, not on a used square
   const used = new Set([dk, slideK, from, holeK]);
@@ -301,7 +327,8 @@ while (found.length < WANT && (Date.now() - t0) < SECONDS * 1000) {
   // direction and most candidates are exactly that. Capping it trades a few
   // provable-but-slow positions for an order of magnitude more attempts, and
   // the ones that abort were never going to be quick puzzles anyway.
-  const res = S.tryWithin(depth >= 3 ? 140000 : 120000, () => S.provePuzzle(g, depth));
+  const cap = BOARD === '8x8' ? (depth >= 2 ? 600000 : 200000) : (depth >= 3 ? 140000 : 120000);
+  const res = S.tryWithin(cap, () => S.provePuzzle(g, depth));
   if (res === null) { aborted++; why.budget++; continue; }
   if (!res.ok) { why[res.reason && res.reason.indexOf('unique') >= 0 ? 'notUnique' : 'noMate']++; continue; }
   why.proved++;

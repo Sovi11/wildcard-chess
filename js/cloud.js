@@ -205,6 +205,36 @@
     return data[0];
   }
 
+  // ---- puzzles ---------------------------------------------------------------
+  // Live puzzle ratings (calibrated from everyone's first attempts). Public read.
+  async function puzzleRatings() {
+    if (!client) return {};
+    const { data, error } = await client.from('puzzles').select('id, rating, attempts, solves');
+    if (error) { console.warn('[cloud] puzzleRatings:', error.message); return {}; }
+    const map = {};
+    for (const r of data || []) map[r.id] = r.rating;
+    return map;
+  }
+
+  // Report an attempt; the server does the Elo maths and rates only the first
+  // attempt per puzzle. Returns {rated, player_rating, puzzle_rating, delta}
+  // or null when the function is not installed yet (see sql/puzzles.sql).
+  async function recordPuzzleAttempt(a) {
+    if (!client || !user) return null;
+    const { data, error } = await client.rpc('hc_puzzle_attempt', {
+      p_puzzle: a.puzzleId, p_seed: Math.round(a.seed) || 1000,
+      p_solved: !!a.solved, p_clean: !!a.clean, p_hinted: !!a.hinted,
+      p_ms: a.ms != null ? Math.min(2147483647, Math.round(a.ms)) : null,
+    });
+    if (error) {
+      if (/function|schema|does not exist/i.test(error.message || '')) {
+        console.warn('[cloud] hc_puzzle_attempt is not installed — run sql/puzzles.sql (rating stays local)');
+      } else console.warn('[cloud] recordPuzzleAttempt:', error.message);
+      return null;
+    }
+    return data || null;
+  }
+
   // ---- feedback ------------------------------------------------------------
   // Insert-only, no account required. Context (version, screen, signed-in) is
   // attached automatically so a bug report is actionable without interrogating
@@ -229,5 +259,6 @@
     signOut, currentUser, onChange,
     loadProfile, saveProfile, leaderboard,
     joinQueue, leaveQueue, findWaiting,
+    puzzleRatings, recordPuzzleAttempt,
   };
 })();
