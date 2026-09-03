@@ -2119,10 +2119,14 @@ function paintPuzzle() {
   pzEl.count.textContent = 'Puzzle ' + (st.index + 1) + ' of ' + st.total;
   const side = p.turn === 'white' ? 'White' : 'Black';
   pzEl.goal.textContent = side + ' to play. Mate in ' + st.mateIn + '.';
-  pzEl.tags.innerHTML = (st.tags || []).map(function (t) {
-    const terrain = t.indexOf('wildcard') >= 0 || t.indexOf('board-move') >= 0;
-    return '<span class="pz-tag' + (terrain ? ' terrain' : '') + '">' + esc(TAG_LABEL[t] || t) + '</span>';
-  }).join('');
+  // Themes are shown AFTER the solve. Before it, "the key move is a board
+  // move" is not a tag, it is the answer — the same thing the first hint
+  // level charges you for. The mate-in-N chip is dropped outright: the goal
+  // line already says it.
+  pzEl.tags.innerHTML = !st.finished ? '' : (st.tags || [])
+    .filter(function (t) { return TAG_LABEL[t]; })
+    .map(function (t) { return '<span class="pz-tag terrain">' + esc(TAG_LABEL[t]) + '</span>'; })
+    .join('');
   const pr = WCPUZZLE.progress();
   const solved = Object.keys(pr.solved || {}).length;
   pzEl.progress.innerHTML = '<b>' + solved + '</b> of <b>' + st.total + '</b> solved' +

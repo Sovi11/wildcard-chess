@@ -53,11 +53,38 @@
     const res = await fetch(DATA_URL, { cache: 'no-cache' });
     if (!res.ok) throw new Error('puzzle set not found (' + res.status + ')');
     const j = await res.json();
-    all = (j.puzzles || []).slice();
-    // easiest first: fewer moves, then fewer pieces to read
-    all.sort((a, b) => (a.mateIn - b.mateIn) ||
-      (Object.keys(a.pieces).length - Object.keys(b.pieces).length));
+    all = order((j.puzzles || []).slice());
     return all;
+  }
+
+  // Sorting strictly easiest-first meant every mate-in-1 came before any
+  // mate-in-2 — eight identical-feeling puzzles before the first real one. So
+  // the tiers are interleaved in proportion: within a tier, fewer pieces
+  // first; across tiers, spread evenly, so the difficulty climbs rather than
+  // steps.
+  function order(list) {
+    const tiers = {};
+    for (const p of list) (tiers[p.mateIn] = tiers[p.mateIn] || []).push(p);
+    const keys = Object.keys(tiers).map(Number).sort((a, b) => a - b);
+    for (const k of keys) tiers[k].sort((a, b) => Object.keys(a.pieces).length - Object.keys(b.pieces).length);
+    const out = [];
+    const total = list.length;
+    const taken = {};
+    for (let i = 0; i < total; i++) {
+      // pick the tier furthest behind its fair share so far
+      let best = null, bestGap = -Infinity;
+      for (const k of keys) {
+        const done = taken[k] || 0;
+        if (done >= tiers[k].length) continue;
+        const gap = (i + 1) * (tiers[k].length / total) - done;
+        if (gap > bestGap) { bestGap = gap; best = k; }
+      }
+      out.push(tiers[best][taken[best] = (taken[best] || 0) + 1, taken[best] - 1]);
+    }
+    // ...but always open on the gentlest tier, whatever the proportions say
+    const first = out.findIndex((p) => p.mateIn === keys[0]);
+    if (first > 0) { const t = out[0]; out[0] = out[first]; out[first] = t; }
+    return out;
   }
 
   const list = () => all;
