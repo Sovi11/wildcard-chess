@@ -16,6 +16,7 @@
       light: '#e9e3d6', dark: '#6f7d92',
       void: '#101218', label: '#8a90a0',
       grid: 'rgba(20,22,28,0.16)',
+      holeLight: '#2c3342',            // darker than the dark square, not between the two
     },
     garden: {
       name: 'Garden & stone',
@@ -23,6 +24,7 @@
       light: '#dfe9c4', dark: '#8caf68',
       void: '#2b2013', label: '#e8efd4',
       grid: 'rgba(52,64,30,0.18)',
+      holeLight: '#43301c',            // bare soil, dug deeper for a light page
       rounded: true,                     // squares sit like paving stones
       hatW: '#c8452f', hatB: '#3e63c4',  // gnome hats: classic red vs cornflower
     },
@@ -32,6 +34,7 @@
       light: '#f1e7cd', dark: '#b3925f',
       void: '#221a10', label: '#7a6749',
       grid: 'rgba(70,55,30,0.15)',
+      holeLight: '#332614',
     },
     midnight: {
       name: 'Neon void',
@@ -39,6 +42,9 @@
       light: '#39415c', dark: '#232a3d',
       void: '#04060c', label: '#4dd0e1',
       grid: 'rgba(120,200,230,0.08)',
+      // This theme's squares are already near-black, so the void barely reads
+      // against them in EITHER mode (1.4:1). Here the rim does all the work.
+      holeLight: '#04060c', holeRim: 'rgba(77,208,225,.55)',
       neon: true,                        // black pieces get a cyan outline
     },
   };
@@ -76,6 +82,11 @@
     // instead. This is set as an inline style on :root, so a CSS override in
     // body.light could not win — it has to be decided here.
     r.setProperty('--board-void', isLight() ? (t.voidLight || '#dfe3ea') : t.void);
+    // The hole is set independently of the frame. That split is the whole point:
+    // the frame can stay quiet on a light page while the hole goes dark enough
+    // to read against the light squares it sits beside.
+    r.setProperty('--hole', isLight() ? (t.holeLight || '#2c3342') : t.void);
+    r.setProperty('--hole-rim', t.holeRim || (isLight() ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.10)'));
     r.setProperty('--lbl-edge', t.label);
     r.setProperty('--grid', t.grid);
     r.setProperty('--pc-hat-w', t.hatW || 'currentColor');

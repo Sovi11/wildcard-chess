@@ -132,7 +132,13 @@ these fields and everything else keeps working:
 ```sql
 alter table profiles add column if not exists dob date;
 alter table profiles add column if not exists chess_level text;
+alter table profiles add column if not exists puzzles jsonb;   -- solved puzzles + streaks
 ```
+
+`puzzles` carries puzzle-mode progress (which puzzles are solved, current and
+best streak) so it follows the account between devices. Without the column the
+game still works; progress just stays on the device, exactly like the rating
+does when signed out.
 
 ## 6. In-game feedback
 

@@ -11,6 +11,11 @@
   --sq-dark: #6f7d92;
   --grid: rgba(20,22,28,0.16);
   --board-void: #101218;
+  /* A hole is its own thing, separate from the off-board frame (--board-void).
+     Themes set both in themes.js; the rim is what carries the read when the
+     fill lands close to a square colour. */
+  --hole: #101218;
+  --hole-rim: rgba(255,255,255,.10);
   --lbl-edge: #8a90a0;
   --pc-hat-w: currentColor;
   --pc-hat-b: currentColor;
@@ -54,6 +59,14 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; al
 .sq.dk { fill: var(--sq-dark); }
 /* very mild gridlines on every square */
 .sq { stroke: var(--grid); stroke-width: 0.012; }
+
+/* ---- holes ----
+   A missing square. It has to read as an absence against BOTH square colours,
+   which no single fill can do on its own — a tone between them contrasts with
+   neither. So a hole is fill + rim: the fill goes darker than the darkest
+   square, and the inset rim guarantees an edge even when the fill is close. */
+.hole { fill: var(--hole); }
+.hole-rim { fill: none; stroke: var(--hole-rim); stroke-width: .045; }
 
 .last { fill: rgba(231,193,74,0.20); }
 .sel { fill: rgba(231,193,74,0.40); }
@@ -507,6 +520,9 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 
 /* ============ theme modifiers ============ */
 body.brd-rounded .sq { rx: 0.13; ry: 0.13; }               /* paving stones */
+/* a hole left by a lifted paving stone keeps the stone's shape */
+body.brd-rounded .hole { rx: 0.13; ry: 0.13; }
+body.brd-rounded .hole-rim { rx: 0.1; ry: 0.1; }
 body.brd-neon #board .pc.b, body.brd-neon #revBoard .pc.b { --pc-line: #5fe0f0; }
 body.brd-neon #board { box-shadow: 0 20px 55px rgba(0,0,0,.6), 0 0 34px rgba(77,208,225,.10), inset 0 0 0 1px rgba(255,255,255,.04); }
 
@@ -599,6 +615,61 @@ body.wild-turn #board {
 }
 body.wild-turn .badge { animation: pulse 1.4s ease-in-out infinite; }
 
+/* ---- the ✦ ONSET ----
+   The sustained glow above is ambient: good for "this is still a board turn",
+   useless for "a board turn just started", which is the thing people miss
+   while staring at the pieces. So the arrival gets its own one-shot burst,
+   loud enough to catch peripheral vision, that settles into the ambient glow.
+   Specificity beats the .wild-turn rule so it wins while it runs; main.js
+   drops the class when it finishes and the ambient glow resumes. */
+body.wild-turn.wild-onset #board { animation: wildburst .9s cubic-bezier(.22,1,.36,1); }
+@keyframes wildburst {
+  0%   { box-shadow: 0 0 0 0 rgba(231,193,74,.9), 0 0 0 0 rgba(231,193,74,.6); }
+  30%  { box-shadow: 0 0 0 7px rgba(231,193,74,.6), 0 0 52px 20px rgba(231,193,74,.5); }
+  100% { box-shadow: 0 0 0 2px rgba(231,193,74,.55), 0 0 26px 4px rgba(231,193,74,.22); }
+}
+/* the badge lands rather than just fading in */
+body.wild-onset .badge { animation: wildpop .55s cubic-bezier(.2,1.5,.4,1); }
+@keyframes wildpop {
+  0%   { transform: scale(.7); opacity: 0; }
+  60%  { transform: scale(1.14); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+/* and the hint line says so, briefly lit */
+body.wild-onset .hint { animation: hintflash 1.1s ease-out; }
+@keyframes hintflash {
+  0%, 22% { color: var(--accent-text, var(--accent)); }
+  100%    { color: var(--muted); }
+}
+
+/* The ACTION is what should glow, not only the frame — a live board turn puts
+   the button in the accent, so the thing you can do is the brightest thing in
+   the panel. */
+body.wild-turn .wild-btn:not(:disabled):not(.active) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel2));
+  color: var(--accent-text, var(--ink));
+  animation: wildbtn 1.8s ease-in-out infinite;
+}
+@keyframes wildbtn {
+  50% { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+}
+
+/* Motion is the redundant channel here, not the only one: the sound and the
+   accent colouring carry the cue on their own. */
+@media (prefers-reduced-motion: reduce) {
+  body.wild-turn #board,
+  body.wild-turn.wild-onset #board,
+  body.wild-onset .badge,
+  body.wild-onset .hint,
+  body.wild-turn .wild-btn:not(:disabled):not(.active),
+  body.wild-turn .badge { animation: none; }
+  body.wild-turn #board {
+    box-shadow: 0 0 0 3px rgba(231,193,74,.85), 0 0 30px 6px rgba(231,193,74,.3);
+  }
+  .board-wrap.quake { animation: none; }
+}
+
 /* the lifted square hovers off the world */
 .selcell {
   fill: rgba(231,193,74,.5);
@@ -618,6 +689,43 @@ body.wild-turn .badge { animation: pulse 1.4s ease-in-out infinite; }
 }
 
 .sound-btn { min-width: 40px; padding-left: 8px; padding-right: 8px; }
+
+/* ============ puzzles ============ */
+/* Puzzle mode reuses the board and the ✦ cue wholesale — the terrain is the
+   subject of these puzzles, so it should look and sound exactly like a game.
+   Only the panel changes: everything about playing an opponent goes away. */
+.puzzle-panel { display: none; margin-bottom: 16px; }
+body.puzzle-mode #puzzlePanel { display: block; }
+body.puzzle-mode .wild-group,
+body.puzzle-mode .tutor-group,
+body.puzzle-mode .log-wrap,
+body.puzzle-mode .opp-group,
+body.puzzle-mode .game-actions,
+body.puzzle-mode .evalbar,
+body.puzzle-mode #newGame { display: none; }
+
+.pz-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.pz-head .wild-label { margin-bottom: 0; }
+.pz-goal { font-size: 15.5px; font-weight: 700; color: var(--ink); line-height: 1.4; }
+.pz-tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0 0; }
+.pz-tag {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+  padding: 2px 6px; border-radius: 5px;
+  color: var(--muted); background: var(--panel2); border: 1px solid var(--line);
+}
+/* the tag that says this puzzle is the reason the mode exists */
+.pz-tag.terrain { color: var(--accent-text, var(--accent)); background: rgba(231,193,74,.14); border-color: rgba(231,193,74,.35); }
+.pz-msg { font-size: 13px; line-height: 1.5; min-height: 42px; margin: 10px 0 4px; color: var(--muted); }
+.pz-msg.good { color: #4caf50; font-weight: 600; }
+.pz-msg.bad { color: #d8453a; font-weight: 600; }
+.pz-msg.done { color: var(--accent-text, var(--accent)); font-weight: 700; }
+.pz-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 10px; }
+.pz-progress { font-size: 12px; color: var(--muted); }
+.pz-progress b { color: var(--ink); }
+.mode-card.mode-wide { grid-column: 1 / -1; }
+/* A solved puzzle's board is done. The result is on the panel, so the game's
+   own end-of-game banner would be saying it twice on top of the position. */
+body.puzzle-mode #banner { display: none; }
 
 /* ============ welcome ============ */
 /* stacking: lobby/profile 50 < welcome 55 < tutorial 60 < auth modal 65 */
@@ -781,6 +889,36 @@ body.light .state { background: #c62f24; }
 
 /* dark-mode drop shadows read as dirt on light */
 body.light .selcell { filter: drop-shadow(0 .09px .12px rgba(40,50,70,.35)); }
+
+/* The ✦ cue is a gold glow, which has far less punch on a pale page than on
+   near-black — the same shadow that shouts in dark mode whispers here. Light
+   mode gets a denser ring in the darker accent so the cue costs the same
+   attention in both. */
+body.light.wild-turn #board {
+  box-shadow: 0 0 0 3px rgba(170,124,8,.7), 0 0 24px 5px rgba(226,180,48,.42),
+              0 12px 34px rgba(30,40,60,.13);
+  animation: wildglowLight 1.8s ease-in-out infinite;
+}
+@keyframes wildglowLight {
+  50% { box-shadow: 0 0 0 4px rgba(170,124,8,.9), 0 0 34px 9px rgba(226,180,48,.55),
+                    0 12px 34px rgba(30,40,60,.13); }
+}
+body.light.wild-turn.wild-onset #board { animation: wildburstLight .9s cubic-bezier(.22,1,.36,1); }
+@keyframes wildburstLight {
+  0%   { box-shadow: 0 0 0 0 rgba(170,124,8,.95), 0 0 0 0 rgba(226,180,48,.7); }
+  30%  { box-shadow: 0 0 0 8px rgba(170,124,8,.75), 0 0 50px 20px rgba(226,180,48,.6); }
+  100% { box-shadow: 0 0 0 3px rgba(170,124,8,.7), 0 0 24px 5px rgba(226,180,48,.42),
+                     0 12px 34px rgba(30,40,60,.13); }
+}
+body.light.wild-turn .wild-btn:not(:disabled):not(.active) { color: var(--accent-text); }
+
+/* Solved. Placed after the theme's own #board shadows so it wins on order —
+   same specificity, and the later rule is the one that should speak. */
+body.puzzle-solved #board,
+body.light.puzzle-solved #board {
+  box-shadow: 0 0 0 3px rgba(56,142,60,.85), 0 0 34px 9px rgba(76,175,80,.35);
+  animation: none;
+}
 body.light .tut-sq.lift { filter: drop-shadow(0 .1px .1px rgba(40,50,70,.3)); }
 body.light #board .pc.w { color: #fbfaf6; --pc-line: #5a6070; }
 

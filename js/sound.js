@@ -79,12 +79,32 @@
     lift: function (a, t) {
       tone(a, t, 220, 0.16, { vol: 0.07, slideTo: 360 });
     },
+    // A board turn just became available. The thing players actually miss is
+    // not that a square MOVED — that already has the loudest sound in the game
+    // — but that they are *allowed* to move one this ply. So this cue sits at
+    // the opposite end of the spectrum from `terrain`: bright, bell-like and
+    // high, where nothing else in the mix lives. Detuned twins give it the
+    // shimmer that reads as "✦" rather than as a notification beep.
+    wildready: function (a, t) {
+      [784, 1175.7, 1568].forEach(function (f, i) {        // G5 - D6 - G6
+        const at = t + i * 0.07;
+        tone(a, at, f, 0.45, { vol: 0.075, type: 'triangle', attack: 0.008 });
+        tone(a, at, f * 1.006, 0.45, { vol: 0.032, type: 'sine', attack: 0.01 });
+      });
+      tone(a, t + 0.13, 392, 0.55, { vol: 0.045, type: 'sine', attack: 0.02 });  // root, so it isn't thin
+    },
     // a square of the WORLD grinding into a new place. Low, long, unmistakable.
     terrain: function (a, t) {
       tone(a, t, 140, 0.5, { vol: 0.16, slideTo: 52, type: 'sawtooth', attack: 0.03 });
       tone(a, t, 70, 0.55, { vol: 0.14, slideTo: 45, attack: 0.02 });
       thud(a, t, 0.4, 300, 0.35);
       thud(a, t + 0.32, 0.14, 700, 0.30);          // the square settling into place
+    },
+    // a wrong puzzle answer: a short flat two-note fall. Deliberately small —
+    // being wrong in a puzzle is information, not a defeat.
+    wrong: function (a, t) {
+      tone(a, t, 300, 0.11, { vol: 0.07, type: 'triangle' });
+      tone(a, t + 0.1, 225, 0.18, { vol: 0.07, type: 'triangle' });
     },
     win: function (a, t) {
       [523, 659, 784, 1047].forEach(function (f, i) {

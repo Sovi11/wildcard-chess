@@ -53,6 +53,23 @@ function render() {
   let svg = pieceDefs(WCTHEME.get().pieces);
   svg += `<defs><marker id="hintHead" viewBox="0 0 10 10" refX="7.5" refY="5" markerWidth="3.6" markerHeight="3.6" orient="auto-start-reverse"><path d="M1 1L9 5L1 9Z" fill="#e7c14a"/></marker></defs>`;
 
+  // Holes are DRAWN, not left as bare background. Off-board space and a hole in
+  // the middle of the board used to be the same pixel — the SVG's background —
+  // so one colour had to serve both, and on a light page the colour that keeps
+  // the frame from reading as a heavy border made holes vanish into the light
+  // squares (1.01:1 contrast). Drawing the hole separates the two: the frame
+  // stays quiet, the hole gets to look like a pit on every theme.
+  const hb = game.bounds();
+  for (let c = hb.minC; c <= hb.maxC; c++) {
+    for (let r = hb.minR; r <= hb.maxR; r++) {
+      if (game.hasCell(c, r)) continue;
+      svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" class="hole"/>`;
+      // The rim is what actually reads when fill and square are close in tone,
+      // so it is not decoration — inset so it never bleeds onto a neighbour.
+      svg += `<rect x="${X(c) + 0.045}" y="${Y(r) + 0.045}" width="0.91" height="0.91" rx="0.06" class="hole-rim"/>`;
+    }
+  }
+
   for (const k of game.cells) {
     const { c, r } = parseKeyJS(k);
     const light = mod2(c + r) === 1;
@@ -101,7 +118,7 @@ function render() {
 
   // tutor: best-action overlay
   if (hintMove) {
-    const gm = WCAI.moveToGame(hintMove);
+    const gm = hintMove.game ? hintMove : WCAI.moveToGame(hintMove);
     if (gm.kind === 'm' || gm.kind === 'mc') {
       const fx = X(gm.from.c) + 0.5, fy = Y(gm.from.r) + 0.5;
       const tx = X(gm.to.c) + 0.5, ty = Y(gm.to.r) + 0.5;
@@ -215,6 +232,10 @@ boardEl.addEventListener('click', (e) => {
 });
 
 function done(gm) {
+  // In puzzle mode the action has landed on the board but is not yet accepted:
+  // the puzzle grades it, and a miss rewinds the position. Nothing else in the
+  // game loop applies — there is no opponent to broadcast to and no bot to wake.
+  if (puzzleMode) { puzzleSubmit(gm); return; }
   if (gm) gameActs.push(gm);
   afterMove(); updateShare(); netBroadcast(gm); paintNetCard(); maybeAI();
 }
@@ -278,6 +299,7 @@ function refreshBotUI() {
 }
 
 function maybeAI() {
+  if (puzzleMode) return;              // a puzzle has a scripted opponent, not a bot
   if (!botEnabled() || aiThinking || gameOver()) return;
   if (game.turn !== botSide()) return;
   aiThinking = true;
@@ -970,8 +992,13 @@ async function syncProfileDown() {
         dob: remote.dob || local.dob, chessLevel: remote.chess_level || local.chessLevel,
         log: local.log || [],
       });
+      // Puzzles merge rather than overwrite: a solve on any device is a solve.
+      // If the union grew past what the cloud had, push it back up.
+      const beforeN = Object.keys((remote.puzzles && remote.puzzles.solved) || {}).length;
+      const merged = WCPUZZLE.mergeProgress(remote.puzzles);
+      if (Object.keys(merged.solved).length > beforeN) syncProfileUp();
     } else {
-      await WCCLOUD.saveProfile(local);
+      await WCCLOUD.saveProfile(Object.assign({}, local, { puzzles: WCPUZZLE.progress() }));
     }
     if (remote && (remote.chess_level || ((remote.wins | 0) + (remote.losses | 0) + (remote.draws | 0)) > 0)) {
       markTutSeen();                // an account with history knows the game
@@ -1089,7 +1116,8 @@ if (obEl) obEl.addEventListener('click', function (e) { if (e.target === obEl) o
 
 function syncProfileUp() {
   if (!WCCLOUD.enabled() || !WCCLOUD.currentUser()) return;
-  WCCLOUD.saveProfile(WCLADDER.getProfile());
+  // puzzle progress travels with the profile so it follows the account too
+  WCCLOUD.saveProfile(Object.assign({}, WCLADDER.getProfile(), { puzzles: WCPUZZLE.progress() }));
 }
 
 // A proper sign-in surface: Google when the project has it, an email
@@ -1669,6 +1697,7 @@ document.querySelectorAll('.mode-card').forEach(function (el) {
   el.addEventListener('click', function () {
     const kind = el.dataset.lobbymode;
     if (kind === 'online') { hostRoom(); return; }
+    if (kind === 'puzzles') { startPuzzles(); return; }
     startCasual(kind);
   });
 });
@@ -2049,6 +2078,175 @@ if (copyNotationBtn) copyNotationBtn.addEventListener('click', async function ()
   setTimeout(function () { copyNotationBtn.textContent = 'Copy'; }, 1600);
 });
 
+// ---- puzzle mode ----------------------------------------------------------
+// The board, the ✦ cue and the sounds are the game's, unchanged — a puzzle
+// should feel like the position it came from. Only the panel and the move
+// loop differ: your action is graded against a proven-unique solution instead
+// of being sent to an opponent.
+let puzzleMode = false;
+let pzHintLevel = 0;
+
+const pzEl = {
+  panel: document.getElementById('puzzlePanel'),
+  count: document.getElementById('pzCount'),
+  goal: document.getElementById('pzGoal'),
+  tags: document.getElementById('pzTags'),
+  msg: document.getElementById('pzMsg'),
+  hint: document.getElementById('pzHint'),
+  retry: document.getElementById('pzRetry'),
+  next: document.getElementById('pzNext'),
+  exit: document.getElementById('pzExit'),
+  progress: document.getElementById('pzProgress'),
+};
+
+function pzSay(text, cls) {
+  if (!pzEl.msg) return;
+  pzEl.msg.textContent = text || '\u00a0';
+  pzEl.msg.className = 'pz-msg' + (cls ? ' ' + cls : '');
+}
+
+const TAG_LABEL = {
+  'both-wildcards': 'both players reshape the board',
+  'wildcard-key': 'the key move is a board move',
+  'wildcard-defence': 'the defence uses the board',
+  'board-move-first': 'starts with a board move',
+};
+
+function paintPuzzle() {
+  const st = WCPUZZLE.state();
+  if (!st) return;
+  const p = WCPUZZLE.current();
+  pzEl.count.textContent = 'Puzzle ' + (st.index + 1) + ' of ' + st.total;
+  const side = p.turn === 'white' ? 'White' : 'Black';
+  pzEl.goal.textContent = side + ' to play. Mate in ' + st.mateIn + '.';
+  pzEl.tags.innerHTML = (st.tags || []).map(function (t) {
+    const terrain = t.indexOf('wildcard') >= 0 || t.indexOf('board-move') >= 0;
+    return '<span class="pz-tag' + (terrain ? ' terrain' : '') + '">' + esc(TAG_LABEL[t] || t) + '</span>';
+  }).join('');
+  const pr = WCPUZZLE.progress();
+  const solved = Object.keys(pr.solved || {}).length;
+  pzEl.progress.innerHTML = '<b>' + solved + '</b> of <b>' + st.total + '</b> solved' +
+    (pr.streak ? ' · streak <b>' + pr.streak + '</b>' : '') +
+    (pr.best ? ' · best <b>' + pr.best + '</b>' : '');
+  document.body.classList.toggle('puzzle-solved', !!st.finished);
+  pzEl.hint.disabled = !!st.finished;
+}
+
+function loadPuzzle(starter) {
+  pzHintLevel = 0;
+  hintMove = null;
+  const p = starter();
+  if (!p) { pzSay('No puzzles available.', 'bad'); return; }
+  orientFor(p.turn);                      // you always play from your own side
+  pzSay(p.mateIn === 1 ? 'Find the mate.' : 'Find the forced mate. There is exactly one.');
+  sync(); render(); paintPuzzle();
+}
+
+async function startPuzzles() {
+  try { await WCPUZZLE.load(); }
+  catch (e) { alert('Could not load the puzzle set: ' + e.message); return; }
+  WCPUZZLE.attach({ game: game });
+  if (netSession && netSession.cancel) { netSession.cancel(); netSession = null; }
+  WCNET.destroy(); onlineActive = false; myColor = null;
+  activeBot = null; ratedGame = false;
+  aiGen++; aiThinking = false;
+  if (oppModeEl) oppModeEl.value = 'human';    // no bot may ever move in a puzzle
+  WCSOUND.setAmbient(false);
+  puzzleMode = true;
+  document.body.classList.add('puzzle-mode');
+  closeLobby();
+  ui.banner.classList.remove('show');
+  WCSTATS.track('puzzle_start', { total: WCPUZZLE.count() });
+  loadPuzzle(function () { return WCPUZZLE.nextUnsolved(); });
+}
+
+function exitPuzzles() {
+  puzzleMode = false;
+  WCPUZZLE.exit();
+  document.body.classList.remove('puzzle-mode', 'puzzle-solved');
+  hintMove = null;
+  startCasual('hotseat');
+}
+
+// Grade the action that just landed. A miss rewinds to the position as it was
+// before it, so you can try again from the same picture rather than restarting.
+function puzzleSubmit(gm) {
+  const before = WCPUZZLE.state();
+  const res = WCPUZZLE.submit(gm);
+  selected = null; legal = []; hintMove = null; setMode('normal');
+  if (!res.ok && res.state === 'wrong') {
+    WCSOUND.play('wrong');
+    pzSay(res.message, 'bad');
+    sync(); render(); paintPuzzle();
+    return;
+  }
+  actionFX();                                   // your move gets the game's own sound
+  if (res.state === 'continue') {
+    sync(); render();                             // your move, on its own, first
+    pzSay(res.message + ' Mate in ' + res.moves + '.', 'good');
+    setTimeout(function () {
+      WCPUZZLE.playReply(res.pendingReply);
+      actionFX();
+      pzHintLevel = 0;
+      sync(); render(); paintPuzzle();
+    }, 420);
+    return;
+  }
+  if (res.state === 'solved') {
+    WCSOUND.play('win');
+    pzSay(before && before.failed ? 'Solved.' : 'Solved, first try.', 'done');
+    WCSTATS.track('puzzle_solved', { id: before && before.id, mateIn: before && before.mateIn, clean: !(before && before.failed) });
+    syncProfileUp();                            // a solve follows the account, like a rating change
+  }
+  sync(); render(); paintPuzzle();
+}
+
+if (pzEl.next) pzEl.next.addEventListener('click', function () {
+  loadPuzzle(function () { return WCPUZZLE.next(); });
+});
+if (pzEl.retry) pzEl.retry.addEventListener('click', function () {
+  WCPUZZLE.retry(); pzHintLevel = 0; hintMove = null;
+  pzSay('From the top.');
+  sync(); render(); paintPuzzle();
+});
+if (pzEl.exit) pzEl.exit.addEventListener('click', exitPuzzles);
+if (pzEl.hint) pzEl.hint.addEventListener('click', function () {
+  pzHintLevel++;
+  const h = WCPUZZLE.hint(pzHintLevel);
+  if (!h) return;
+  if (typeof h === 'string') { pzSay(h); return; }
+  // level 3: draw it on the board, using the tutor's own arrow overlay
+  hintMove = gameToHint(h.reveal);
+  pzSay('The move is ' + WCPUZZLE.actionText(h.reveal) + '.');
+  render();
+});
+
+// The hint overlay in render() speaks the AI's move shape; puzzles speak the
+// game's. One small adaptor rather than two overlays.
+function gameToHint(a) {
+  // `game: true` marks it as already in board coordinates — render() otherwise
+  // pushes hintMove through WCAI.moveToGame, which unpacks integer coords.
+  return Object.assign({ game: true }, a);
+}
+
+// Edge-triggered ✦ cue. Tracks the previous state so the burst fires once per
+// board turn rather than on every re-render.
+let wildCueOn = false;
+let wildCueTimer = null;
+function wildOnset(on) {
+  if (on === wildCueOn) return;
+  wildCueOn = on;
+  if (!on) return;
+  WCSOUND.play('wildready');
+  const b = document.body;
+  b.classList.remove('wild-onset');
+  void b.offsetWidth;                       // restart the animation
+  b.classList.add('wild-onset');
+  clearTimeout(wildCueTimer);
+  // dropped once the burst is done so the ambient .wild-turn glow resumes
+  wildCueTimer = setTimeout(function () { b.classList.remove('wild-onset'); }, 1150);
+}
+
 function sync() {
   const side = game.turn === 'white' ? 'White' : 'Black';
   ui.turn.textContent = `${side} to move`;
@@ -2059,6 +2257,12 @@ function sync() {
   for (const b of document.querySelectorAll('.wild-btn')) b.disabled = !eligible;
   // board turns look different from across the room: the whole board glows
   document.body.classList.toggle('wild-turn', eligible && !gameOver());
+  // ...but a sustained glow only answers "is this a board turn", and the thing
+  // that actually gets missed is the moment one ARRIVES. Fire a one-shot burst
+  // plus a bell the instant it becomes the local player's board turn. Only on
+  // the transition (sync runs on every render) and only for a human sitting
+  // here — the bot's own board turns are not an invitation to act.
+  wildOnset(eligible && !gameOver() && game.turn === localColor());
 
   ui.state.textContent = game.status === 'check' ? 'Check!' : '';
   ui.state.style.display = game.status === 'check' ? 'inline-flex' : 'none';

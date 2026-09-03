@@ -103,6 +103,9 @@ wildcard-chess/
   js/engine.js        # pure game logic (cells Set + pieces Map) — Node-testable, no DOM
   js/pieces.js        # original flat SVG piece set (no licensing issues)
   js/main.js          # SVG rendering + click/UI wiring
+  js/solver.js        # full-width prover — puzzle proofs, Node + browser
+  js/puzzles.js       # puzzle mode: state machine over a proven line
+  js/puzzle-data.json # the shipped set (generated, verifiable)
   electron-main.js    # desktop wrapper
 ```
 
@@ -164,8 +167,19 @@ Board themes and piece sets mix freely and persist (panel → Appearance):
   moves, a sharper knock for captures, and a low **stone-grind rumble plus a screen
   quake** when a square of the world moves — a board move should feel like nothing
   else in the game. Mute toggle in the header, remembered per device.
-- **Board turns glow** — the board pulses gold when a ✦ board turn is available, so
-  you never miss one.
+- **Board turns announce themselves** — a sustained gold ring says *this is* a board
+  turn; the moment one *arrives* gets its own one-shot burst, a bell (high and
+  bright, the opposite end of the mix from the terrain rumble) and the
+  "Move a square" button lighting up in the accent. The ambient glow alone was
+  easy to miss while you were staring at the pieces. The cue fires only on your
+  own board turns, never the bot's, and motion is redundant with sound and
+  colour under `prefers-reduced-motion`.
+- **Holes are drawn, not left blank** — a hole and the off-board frame used to be
+  the same pixel (the board's background), so one colour had to serve both. On a
+  light page that colour sat at 1.01:1 against the light squares: holes vanished.
+  Holes are now their own element — a dark pit with an inset rim — so the frame
+  can stay quiet while the hole reads on every theme (9.9:1 on Slate; the rim is
+  what carries Neon void, whose squares are near-black in either mode).
 - **Welcome & walkthrough** — signed-out visitors land on a welcome screen with
   sign-in / guest; first-timers get a 5-step illustrated tutorial (replayable from
   Rules → "Replay the walkthrough").
@@ -176,6 +190,100 @@ Fully playable by touch: tap a piece, tap a square. The layout reorders on narro
 (board first, thumb-sized action buttons beneath), double-tap zoom is suppressed on the
 board, and the site installs as a **PWA** — Add to Home Screen gives a standalone app that
 opens instantly and plays bot games offline.
+
+## Puzzles
+
+Lobby → **Puzzles**. Each one is a position with a *forced* mate and, at every
+one of your turns, **exactly one action that delivers it**. Play the wrong move
+and the position rewinds so you can look again from the same picture; play the
+right one and the defence answers, chosen as the toughest reply available.
+
+Hints are graduated on purpose — what kind of action it is, then where it
+starts, then the move drawn on the board — so a hint is a nudge rather than the
+answer.
+
+### How the puzzles are found
+
+The chess.com / lichess pipeline is: mine millions of real games, run an engine
+over every position, and keep the ones where the game continuation swung the
+evaluation hard — evidence a player missed something. Then apply the test that
+actually makes a puzzle: the winning move must be the **only** winning move,
+verified at every solver turn, with the defence playing its best. Themes are
+tagged from the solution's mechanics, and difficulty is *measured* afterwards
+from how often humans solve it, not assigned by hand.
+
+There is no corpus of Hollow Chess games worth mining yet, so the same test is
+applied to a composed seed space instead — a small cast on a small island,
+proved rather than mined:
+
+```bash
+node harness/compose-puzzles.js --want=12 --seconds=600   # search and prove
+node harness/verify-puzzles.js                            # re-prove the shipped set
+```
+
+Two things about this variant made it harder than the chess version:
+
+**`js/ai.js` cannot verify a puzzle.** Its `wildcardMoves(K)` candidate-prunes
+board actions to a top-K by static score — square-moves are only the top-4
+sources paired with the top-4 targets. That is the right call for a game engine
+and the wrong one for a proof: a pruned *defence* turns an unsound line into a
+"mate", a pruned *alternative* turns a two-solution position into a "unique"
+one. So `js/solver.js` generates full width, unpruned, against `engine.js` —
+the rules the game actually plays, not a mirror of them. It is slower, and it
+runs offline in the harness, never in front of a player.
+
+**Which wildcards a puzzle can contain is fixed by arithmetic.** Board turns
+land on plies ≡ 1 (mod 3). From a start ply `t` the solver moves on `t, t+2,
+t+4` and the defence replies on `t+1, t+3`, so:
+
+| start phase | who gets a board turn |
+|---|---|
+| `t ≡ 1` | solver on move 1; defence on its 2nd reply |
+| `t ≡ 0` | defence on its 1st reply; solver on its 3rd move |
+| `t ≡ 2` | neither, inside a 5-ply window |
+
+A **mate-in-2 spans only one eligible ply**, so it is structurally incapable of
+holding a wildcard from both sides — the start phase decides which player gets
+it. Wildcards from *both* players inside one puzzle require a **mate-in-3**.
+The set is tiered accordingly:
+
+- **mate-in-1** — a board move *is* the mate. The mechanic on its own.
+  The usual shape: a slider aims at the king along a line broken by one hole;
+  bridge the hole and the line completes, and take the bridging square from one
+  of the king's flight squares so the same action does both jobs.
+- **mate-in-2, `t ≡ 1`** — the key move is a board move, with a real defence to see past.
+- **mate-in-2, `t ≡ 0`** — *they* tear up the floor to escape, and you mate anyway.
+- **mate-in-3** — both players reshape the board inside the solution.
+
+### Where the set stands
+
+The shipped set is **26 puzzles — 8 mate-in-1 and 18 mate-in-2 — every one of
+them turning on a board move**: 25 where the board move is yours and one where
+the defence tears up the floor to escape and you mate anyway. The mate-in-3
+both-wildcards tier has its machinery in place — phase families, tagging,
+verifier support — but no puzzle in it yet, for a measurable reason rather than
+a mysterious one.
+
+`solver.js` proves against `engine.js`, and `engine.js` clones its piece Map on
+every legality probe: correct, clear, and about 6 s per mate-in-3 candidate.
+Most candidates have no mate at all, and "prove there is no mate in 3" is the
+expensive direction, so a search that needs thousands of candidates needs hours.
+(The square-move generator already skips the clone — a square-move touches no
+piece, so `cells` is mutated and put back instead, which is the same question
+`_trial` answers and roughly 40× cheaper. The remaining cost is inside
+`makeMove` → `_evaluate`.)
+
+The fix, when the tier is worth it: port the prover onto `ai.js`'s make/unmake
+position — full width, no pruning — and keep the `engine.js` prover as the
+authority that re-checks whatever survives, exactly as `harness/` already
+arbitrates between the two.
+
+Every shipped puzzle is re-proved from scratch by `harness/verify-puzzles.js`,
+which throws the stored answer away and re-derives it: legality of the position,
+uniqueness at every solver turn, legality of the stored defence, that the line
+really ends in mate, and that the tags it advertises are true of the line. A
+puzzle whose "only" solution is not the only solution is worse than no puzzle,
+because the mode grades you against it.
 
 ## Tutor / analysis
 
@@ -242,6 +350,8 @@ bishop pair.
 node harness/analyze.js --depth=5          # best action + eval for one position
 node harness/selfplay.js 30 3              # N games, stats on mates/draws/action usage
 node harness/botmatch.js 2 3 6             # level vs level, colours swapped
+node harness/compose-puzzles.js --want=12  # search for provable puzzles
+node harness/verify-puzzles.js             # re-prove the shipped puzzle set
 ```
 
 ## Roadmap

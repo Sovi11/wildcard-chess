@@ -150,11 +150,12 @@
     // error retry with the base row rather than losing the rating sync
     if (p.dob) row.dob = p.dob;
     if (p.chessLevel) row.chess_level = p.chessLevel;
+    if (p.puzzles) row.puzzles = p.puzzles;          // solved set + streaks, one jsonb blob
     let { error } = await client.from('profiles').upsert(row);
     if (error && /column|schema/i.test(error.message || '')) {
-      delete row.dob; delete row.chess_level;
+      delete row.dob; delete row.chess_level; delete row.puzzles;
       ({ error } = await client.from('profiles').upsert(row));
-      if (!error) console.warn('[cloud] profiles table is missing dob/chess_level — run the ALTER TABLE in SUPABASE_SETUP.md');
+      if (!error) console.warn('[cloud] profiles table is missing dob/chess_level/puzzles — run the ALTER TABLE in SUPABASE_SETUP.md');
     }
     if (error) { console.warn('[cloud] saveProfile:', error.message); return false; }
     return true;

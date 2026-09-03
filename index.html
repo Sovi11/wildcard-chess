@@ -30,7 +30,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=48" />
+  <link rel="stylesheet" href="styles.css?v=56" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -122,6 +122,11 @@
           <span class="mode-ico">👥</span>
           <span class="mode-name">2 players, one screen</span>
           <span class="mode-desc">Offline hotseat. Pass the mouse.</span>
+        </button>
+        <button class="mode-card mode-wide" data-lobbymode="puzzles">
+          <span class="mode-ico">✦</span>
+          <span class="mode-name">Puzzles <span id="puzzleCountTag" class="lb-tag">new</span></span>
+          <span class="mode-desc">Forced mates where the terrain is the answer. One solution, proved.</span>
         </button>
       </div>
 
@@ -375,6 +380,22 @@
           <span id="state" class="state">Check!</span>
         </div>
 
+        <div id="puzzlePanel" class="puzzle-panel">
+          <div class="pz-head">
+            <span class="wild-label" id="pzCount">Puzzle</span>
+            <button id="pzExit" class="hint-btn" title="Leave puzzle mode">Exit</button>
+          </div>
+          <div id="pzGoal" class="pz-goal">—</div>
+          <div id="pzTags" class="pz-tags"></div>
+          <div id="pzMsg" class="pz-msg">&nbsp;</div>
+          <div class="pz-actions">
+            <button id="pzHint" class="act-btn">Hint</button>
+            <button id="pzRetry" class="act-btn">↻ Retry</button>
+            <button id="pzNext" class="act-btn">Next →</button>
+          </div>
+          <div id="pzProgress" class="pz-progress"></div>
+        </div>
+
         <div class="wild-group">
           <div class="wild-label">Board turn</div>
           <div class="wild-buttons one">
@@ -516,22 +537,24 @@
   </div>
 
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=48"></script>
-  <script defer src="js/stats.js?v=48"></script>
-  <script defer src="js/cloud.js?v=48"></script>
-  <script defer src="js/engine.js?v=48"></script>
-  <script defer src="js/pieces.js?v=48"></script>
-  <script defer src="js/themes.js?v=48"></script>
-  <script defer src="js/sound.js?v=48"></script>
-  <script defer src="js/tutorial.js?v=48"></script>
-  <script defer src="js/ai.js?v=48"></script>
-  <script defer src="js/ladder.js?v=48"></script>
+  <script defer src="js/config.js?v=56"></script>
+  <script defer src="js/stats.js?v=56"></script>
+  <script defer src="js/cloud.js?v=56"></script>
+  <script defer src="js/engine.js?v=56"></script>
+  <script defer src="js/pieces.js?v=56"></script>
+  <script defer src="js/themes.js?v=56"></script>
+  <script defer src="js/sound.js?v=56"></script>
+  <script defer src="js/tutorial.js?v=56"></script>
+  <script defer src="js/ai.js?v=56"></script>
+  <script defer src="js/ladder.js?v=56"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=48"></script>
-  <script defer src="js/net.js?v=48"></script>
-  <script defer src="js/share.js?v=48"></script>
-  <script defer src="js/analysis.js?v=48"></script>
-  <script defer src="js/main.js?v=48"></script>
+  <script defer src="js/matchmaking.js?v=56"></script>
+  <script defer src="js/net.js?v=56"></script>
+  <script defer src="js/share.js?v=56"></script>
+  <script defer src="js/analysis.js?v=56"></script>
+  <script defer src="js/solver.js?v=56"></script>
+  <script defer src="js/puzzles.js?v=56"></script>
+  <script defer src="js/main.js?v=56"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
