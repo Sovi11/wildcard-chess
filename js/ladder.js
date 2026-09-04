@@ -206,6 +206,25 @@
     return p;
   }
 
+  // Fold the account's cloud history into the local log. Union by `at` (the
+  // sync key), newest first; nothing local is ever dropped by a sync, and the
+  // local cap stays — the cloud keeps everything, this is the working set.
+  function mergeLog(remote) {
+    const p = getProfile();
+    const seen = new Set((p.log || []).map((e) => e.at));
+    let added = 0;
+    for (const e of remote || []) {
+      if (!e || !e.at || seen.has(e.at)) continue;
+      seen.add(e.at); p.log.push(e); added++;
+    }
+    if (added) {
+      p.log.sort((a, b) => (b.at || 0) - (a.at || 0));
+      p.log = p.log.slice(0, 40);
+      saveProfile(p);
+    }
+    return added;
+  }
+
   function clearHistory() {
     const p = getProfile();
     p.log = [];
@@ -241,7 +260,7 @@
 
   window.WCLADDER = {
     BOTS, byId, liveBot, livePool, botElo, setBotElo, weightsFor,
-    getProfile, saveProfile, recordResult, recordCasual, clearHistory, resetProfile, ranked, stakes,
+    getProfile, saveProfile, recordResult, recordCasual, mergeLog, clearHistory, resetProfile, ranked, stakes,
     expected, kFactor, games, START_ELO,
   };
 })();

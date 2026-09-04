@@ -205,6 +205,46 @@
     return data[0];
   }
 
+  // ---- games -------------------------------------------------------------------
+  // A finished game, saved against the account. `at` is the sync key, so
+  // re-sending the same game (a retry, a second device that already had it
+  // locally) is a no-op rather than a duplicate.
+  async function saveGame(e) {
+    if (!client || !user || !e || !e.acts || !e.acts.length) return false;
+    const row = {
+      user_id: user.id, at: Math.round(e.at || Date.now()),
+      opponent: e.botName || null, bot: e.bot || null, you_color: e.youColor || null,
+      score: e.score, reason: e.reason || null, plies: e.plies | 0, rated: !!e.rated,
+      elo_before: typeof e.before === 'number' ? e.before : null,
+      elo_after: typeof e.after === 'number' ? e.after : null,
+      acts: e.acts,
+    };
+    const { error } = await client.from('games').upsert(row, { onConflict: 'user_id,at', ignoreDuplicates: true });
+    if (error) {
+      if (/relation|schema|does not exist|find the table/i.test(error.message || '')) {
+        console.warn('[cloud] games table is not installed — run sql/games.sql (history stays local)');
+      } else console.warn('[cloud] saveGame:', error.message);
+      return false;
+    }
+    return true;
+  }
+
+  // Newest first, in the same shape the local log uses so they merge cleanly.
+  async function loadGames(limit) {
+    if (!client || !user) return [];
+    const { data, error } = await client.from('games').select('*')
+      .eq('user_id', user.id).order('at', { ascending: false }).limit(limit || 200);
+    if (error) { console.warn('[cloud] loadGames:', error.message); return []; }
+    return (data || []).map(function (r) {
+      const e = { at: Number(r.at), botName: r.opponent || undefined, bot: r.bot || undefined,
+        youColor: r.you_color || undefined, score: r.score == null ? undefined : Number(r.score),
+        reason: r.reason || undefined, plies: r.plies || undefined, rated: !!r.rated, acts: r.acts || [] };
+      if (r.elo_before != null) e.before = r.elo_before;
+      if (r.elo_after != null) e.after = r.elo_after;
+      return e;
+    });
+  }
+
   // ---- puzzles ---------------------------------------------------------------
   // Live puzzle ratings (calibrated from everyone's first attempts). Public read.
   async function puzzleRatings() {
@@ -260,5 +300,6 @@
     loadProfile, saveProfile, leaderboard,
     joinQueue, leaveQueue, findWaiting,
     puzzleRatings, recordPuzzleAttempt,
+    saveGame, loadGames,
   };
 })();

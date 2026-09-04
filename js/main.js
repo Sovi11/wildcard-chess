@@ -1008,6 +1008,15 @@ async function syncProfileDown() {
   scrubIdentityName();              // undo any old email/real-name leak first
   paintProfile(); renderLeaderboard();
   maybeOnboard(remote);
+  // Past games: the cloud has everything this account ever finished; fold it
+  // into the local list. Games that only exist locally (played signed out,
+  // or before the table existed) are pushed up so nothing is stranded.
+  try {
+    const cloudGames = await WCCLOUD.loadGames(200);
+    const have = new Set(cloudGames.map(function (e) { return e.at; }));
+    for (const e of WCLADDER.getProfile().log || []) if (e.acts && e.acts.length && !have.has(e.at)) WCCLOUD.saveGame(e);
+    if (WCLADDER.mergeLog(cloudGames)) paintProfile();
+  } catch (e) { console.warn('[cloud] games sync failed:', e && e.message); }
 }
 
 // ---- post-sign-in onboarding ----------------------------------------------
@@ -1665,12 +1674,13 @@ function settleResult() {
     if (gameActs.length) {
       resultRecorded = true;
       const me = onlineActive ? myColor : (botEnabled() ? (botSide() === 'white' ? 'black' : 'white') : 'white');
-      WCLADDER.recordCasual({
+      const p = WCLADDER.recordCasual({
         botName: onlineActive ? (oppLabel || 'Online player') : 'Friendly game',
         score: game.winner === me ? 1 : (game.winner ? 0 : 0.5),
         acts: gameActs.slice(), youColor: me,
         reason: game.endReason || game.status, plies: game.history.length,
       });
+      if (WCCLOUD.enabled() && WCCLOUD.currentUser()) WCCLOUD.saveGame(p.log[0]);
     }
     return null;
   }
@@ -1686,6 +1696,7 @@ function settleResult() {
   });
   paintProfile(); paintOppCard(); renderLeaderboard();
   syncProfileUp();
+  if (WCCLOUD.enabled() && WCCLOUD.currentUser()) WCCLOUD.saveGame(WCLADDER.getProfile().log[0]);
   return r;
 }
 
@@ -1765,7 +1776,9 @@ function reviewMatch(idx) {
   if (!entry || !entry.acts || !entry.acts.length) return;
   openReview(entry.acts,
     'vs ' + (entry.botName || 'Opponent') + ' · ' +
-    (entry.score === 1 ? 'you won' : entry.score === 0 ? 'you lost' : 'draw'));
+    (entry.score === 1 ? 'you won' : entry.score === 0 ? 'you lost' : 'draw') +
+    (entry.reason ? ' by ' + entry.reason : ''),
+    entry.plies);
 }
 
 // Lichess-style review: the board is steppable IMMEDIATELY (arrow keys, click
@@ -1775,7 +1788,7 @@ let revToken = 0;                 // bumping this cancels any in-flight analysis
 const REV_DEPTH = 7;              // analysis-grade: far deeper than any bot plays
 const REV_MOVETIME = 2500;   // ~depth 6-7 per ply; it streams, so nothing blocks
 
-function openReview(acts, title) {
+function openReview(acts, title, expectedPlies) {
   const token = ++revToken;
   revActs = acts;
   revPos = 0;
@@ -1783,10 +1796,20 @@ function openReview(acts, title) {
   revQuality = [];
   document.getElementById('reviewTitle').textContent = title;
 
-  // Instant walkthrough: replay without analysis to get the move list.
+  // Instant walkthrough: replay without analysis to get the move list. If an
+  // action refuses to apply the replay stops — but it says so, rather than
+  // presenting a two-move review as though that were the whole game.
   const g0 = new Game();
+  let replayed = 0;
   for (let i = 0; i < revActs.length; i++) {
     if (!WCAI.applyToGame(g0, revActs[i])) break;
+    replayed++;
+  }
+  const short = replayed < revActs.length || (expectedPlies && replayed < expectedPlies);
+  if (short) {
+    document.getElementById('reviewTitle').textContent = title +
+      ' · record replays ' + replayed + ' of ' + (expectedPlies || revActs.length) + ' plies';
+    revActs = revActs.slice(0, replayed);
   }
   revMoves = g0.history.map(function (h) { return { text: h.text, color: h.color }; });
   document.getElementById('revAccuracy').textContent =

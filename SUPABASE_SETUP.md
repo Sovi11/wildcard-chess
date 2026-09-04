@@ -150,7 +150,15 @@ never write a rating. Only a player's *first* attempt at a puzzle is rated, so
 nothing can be farmed. Signed-out players get a local rating against the
 puzzles' seed ratings, and the cloud rating takes over when they sign in.
 
-## 7. In-game feedback
+## 7. Game history
+
+Run [`sql/games.sql`](sql/games.sql) once. Every finished game (the full
+action list the review replays, plus result, reason and rating change) is then
+saved against the account, and merged back into the past-games list on any
+device you sign in from. Without the table, history stays in localStorage —
+last 40 games, this browser only.
+
+## 8. In-game feedback
 
 The ⌨ Feedback button in the header writes here. Run once in the SQL editor:
 

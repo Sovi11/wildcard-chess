@@ -54,6 +54,16 @@ sign-in button hides itself, and matchmaking stays peer-to-peer. Even with the b
 **no moves go through the server** — the queue only exchanges a PeerJS id, and the game
 still runs browser-to-browser.
 
+### Past games
+
+Every finished game — the full action list the review replays, the result,
+how it ended, the rating change — is kept. Signed in, it is saved to the
+account (`sql/games.sql`) and merged into the past-games list on any device;
+games played signed out are pushed up the next time you sign in. Signed out,
+history stays in this browser, last 40 games. The review says how the game
+ended in its title, and if a stored record will not replay to its recorded
+length it says that too, rather than presenting a truncated game as complete.
+
 ### How online works without a server
 
 Moves travel over a direct WebRTC data channel between the two browsers. A free public
