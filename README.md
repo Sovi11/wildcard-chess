@@ -386,3 +386,7 @@ node harness/verify-puzzles.js             # re-prove the shipped puzzle set
 - Play vs AI in the UI (Web Worker), eval bar.
 - Balance passes: action budgets, restrict adds per game, connectivity rules.
 - Animations, promotion choice, capsule art for Steam.
+
+## License
+
+MIT — see [LICENSE](LICENSE). © 2026 Pravar Kataria.

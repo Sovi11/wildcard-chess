@@ -1,0 +1,59 @@
+<!doctype html><meta charset="utf-8"><title>x hero</title>
+<style>
+  html,body{margin:0;background:#0f1115}
+  #s{position:relative;width:1600px;height:900px;overflow:hidden;background:
+      radial-gradient(1100px 700px at 78% 50%,#1b1f27 0%,#0f1115 60%);font-family:-apple-system,"Inter","Segoe UI",Helvetica,Arial,sans-serif;color:#f0ede4}
+  .l{position:absolute;left:96px;top:150px;width:640px}
+  h1{margin:0;font-size:86px;line-height:.98;letter-spacing:-2.5px;font-weight:800}
+  h1 em{font-style:normal;color:#e7c14a}
+  p{margin:34px 0 0;font-size:29px;line-height:1.35;color:#c9c6bd;max-width:600px}
+  p b{color:#f0ede4;font-weight:700}
+  .pill{position:absolute;left:96px;top:742px;padding:14px 22px;border-radius:14px;background:#1c2027;border:1px solid #2b303a;font-size:26px;color:#e7c14a;font-weight:700}
+  .pill span{color:#9a9fa9;font-weight:500}
+  svg{position:absolute;right:88px;top:96px}
+  .lt{fill:#e9e3d6}.dk{fill:#6f7d92}
+  .hole{fill:#101218}.rim{fill:none;stroke:rgba(255,255,255,.14);stroke-width:2}
+  .pc{font-size:88px;text-anchor:middle;dominant-baseline:central;font-family:"Apple Symbols","Segoe UI Symbol","DejaVu Sans",sans-serif}
+  .w{fill:#fbfaf6;stroke:#3a3f49;stroke-width:2.5;paint-order:stroke}
+  .b{fill:#2b3038;stroke:#0c0e13;stroke-width:1.5;paint-order:stroke}
+</style>
+<div id="s">
+  <div class="l">
+    <h1>Chess, except<br>the board is<br>a <em>piece</em> too.</h1>
+    <p>Every third turn: <b>lift an empty square and put it anywhere.</b> Holes block rooks, bishops and queens. Checkmate anyway.</p>
+  </div>
+  <div class="pill">hollowchess.com <span>· free · no account · in the browser</span></div>
+  <svg width="700" height="700" viewBox="0 0 700 700">
+    <defs>
+      <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000" flood-opacity=".7"/></filter>
+      <marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M1 1L9 5L1 9Z" fill="#e7c14a"/></marker>
+    </defs>
+    <g transform="translate(20,20)" id="board"></g>
+  </svg>
+</div>
+<script>
+  // 6x6 window of a board. Black king top-right, white queen bottom-left on the
+  // long diagonal. The square two steps from the king has been LIFTED out of
+  // the line (floating, gold outline) and re-attached on the rim — the check
+  // line stops at the hole it left. The exact moment the game is about to.
+  const N=6, S=110, g=document.getElementById('board');
+  const el=(t,a)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',t);for(const k in a)e.setAttribute(k,a[k]);g.appendChild(e);return e};
+  const hole={c:3,r:2};                     // on the a1-f6 diagonal (r counted from top)
+  const moved={c:0,r:0};                    // rendered attached at top-left outside the window? keep inside: draw it "off" the top-left corner
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const isHole=c===hole.c&&r===hole.r;
+    const cls=((c+r)%2===0)?'lt':'dk';
+    if(isHole){el('rect',{x:c*S,y:r*S,width:S,height:S,class:'hole'});el('rect',{x:c*S+5,y:r*S+5,width:S-10,height:S-10,rx:6,class:'rim'});}
+    else el('rect',{x:c*S,y:r*S,width:S,height:S,class:cls});
+  }
+  // queen at (0,5) i.e. bottom-left; king at (5,0) top-right; diagonal passes (1,4)(2,3)(3,2)=hole
+  const beam=el('line',{x1:0.5*S,y1:5.5*S,x2:(hole.c+0.35)*S,y2:(hole.r+0.65)*S,stroke:'#e7c14a','stroke-width':14,'stroke-linecap':'round',opacity:.85});
+  el('line',{x1:(hole.c+0.35)*S,y1:(hole.r+0.65)*S,x2:(5.5)*S-30,y2:(0.5)*S+30,stroke:'#e7c14a','stroke-width':14,'stroke-linecap':'round',opacity:.18,'stroke-dasharray':'6 22'});
+  // the lifted square, floating up-right of the hole, on its way to the rim
+  const fx=hole.c*S+150, fy=hole.r*S-95;
+  el('rect',{x:fx,y:fy,width:S,height:S,class:'lt',filter:'url(#sh)',transform:`rotate(-7 ${fx+S/2} ${fy+S/2})`});
+  el('rect',{x:fx,y:fy,width:S,height:S,fill:'none',stroke:'#e7c14a','stroke-width':6,'stroke-dasharray':'16 10',transform:`rotate(-7 ${fx+S/2} ${fy+S/2})`});
+  el('path',{d:`M ${hole.c*S+S/2+18} ${hole.r*S+S/2-18} Q ${hole.c*S+S/2+80} ${hole.r*S-40} ${fx+S/2-20} ${fy+S/2+30}`,fill:'none',stroke:'#e7c14a','stroke-width':6,'marker-end':'url(#ah)','stroke-linecap':'round'});
+  const t=(c,r,ch,cls)=>{const e=el('text',{x:c*S+S/2,y:r*S+S/2+4,class:'pc '+cls});e.textContent=ch;};
+  t(0,5,'♛','w'); t(5,0,'♚','b'); t(4,5,'♜','w'); t(5,3,'♟','b'); t(2,0,'♞','b');
+</script>
