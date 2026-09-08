@@ -115,8 +115,24 @@ function synthSfx(kind, file) {
 }
 
 // ---- voiceover -------------------------------------------------------------
-function voFile(line) {
+// Two voices: the deep trailer narrator, and the Pawn (mascot). Pawn lines are
+// made by harness/pawn-vo.py, which also writes the word timings the stage
+// lip-syncs to; the key mirrors WCPAWN.lineKey (djb2).
+function lineKey(text) {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+  return h.toString(16).padStart(8, '0');
+}
+function voFile(line, voice) {
   fs.mkdirSync(VO_DIR, { recursive: true });
+  if (voice === 'pawn') {
+    const f = path.join(VO_DIR, 'pawn-' + lineKey(line) + '.mp3');
+    if (!fs.existsSync(f)) {
+      execFileSync('python', [path.join(__dirname, 'pawn-vo.py'), '--line', line], { stdio: 'inherit' });
+      console.log('pawn vo:', JSON.stringify(line));
+    }
+    return f;
+  }
   const f = path.join(VO_DIR, crypto.createHash('md5').update(line).digest('hex').slice(0, 12) + '.mp3');
   if (!fs.existsSync(f)) {
     execFileSync('python', ['-m', 'edge_tts',
@@ -147,7 +163,7 @@ function findSync(videoFile) {
 }
 
 // ---- mix one scene ---------------------------------------------------------
-const VOL = { bed: 0.42, vo: 1.9, braam: 1.0, hit: 0.85, whoosh: 0.6, lift: 0.45 };
+const VOL = { bed: 0.42, vo: 1.9, pawn: 1.7, braam: 1.0, hit: 0.85, whoosh: 0.6, lift: 0.45 };
 
 function mixScene(scene) {
   const video = path.join(OUT, scene + '-video.mp4');
@@ -172,7 +188,7 @@ function mixScene(scene) {
     if (b.sync) continue;
     const at = Math.max(0, Math.round((sync + b.t) * 1000));
     let file, vol;
-    if (b.vo) { file = voFile(b.vo); vol = VOL.vo; }
+    if (b.vo) { file = voFile(b.vo, b.voice); vol = b.voice === 'pawn' ? VOL.pawn : VOL.vo; }
     else { file = path.join(OUT, 'sfx-' + b.sfx + '.wav'); vol = VOL[b.sfx] || 0.7; }
     inputs.push('-i', file);
     chains.push(`[${idx}]adelay=${at}|${at},volume=${vol}[a${ai}]`);

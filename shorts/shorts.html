@@ -73,6 +73,24 @@
   #endcard .url { font-size:66px; color:var(--accent); font-weight:900; letter-spacing:.03em; }
   #endcard .free { font-size:42px; color:var(--ink); opacity:.85; font-weight:700; }
 
+  /* ---- the Pawn (mascot) + puzzle HUD ---- */
+  #pawnWrap { position:absolute; left:20px; top:225px; width:330px; height:400px; z-index:7; opacity:0;
+    transition:opacity .25s, left .55s cubic-bezier(.22,1,.36,1), top .55s cubic-bezier(.22,1,.36,1),
+      width .55s cubic-bezier(.22,1,.36,1), height .55s cubic-bezier(.22,1,.36,1); }
+  #pawnWrap.show { opacity:1; }
+  #pawnWrap.big { left:195px; top:430px; width:690px; height:900px; }
+  #pawnWrap svg { width:100%; height:100%; overflow:visible; }
+  #hud { position:absolute; left:372px; top:238px; right:180px; z-index:6; color:var(--ink);
+    text-shadow:0 6px 30px rgba(0,0,0,.95), 0 0 14px rgba(0,0,0,.85); }
+  #hud > div { opacity:0; }
+  #hud .h1 { font-size:86px; font-weight:900; line-height:.95; letter-spacing:-.01em; white-space:nowrap; }
+  #hud .h2 { font-size:52px; font-weight:800; color:var(--muted); margin-top:12px; }
+  #hud .h3 { font-size:48px; font-weight:900; color:var(--accent); margin-top:16px; font-variant-numeric:tabular-nums; }
+  #hud .h3 .num { font-size:84px; line-height:1; }
+  #hud .gold { color:var(--accent); }
+  #hud > div.show { opacity:1; }
+  #hud > div.slam { animation:slamIn .38s cubic-bezier(.15,1.3,.3,1) forwards; }
+
   /* ---- square (1:1) variant, for Instagram feed posts: ?fmt=square ---- */
   body.sq, body.sq #stage { width:1080px; height:1080px; }
   body.sq .cap { left:50px; right:50px; }
@@ -91,6 +109,11 @@
   body.sq #endcard .url { font-size:48px; }
   body.sq #endcard .free { font-size:28px; }
   body.sq #safeGuide { display:none !important; }   /* feed posts have no overlay UI */
+  body.sq #pawnWrap { left:14px; top:12px; width:200px; height:244px; }
+  body.sq #pawnWrap.big { left:290px; top:150px; width:500px; height:650px; }
+  body.sq #hud { left:228px; top:24px; right:36px; }
+  body.sq #hud .h1 { font-size:66px; } body.sq #hud .h2 { font-size:36px; margin-top:2px; }
+  body.sq #hud .h3 { font-size:34px; margin-top:6px; } body.sq #hud .h3 .num { font-size:56px; }
 </style>
 </head>
 <body>
@@ -110,6 +133,8 @@
   <div id="capMid" class="cap mid"></div>
   <div id="capBottom" class="cap bottom"></div>
   <div id="counter"></div>
+  <div id="pawnWrap"></div>
+  <div id="hud"><div class="h1" id="hud1"></div><div class="h2" id="hud2"></div><div class="h3" id="hud3"></div></div>
   <div id="flash"></div>
   <div id="endcard">
     <div class="mark">
@@ -138,6 +163,7 @@
 
 <script src="../js/engine.js?v=27"></script>
 <script src="../js/pieces.js?v=27"></script>
+<script src="pawn.js?v=1"></script>
 <script>
 (function () {
   'use strict';
@@ -157,7 +183,7 @@
   const beats = [];
   let T0 = 0;
   const now = () => (performance.now() - T0) / 1000;
-  const vo = (line) => beats.push({ t: now(), vo: line });
+  const vo = (line, voice) => beats.push({ t: now(), vo: line, voice: voice || 'trailer' });
   const sfx = (name) => beats.push({ t: now(), sfx: name });
 
   function view() { const b = game.bounds(); return { minC: b.minC, maxC: b.maxC, minR: b.minR, maxR: b.maxR }; }
@@ -288,11 +314,11 @@
     return true;
   }
 
-  async function endCard(holdMs, voLine) {
-    hideCaps(); $('counter').classList.remove('show');
+  async function endCard(holdMs, voLine, voice) {
+    hideCaps(); $('counter').classList.remove('show'); hudHide(); pawnOut();
     hit();
     $('endcard').classList.add('show');
-    if (voLine) vo(voLine);
+    if (voLine) vo(voLine, voice);
     sfx('braam');
     await sleep(holdMs || 5200);
     window.SCENE_BEATS = beats;
@@ -588,12 +614,210 @@
     await endCard(5200, 'HOLLOW CHESS. hollow chess dot com.');
   }
 
+  // =================== THE PAWN (mascot) ===================
+  const pawnWrap = $('pawnWrap');
+  let pawn = null, pawnIdle = null;
+  const PAWN_VO = {};                        // line -> [{t0,t1}] word timings (from harness/pawn-vo.py)
+  async function preloadPawnLines(lines) {
+    await Promise.all(lines.map(async (line) => {
+      try {
+        const r = await fetch('vo/pawn-' + WCPAWN.lineKey(line) + '.json');
+        if (r.ok) { PAWN_VO[line] = (await r.json()).words; return; }
+      } catch (e) {}
+      // no recording yet: rough estimate so the mouth still moves (run pawn-vo.py for real sync)
+      let t = 0.1;
+      PAWN_VO[line] = line.split(/\s+/).map((w) => { const d = .12 + .05 * w.length, o = { w, t0: t, t1: t + d }; t += d + .06; return o; });
+      console.warn('pawn line has no timing file:', line);
+    }));
+  }
+  function pawnIn(big) {
+    if (!pawn) { pawn = WCPAWN.make(); pawnWrap.appendChild(pawn.svg); }
+    pawnWrap.classList.toggle('big', !!big);
+    pawnWrap.classList.add('show');
+    if (pawnIdle) pawnIdle.stop();
+    pawnIdle = WCPAWN.idle(pawn, { popIn: true });
+  }
+  function pawnOut() { pawnWrap.classList.remove('show'); }
+  // Speak a line: logs the beat for the mixer, flaps the mouth on word timings,
+  // fires `cues` ({ word: /regex/, fn }) when that word starts. Resolves when done.
+  async function say(line, expr, cues) {
+    if (expr) pawn.set(expr);
+    vo(line, 'pawn');
+    const words = PAWN_VO[line] || [];
+    for (const c of (cues || [])) {
+      const w = words.find((x) => x.w && c.word.test(x.w));
+      setTimeout(c.fn, (w ? w.t0 : 0) * 1000);
+    }
+    await WCPAWN.speak(pawn, words);
+    await sleep(120);
+  }
+  function hudSet(id, html) { const e = $(id); e.innerHTML = html; e.classList.remove('slam'); e.classList.add('show'); }
+  function hudSlam(id, html) { const e = $(id); e.innerHTML = html; e.classList.remove('show', 'slam'); void e.offsetWidth; e.classList.add('show', 'slam'); shake(); }
+  function hudHide() { ['hud1', 'hud2', 'hud3'].forEach((i) => $(i).classList.remove('show', 'slam')); }
+
+  function gameFromSpec(spec) {
+    const g = new Game();
+    g.cells = new Set(spec.cells.map(([c, r]) => c + ',' + r));
+    g.board = new Map();
+    for (const [c, r, t, col, moved] of spec.pieces) g.board.set(c + ',' + r, { type: t, color: col, hasMoved: !!moved });
+    g.turn = spec.turn;
+    g.moveCount = { white: spec.counts.white, black: spec.counts.black };
+    g.wildUsed = { white: 0, black: 0 };
+    g.epTarget = spec.ep ? { c: spec.ep.c, r: spec.ep.r } : null;
+    g.rules = { cadence: 3, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
+    g._evaluate();
+    return g;
+  }
+
+  // =================== PUZZLE ===================
+  // ?scene=puzzle&id=N[&src=puzzles.json]  -- a verified mate-in-N from harness/puzzles.js
+  async function scenePuzzle() {
+    const id = +(qs.get('id') || 0);
+    const data = await (await fetch((qs.get('src') || 'puzzles.json') + '?t=' + Date.now())).json();
+    const pz = data.puzzles[id];
+    if (!pz) throw new Error('no puzzle ' + id);
+    game = gameFromSpec(pz.spec);
+    const N = pz.n, side = pz.spec.turn;
+    const L = {
+      intro: `Mate in ${['', 'one', 'two', 'three'][N]}. ${side === 'white' ? 'White' : 'Black'} to play.`,
+      phase: pz.phase === 'now' ? 'You can move a square. Right now.' : 'You get to move a square on your second move.',
+      pause: 'Pause it. Find the mate.',
+      sol: 'Here it is.',
+      floor: 'Move the floor.',
+      mate: 'Mate.',
+      outro: 'Play it yourself. Hollow chess dot com.',
+    };
+    await preloadPawnLines(Object.values(L));
+    await startScene();
+    wrap.classList.add('show'); render();
+    pawnIn();
+    hudSlam('hud1', `MATE IN <span class="gold">${N}</span>`);
+    sfx('braam');
+    await say(L.intro, 'neutral');
+    hudSet('hud2', `${side === 'white' ? 'White' : 'Black'} to play`);
+    await sleep(250);
+    hudSlam('hud3', pz.phase === 'now' ? '\u2726 board move: NOW' : '\u2726 board move: on move 2');
+    await say(L.phase, 'hype', [{ word: /square/i, fn: () => pawnIdle.gesture(-60, 0, 900) }]);
+    pawn.set('think');
+    say(L.pause, 'think');
+    for (let k = 5; k >= 1; k--) {
+      hudSet('hud3', `<span class="num">${k}</span> &nbsp;pause &amp; solve`);
+      sfx('lift');
+      await sleep(1000);
+    }
+    hudSlam('hud3', 'SOLUTION');
+    await say(L.sol, 'neutral');
+    let moveNo = 1;
+    for (let i = 0; i < pz.line.length; i++) {
+      const m = pz.line[i], attacker = i % 2 === 0, last = i === pz.line.length - 1;
+      hudSet('hud3', attacker ? `${moveNo}. ${m.hcn}` : `${moveNo}\u2026 ${m.hcn}`);
+      if (m.kind === 'mc') {
+        overlays = [{ kind: 'flash', c: m.from[0], r: m.from[1], color: '#e7c14a' }]; render();
+        camTo(1.5, -3, m.from);
+        if (attacker) { say(L.floor, 'hype'); pawnIdle.gesture(-70, 0, 1300); }
+        await sleep(600);
+        await flySquare(m.from[0], m.from[1], m.to[0], m.to[1], 1000);
+        overlays = []; render();
+      } else {
+        overlays = [{ kind: 'flash', c: m.from[0], r: m.from[1], color: attacker ? '#e7c14a' : '#969aa1' }]; render();
+        camTo(1.3, attacker ? 2 : -2, m.to);
+        await sleep(400);
+        await slidePiece(m.from[0], m.from[1], m.to[0], m.to[1], 650);
+        if (/[x+#]/.test(m.hcn)) hit();
+        overlays = []; render();
+      }
+      if (!attacker) { moveNo++; pawn.set('smug'); }
+      await sleep(last ? 300 : 800);
+    }
+    const kk = game.findKing(game.turn);
+    overlays = [{ kind: 'flash', c: kk.c, r: kk.r, color: '#e05656' }]; render();
+    camTo(1.9, -4, [kk.c, kk.r], true);
+    slam('capMid', '<span class="red">MATE.</span>'); sfx('braam');
+    await say(L.mate, 'smug');
+    await sleep(1400);
+    hide('capMid'); camReset();
+    await endCard(5000, L.outro, 'pawn');
+  }
+
+  // =================== DAY 1 ===================
+  async function sceneDay1() {
+    const L = {
+      day: 'Day one of posting until Hikaru plays my chess game.',
+      rule: "It's chess. But every third turn, you move a square of the board.",
+      rook: 'So this rook... is stuck.',
+      mate: "And this... isn't checkmate.",
+      free: 'Free. In your browser. Hollow chess dot com. Day one.',
+    };
+    await preloadPawnLines(Object.values(L));
+    await startScene();
+    pawnIn(true);
+    await sleep(350);
+    slam('capTop', 'DAY <span class="gold">1</span>'); sfx('braam');
+    await say(L.day, 'neutral', [
+      { word: /hikaru/i, fn: () => { pawn.set('hype'); pawnIdle.gesture(-70, 0, 1100); } },
+      { word: /game/i, fn: () => pawn.set('smug') },
+    ]);
+    await sleep(300);
+    hideCaps();
+    // shrink to the corner, bring the board in
+    pawnIn(false);
+    game = new Game();
+    game.moveCount = { white: 1, black: 0 };          // a board turn is available right now
+    game._evaluate();
+    await sleep(500);
+    wrap.classList.add('show'); render();
+    camTo(1.0, -2);
+    say(L.rule, 'neutral', [{ word: /square/i, fn: () => pawnIdle.gesture(-60, 0, 1200) }]);
+    await sleep(2300);
+    cap('capMid', 'move the<br/><span class="gold">FLOOR</span>.');
+    await flySquare(4, 3, 8, 3, 950);           // e4 tears out and lands off the right edge
+    camTo(1.2, 2, [5, 3], true);
+    await sleep(1300);
+    hideCaps();
+    // the rook stops at the hole
+    game = new Game();
+    game.board.clear();
+    game._put(0, 0, 'rook', 'white', true); game._put(1, 0, 'king', 'white', true);
+    game._put(7, 7, 'king', 'black', true); game._put(4, 6, 'pawn', 'black', true);
+    game.cells.delete('0,5');                   // a6 is already gone
+    game.turn = 'white'; game._evaluate();
+    render(); camTo(2.2, -6, [0, 2]);
+    say(L.rook, 'neutral');
+    await sleep(600);
+    sfx('whoosh');
+    const chase = slidePiece(0, 0, 0, 4, 900);
+    camTo(2.0, 3, [0, 4]);
+    await chase; hit();
+    overlays = [{ kind: 'flash', c: 0, r: 4, color: '#e05656' }]; render();
+    pawn.set('shocked');
+    slam('capMid', '<span class="red">STUCK.</span>');
+    await sleep(1500);
+    hideCaps(); overlays = [];
+    // and the checkmate that isn't
+    setupMatePosition();
+    overlays = [{ kind: 'beam', pts: [[3, 3], [7, 7]] }, { kind: 'flash', c: 7, r: 7, color: '#e05656' }];
+    render(); camTo(1.6, 4, [6, 6]);
+    say(L.mate, 'neutral', [{ word: /isn/i, fn: () => { pawn.set('hype'); pawnIdle.gesture(-70, 0, 1200); } }]);
+    slam('capMid', '<span class="red">CHECKMATE?</span>');
+    await sleep(1500);
+    hideCaps();
+    overlays = [{ kind: 'flash', c: 7, r: 7, color: '#e05656' }];
+    await flySquare(5, 5, 0, 8, 950);
+    overlays = [{ kind: 'beam', pts: [[3, 3], [4, 4]] }, { kind: 'flash', c: 7, r: 7, color: '#57c974' }];
+    render(); camTo(1.8, -4, [5, 5], true);
+    pawn.set('smug');
+    slam('capMid', '<span class="green">NOT MATE.</span>'); sfx('braam');
+    await sleep(1800);
+    hideCaps(); camReset();
+    await endCard(5200, L.free, 'pawn');
+  }
+
   const qs = new URLSearchParams(location.search);
   if (qs.get('fmt') === 'square') document.body.classList.add('sq');
   if (qs.get('safe')) document.getElementById('safeGuide').style.display = '';
   const scene = new URLSearchParams(location.search).get('scene') || 'rook';
   window.SCENE_DONE = false;
-  ({ rook: sceneRook, island: sceneIsland, escape: sceneEscape, cheese: sceneCheese, morph: sceneMorph }[scene] || sceneRook)()
+  ({ rook: sceneRook, island: sceneIsland, escape: sceneEscape, cheese: sceneCheese, morph: sceneMorph, puzzle: scenePuzzle, day1: sceneDay1 }[scene] || sceneRook)()
     .catch((e) => { console.error(e); window.SCENE_BEATS = beats; window.SCENE_DONE = true; });
 })();
 </script>

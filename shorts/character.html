@@ -1,0 +1,341 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hollow Chess — mascot candidates</title>
+<style>
+  :root { --ink:#14161b; --ivory:#e9e3d6; --gold:#e7c14a; --slate:#6f7d92; --bg:#1c2029; --void:#0b0c10; }
+  html, body { margin:0; background:var(--bg); color:var(--ivory); font-family:"Segoe UI", system-ui, sans-serif; }
+  #sheet { width:1800px; height:1100px; background:radial-gradient(circle at 50% 30%, #262b36, #14161b 70%); position:relative; overflow:hidden; }
+  #sheet h1 { position:absolute; top:34px; left:60px; margin:0; font-size:44px; letter-spacing:.02em; font-weight:800; }
+  #sheet h1 small { display:block; font-size:20px; font-weight:400; color:var(--slate); margin-top:6px; }
+  .col { position:absolute; top:130px; width:560px; height:640px; text-align:center; }
+  .col svg { width:385px; height:500px; }
+  .col .name { font-size:34px; font-weight:800; margin-top:4px; }
+  .col .pitch { font-size:18px; color:#b9bfcb; line-height:1.35; padding:0 40px; }
+  .col.pick .name { color:var(--gold); }
+  .tag { display:inline-block; background:var(--gold); color:var(--ink); font-weight:800; font-size:15px; padding:3px 12px; border-radius:999px; margin-bottom:6px; letter-spacing:.06em; }
+  #faces { position:absolute; left:60px; bottom:28px; width:1680px; height:236px; display:flex; gap:20px; align-items:flex-end; }
+  #faces .f { flex:1; text-align:center; }
+  #faces .f svg { width:176px; height:176px; }
+  #faces .f div { font-size:18px; color:#b9bfcb; margin-top:-2px; }
+  #faces .lbl { position:absolute; top:-8px; left:0; font-size:18px; color:var(--slate); letter-spacing:.14em; text-transform:uppercase; }
+
+  /* ---- animated demo stage (1080x1920) ---- */
+  #stage { width:1080px; height:1920px; position:relative; overflow:hidden; display:none;
+           background:radial-gradient(ellipse at 50% 35%, #2a303c 0%, #14161b 65%); }
+  #stage .floor { position:absolute; left:0; right:0; bottom:0; height:520px;
+    background: repeating-conic-gradient(#20242c 0 25%, #171a20 0 50%) 0 0/160px 160px;
+    transform: perspective(900px) rotateX(58deg); transform-origin:50% 100%; opacity:.9; }
+  #stage .floorfade { position:absolute; left:0; right:0; bottom:0; height:560px;
+    background:linear-gradient(#14161b, rgba(20,22,27,0) 40%); }
+  #char { position:absolute; left:50%; top:52%; width:800px; height:1040px; margin-left:-400px; margin-top:-520px; }
+  #char svg { width:100%; height:100%; overflow:visible; }
+  #slam { position:absolute; left:0; right:0; top:230px; text-align:center; font-size:190px; font-weight:900;
+          color:var(--ivory); letter-spacing:.02em; line-height:.9; opacity:0; transform:scale(2.4);
+          text-shadow:0 0 40px rgba(231,193,74,.35); }
+  #slam b { color:var(--gold); }
+  #sub { position:absolute; left:0; right:0; top:520px; text-align:center; font-size:64px; font-weight:700; color:#b9bfcb; opacity:0; }
+  #url { position:absolute; left:0; right:0; bottom:120px; text-align:center; font-size:58px; font-weight:800; color:var(--gold); opacity:0; letter-spacing:.02em; }
+  .shake { animation:shake .38s cubic-bezier(.36,.07,.19,.97) both; }
+  @keyframes shake { 10%,90%{transform:translate(-8px,4px)} 20%,80%{transform:translate(12px,-6px)} 30%,50%,70%{transform:translate(-16px,8px)} 40%,60%{transform:translate(16px,-8px)} }
+</style>
+</head>
+<body>
+
+<div id="sheet">
+  <h1>Hollow Chess — mascot candidates <small>flat 2D, thick outline, big eyes. Built to animate: eyes, brows, mouth, arms are separate parts.</small></h1>
+  <div class="col pick" style="left:60px">
+    <span class="tag">RECOMMENDED</span>
+    <div id="c-pawn"></div>
+    <div class="name">The Pawn</div>
+    <div class="pitch">Underdog, solo-dev energy. Blob body = easiest to animate. Carries a board tile. Fits "Day 1 of posting until…" perfectly.</div>
+  </div>
+  <div class="col" style="left:620px">
+    <div id="c-knight"></div>
+    <div class="name">The Knight</div>
+    <div class="pitch">Cocky. The only piece that jumps holes, so he's the one piece the void can't scare. Cooler silhouette, harder to animate (fixed head).</div>
+  </div>
+  <div class="col" style="left:1180px">
+    <div id="c-hollow"></div>
+    <div class="name">Hollow</div>
+    <div class="pitch">The board square itself, with a hole in it. Most on-brand and most ownable; least obviously "chess" at a glance.</div>
+  </div>
+  <div id="faces">
+    <span class="lbl">The Pawn — expressions</span>
+    <div class="f"><div id="f1"></div><div>neutral</div></div>
+    <div class="f"><div id="f2"></div><div>talking</div></div>
+    <div class="f"><div id="f3"></div><div>hype</div></div>
+    <div class="f"><div id="f4"></div><div>smug</div></div>
+    <div class="f"><div id="f5"></div><div>shocked</div></div>
+    <div class="f"><div id="f6"></div><div>dead inside</div></div>
+    <div class="f"><div id="f7"></div><div>blink</div></div>
+  </div>
+</div>
+
+<div id="stage">
+  <div class="floor"></div><div class="floorfade"></div>
+  <div id="char"></div>
+  <div id="slam">DAY <b>1</b></div>
+  <div id="sub">until Hikaru plays my game</div>
+  <div id="url">hollowchess.com</div>
+</div>
+
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const INK = '#14161b', IVORY = '#e9e3d6', GOLD = '#e7c14a', VOID = '#0b0c10';
+const SW = 9;   // outline width
+
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+// a limb = ink under-stroke + ivory over-stroke, so it reads on a dark background
+function limb(d, parent, w = 16) {
+  el('path', { d, fill: 'none', stroke: INK, 'stroke-width': w + SW * 2 }, parent);
+  el('path', { d, fill: 'none', stroke: IVORY, 'stroke-width': w }, parent);
+}
+
+// ---------- THE PAWN (rigged) ----------
+// Returns { svg, set(expr), mouth(open), blink(t 0..1), armL(deg), armR(deg), tile(show) }
+function makePawn(opts = {}) {
+  const svg = el('svg', { viewBox: '0 0 400 520' });
+  const root = el('g', { id: 'root' }, svg);
+  const body = el('g', { 'stroke': INK, 'stroke-width': SW, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', fill: IVORY }, root);
+
+  // shadow
+  el('ellipse', { cx: 200, cy: 500, rx: 118, ry: 14, fill: 'rgba(0,0,0,.35)', stroke: 'none' }, root).setAttribute('style', 'order:-1');
+  root.insertBefore(root.lastChild, body);
+
+  // left arm (behind body)
+  const armL = el('g', { id: 'armL' }, body);
+  limb('M150 345 C 120 365, 95 385, 80 415', armL);
+  el('circle', { cx: 78, cy: 420, r: 17 }, armL);
+
+  // base + body + collar
+  el('rect', { x: 96, y: 452, width: 208, height: 46, rx: 20 }, body);
+  el('path', { d: 'M150 300 C 142 372, 120 428, 118 458 L 282 458 C 280 428, 258 372, 250 300 Z' }, body);
+  el('rect', { x: 126, y: 280, width: 148, height: 36, rx: 18 }, body);
+
+  // head
+  el('circle', { cx: 200, cy: 168, r: 112 }, body);
+
+  // right arm (front) + tile
+  const armR = el('g', { id: 'armR' }, body);
+  limb('M250 345 C 280 360, 305 375, 322 405', armR);
+  const tile = el('g', { id: 'tile', transform: 'translate(300 372) rotate(-12)' }, armR);
+  el('rect', { x: -44, y: -44, width: 88, height: 88, rx: 10, fill: INK, stroke: GOLD, 'stroke-width': 7 }, tile);
+  el('rect', { x: -24, y: -24, width: 48, height: 48, rx: 5, fill: VOID, stroke: 'none' }, tile);
+  el('rect', { x: -14, y: -14, width: 28, height: 28, rx: 3, fill: 'none', stroke: GOLD, 'stroke-width': 3, opacity: .55 }, tile);
+  el('circle', { cx: 326, cy: 410, r: 17 }, armR);
+
+  // face
+  const face = el('g', { id: 'face', stroke: 'none' }, root);
+  const eyes = {};
+  for (const side of ['L', 'R']) {
+    const cx = side === 'L' ? 162 : 238;
+    const g = el('g', { id: 'eye' + side }, face);
+    const white = el('ellipse', { cx, cy: 165, rx: 30, ry: 40, fill: '#fff', stroke: INK, 'stroke-width': 7 }, g);
+    const pupil = el('circle', { cx: cx + 5, cy: 172, r: 12, fill: INK }, g);
+    const glint = el('circle', { cx: cx + 10, cy: 164, r: 4, fill: '#fff' }, g);
+    // lid: ivory shape that slides down over the eye
+    const lid = el('rect', { x: cx - 36, y: 165 - 44, width: 72, height: 0, fill: IVORY, stroke: 'none' }, g);
+    const lidLine = el('line', { x1: cx - 30, y1: 165 - 44, x2: cx + 30, y2: 165 - 44, stroke: INK, 'stroke-width': 7, 'stroke-linecap': 'round', opacity: 0 }, g);
+    eyes[side] = { white, pupil, glint, lid, lidLine, cx };
+  }
+  const browL = el('path', { d: 'M132 108 Q162 96 192 108', fill: 'none', stroke: INK, 'stroke-width': 9, 'stroke-linecap': 'round' }, face);
+  const browR = el('path', { d: 'M208 108 Q238 96 268 108', fill: 'none', stroke: INK, 'stroke-width': 9, 'stroke-linecap': 'round' }, face);
+  const mouth = el('path', { d: 'M176 226 Q200 246 224 226', fill: 'none', stroke: INK, 'stroke-width': 8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, face);
+  const tongue = el('ellipse', { cx: 200, cy: 240, rx: 0, ry: 0, fill: '#c94a4a', stroke: 'none' }, face);
+
+  const EXPR = {
+    neutral: { browL: 'M132 108 Q162 96 192 108', browR: 'M208 108 Q238 96 268 108', mouth: 'M176 226 Q200 246 224 226', lid: 0, ry: 40, pupilDy: 0 },
+    hype:    { browL: 'M128 88 Q160 74 194 92',   browR: 'M206 92 Q240 74 272 88',  mouth: 'M168 222 Q200 262 232 222 Z', lid: 0, ry: 46, pupilDy: -4, fillMouth: true },
+    smug:    { browL: 'M134 118 Q164 108 192 114', browR: 'M206 100 Q238 84 268 96', mouth: 'M176 228 Q206 244 230 220', lid: 14, ry: 40, pupilDy: 2 },
+    shocked: { browL: 'M128 82 Q162 70 194 86',   browR: 'M206 86 Q238 70 272 82',  mouth: 'M188 218 Q200 210 212 218 Q222 236 200 254 Q178 236 188 218 Z', lid: 0, ry: 50, pupilDy: -2, fillMouth: true, smallPupil: true },
+    dead:    { browL: 'M132 112 Q162 118 192 120', browR: 'M208 120 Q238 118 268 112', mouth: 'M180 236 L 222 236', lid: 26, ry: 40, pupilDy: 4 },
+  };
+  let cur = 'neutral';
+  function set(name) {
+    const e = EXPR[name] || EXPR.neutral; cur = name;
+    browL.setAttribute('d', e.browL); browR.setAttribute('d', e.browR);
+    mouth.setAttribute('d', e.mouth);
+    mouth.setAttribute('fill', e.fillMouth ? INK : 'none');
+    for (const s of ['L', 'R']) {
+      const y = eyes[s]; y.white.setAttribute('ry', e.ry);
+      y.pupil.setAttribute('cy', 172 + e.pupilDy); y.pupil.setAttribute('r', e.smallPupil ? 8 : 12);
+      y.glint.setAttribute('cy', 164 + e.pupilDy);
+      y.lid.setAttribute('y', 165 - e.ry - 4); y.lid.setAttribute('height', e.lid); y.lid.setAttribute('width', 72); y.lid.setAttribute('x', y.cx - 36);
+      y.lidLine.setAttribute('y1', 165 - e.ry - 4 + e.lid); y.lidLine.setAttribute('y2', 165 - e.ry - 4 + e.lid);
+      y.lidLine.setAttribute('opacity', e.lid > 0 ? 1 : 0);
+    }
+  }
+  // mouth: 0 closed .. 1 open (talking)
+  function mouthOpen(a) {
+    if (a <= 0.02) { set(cur); return; }
+    const h = 10 + 34 * a;
+    mouth.setAttribute('d', `M${200 - 22 - 6 * a} 226 Q200 ${226 + h} ${200 + 22 + 6 * a} 226 Z`);
+    mouth.setAttribute('fill', INK);
+  }
+  function blink(t) { // t: 0 open .. 1 closed
+    for (const s of ['L', 'R']) {
+      const y = eyes[s]; const ry = +y.white.getAttribute('ry');
+      const h = Math.max(0, t) * (ry * 2 + 8);
+      y.lid.setAttribute('y', 165 - ry - 4); y.lid.setAttribute('height', h); y.lid.setAttribute('x', y.cx - 36); y.lid.setAttribute('width', 72);
+      y.lidLine.setAttribute('y1', 165 - ry - 4 + h); y.lidLine.setAttribute('y2', 165 - ry - 4 + h);
+      y.lidLine.setAttribute('opacity', t > 0.05 ? 1 : 0);
+    }
+  }
+  function look(dx, dy) {
+    for (const s of ['L', 'R']) { const y = eyes[s]; y.pupil.setAttribute('cx', y.cx + 5 + dx); y.glint.setAttribute('cx', y.cx + 10 + dx); }
+  }
+  function arm(which, deg) {
+    const g = which === 'L' ? armL : armR;
+    const ox = which === 'L' ? 150 : 250;
+    g.setAttribute('transform', `rotate(${deg} ${ox} 345)`);
+  }
+  function showTile(on) { tile.setAttribute('opacity', on ? 1 : 0); }
+  set('neutral');
+  return { svg, root, set, mouthOpen, blink, look, arm, showTile, tile };
+}
+
+// ---------- THE KNIGHT ----------
+function makeKnight() {
+  const svg = el('svg', { viewBox: '0 0 400 520' });
+  const root = el('g', {}, svg);
+  el('ellipse', { cx: 200, cy: 500, rx: 118, ry: 14, fill: 'rgba(0,0,0,.35)' }, root);
+  const body = el('g', { stroke: INK, 'stroke-width': SW, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', fill: IVORY }, root);
+  // arms
+  limb('M150 360 C 120 380, 95 400, 82 428', body);
+  el('circle', { cx: 80, cy: 433, r: 17 }, body);
+  el('rect', { x: 96, y: 452, width: 208, height: 46, rx: 20 }, body);
+  el('path', { d: 'M150 320 C 142 380, 120 428, 118 458 L 282 458 C 280 428, 258 380, 250 320 Z' }, body);
+  el('rect', { x: 126, y: 300, width: 148, height: 36, rx: 18 }, body);
+  // horse head
+  el('path', { d: 'M158 320 C 150 240, 150 150, 178 110 C 182 92, 190 72, 200 62 L 214 96 C 262 92, 312 118, 326 170 C 334 200, 318 216, 288 214 L 268 222 C 262 262, 258 292, 256 320 Z' }, body);
+  // mane bumps
+  el('path', { d: 'M178 118 C 160 128, 156 150, 168 160 C 156 172, 154 194, 166 204 C 154 216, 154 236, 166 246', fill: 'none', 'stroke-width': 8 }, body);
+  // nostril + mouth line
+  el('circle', { cx: 300, cy: 190, r: 5, fill: INK, stroke: 'none' }, body);
+  el('path', { d: 'M268 214 Q286 206 300 212', fill: 'none', 'stroke-width': 7 }, body);
+  // right arm front
+  limb('M250 360 C 280 375, 305 390, 322 420', body);
+  el('circle', { cx: 326, cy: 425, r: 17 }, body);
+  // face
+  const face = el('g', { stroke: 'none' }, root);
+  el('ellipse', { cx: 236, cy: 146, rx: 26, ry: 32, fill: '#fff', stroke: INK, 'stroke-width': 7 }, face);
+  el('circle', { cx: 244, cy: 152, r: 11, fill: INK }, face);
+  el('circle', { cx: 249, cy: 145, r: 4, fill: '#fff' }, face);
+  el('path', { d: 'M208 104 Q236 92 262 108', fill: 'none', stroke: INK, 'stroke-width': 9, 'stroke-linecap': 'round' }, face); // cocky brow
+  return { svg };
+}
+
+// ---------- HOLLOW (the square) ----------
+function makeHollow() {
+  const svg = el('svg', { viewBox: '0 0 400 520' });
+  const root = el('g', {}, svg);
+  el('ellipse', { cx: 200, cy: 500, rx: 118, ry: 14, fill: 'rgba(0,0,0,.35)' }, root);
+  const body = el('g', { stroke: INK, 'stroke-width': SW, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', fill: IVORY }, root);
+  // legs
+  limb('M160 400 L 150 470', body);
+  limb('M240 400 L 250 470', body);
+  el('ellipse', { cx: 146, cy: 478, rx: 30, ry: 14 }, body);
+  el('ellipse', { cx: 254, cy: 478, rx: 30, ry: 14 }, body);
+  // arms
+  limb('M92 250 C 60 270, 40 300, 34 340', body);
+  el('circle', { cx: 32, cy: 346, r: 17 }, body);
+  limb('M308 250 C 340 240, 362 220, 374 190', body);
+  el('circle', { cx: 376, cy: 184, r: 17 }, body);
+  // square body with a hole
+  el('path', { d: 'M92 128 h216 a24 24 0 0 1 24 24 v216 a24 24 0 0 1 -24 24 h-216 a24 24 0 0 1 -24 -24 v-216 a24 24 0 0 1 24 -24 z M140 214 v128 h120 v-128 z', 'fill-rule': 'evenodd' }, body);
+  // void glow inside the hole
+  el('rect', { x: 140, y: 214, width: 120, height: 128, fill: VOID, stroke: 'none' }, body);
+  el('rect', { x: 156, y: 232, width: 88, height: 92, fill: 'none', stroke: GOLD, 'stroke-width': 4, opacity: .5 }, body);
+  // face on the top band
+  const face = el('g', { stroke: 'none' }, root);
+  for (const cx of [162, 238]) {
+    el('ellipse', { cx, cy: 170, rx: 26, ry: 26, fill: '#fff', stroke: INK, 'stroke-width': 7 }, face);
+    el('circle', { cx: cx + 4, cy: 174, r: 10, fill: INK }, face);
+    el('circle', { cx: cx + 8, cy: 168, r: 3.5, fill: '#fff' }, face);
+  }
+  el('path', { d: 'M136 128 Q162 116 188 128', fill: 'none', stroke: INK, 'stroke-width': 9, 'stroke-linecap': 'round' }, face);
+  el('path', { d: 'M212 128 Q238 116 264 128', fill: 'none', stroke: INK, 'stroke-width': 9, 'stroke-linecap': 'round' }, face);
+  el('path', { d: 'M178 372 Q200 388 222 372', fill: 'none', stroke: INK, 'stroke-width': 8, 'stroke-linecap': 'round' }, face);
+  return { svg };
+}
+
+// ---------- head-only crops for the expression row ----------
+function headOnly(pawn) {
+  pawn.svg.setAttribute('viewBox', '60 30 280 250');
+  return pawn;
+}
+
+const q = new URLSearchParams(location.search);
+if (q.get('mode') === 'anim') {
+  // ===== animated demo =====
+  document.getElementById('sheet').style.display = 'none';
+  const stage = document.getElementById('stage'); stage.style.display = 'block';
+  const P = makePawn(); document.getElementById('char').appendChild(P.svg);
+  const slam = document.getElementById('slam'), sub = document.getElementById('sub'), url = document.getElementById('url');
+
+  // word timings from edge-tts (seconds)
+  fetch('out/character-line.json').then(r => r.json()).catch(() => ({ start: 0.9, words: [] })).then(line => {
+    const T0 = line.start || 0.9;                 // when the audio starts inside the recording
+    const words = line.words || [];               // [{w, t0, t1}]
+    const end = words.length ? words[words.length - 1].t1 : 4;
+    const hitHikaru = words.find(w => /hikaru/i.test(w.w));
+    const hitGame = words.find(w => /game/i.test(w.w));
+    const DUR = T0 + end + 2.6;
+    const t0 = performance.now();
+    let nextBlink = 1.6, blinkT = -1, slammed = false, subbed = false, urled = false, tileOut = false;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const root = P.root;
+
+    function frame() {
+      const t = (performance.now() - t0) / 1000;
+      // entrance: pop with squash
+      const enter = Math.min(1, t / .45);
+      const pop = enter < 1 ? (1 + Math.sin(enter * Math.PI) * .18) : 1;
+      // idle bob
+      const bob = Math.sin(t * 2.4) * 8;
+      const sq = 1 + Math.sin(t * 2.4) * .012;
+      root.setAttribute('transform', `translate(200 520) scale(${pop * sq}, ${pop / sq}) translate(-200 -520) translate(0 ${bob})`);
+      // blink
+      if (blinkT < 0 && t > nextBlink) { blinkT = t; nextBlink = t + rnd(1.8, 3.4); }
+      if (blinkT >= 0) { const k = (t - blinkT) / .16; P.blink(k < 1 ? Math.sin(k * Math.PI) : 0); if (k >= 1) blinkT = -1; }
+      // talking: mouth open during words
+      const a = t - T0;
+      const cur = words.find(w => a >= w.t0 && a < w.t1);
+      if (cur) {
+        const ph = (a - cur.t0) / Math.max(.08, cur.t1 - cur.t0);
+        const open = .35 + .65 * Math.abs(Math.sin(ph * Math.PI * Math.max(1, Math.round((cur.t1 - cur.t0) / .14))));
+        P.mouthOpen(open);
+      } else P.mouthOpen(0);
+      // acting beats
+      if (hitHikaru && a >= hitHikaru.t0 && a < hitHikaru.t1 + .5) { P.set('hype'); P.arm('R', -70); P.look(4, -4); }
+      else if (hitGame && a >= hitGame.t0) { if (!tileOut) { tileOut = true; P.set('smug'); } P.arm('R', -28); P.look(0, 2); }
+      else if (a > -0.2) { P.set('neutral'); P.arm('R', Math.sin(t * 2.4) * 3); P.look(0, 0); }
+      P.arm('L', Math.sin(t * 2.4 + 1) * 4);
+      // text
+      if (!slammed && a >= 0) { slammed = true; slam.animate([{ opacity: 0, transform: 'scale(2.4)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 220, fill: 'forwards', easing: 'cubic-bezier(.2,1.4,.4,1)' }); stage.classList.add('shake'); }
+      if (!subbed && hitHikaru && a >= hitHikaru.t0) { subbed = true; sub.animate([{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'none' }], { duration: 260, fill: 'forwards' }); }
+      if (!urled && a >= end + .4) { urled = true; url.animate([{ opacity: 0, transform: 'scale(.8)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 260, fill: 'forwards', easing: 'cubic-bezier(.2,1.4,.4,1)' }); }
+      if (t < DUR) requestAnimationFrame(frame); else window.SCENE_DONE = true;
+    }
+    requestAnimationFrame(frame);
+  });
+} else {
+  // ===== static sheet =====
+  document.getElementById('c-pawn').appendChild(makePawn().svg);
+  document.getElementById('c-knight').appendChild(makeKnight().svg);
+  document.getElementById('c-hollow').appendChild(makeHollow().svg);
+  const faces = [['f1', p => p.set('neutral')], ['f2', p => { p.set('neutral'); p.mouthOpen(.8); }], ['f3', p => p.set('hype')],
+                 ['f4', p => p.set('smug')], ['f5', p => p.set('shocked')], ['f6', p => p.set('dead')], ['f7', p => { p.set('neutral'); p.blink(1); }]];
+  for (const [id, fn] of faces) { const p = headOnly(makePawn()); fn(p); document.getElementById(id).appendChild(p.svg); }
+  window.SHEET_READY = true;
+}
+</script>
+</body>
+</html>

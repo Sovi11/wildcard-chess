@@ -44,14 +44,20 @@ async function renderBrand(browser) {
 
 async function recordScene(browser, scene, square) {
   const W = 1080, H = square ? 1080 : 1920;
-  const name = scene + (square ? '-sq' : '');
+  // 'puzzle:3' -> ?scene=puzzle&id=3, recorded as puzzle-3
+  const [sceneName, sceneId] = scene.split(':');
+  const query = sceneName + (sceneId !== undefined ? '&id=' + sceneId : '');
+  const name = sceneName + (sceneId !== undefined ? '-' + sceneId : '') + (square ? '-sq' : '');
   const ctx = await browser.newContext({
     viewport: { width: W, height: H },
     deviceScaleFactor: 1,
     recordVideo: { dir: SHORTS_OUT, size: { width: W, height: H } },
   });
   const page = await ctx.newPage();
-  await page.goto(BASE + '/shorts/shorts.html?scene=' + scene + (square ? '&fmt=square' : ''));
+  page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('  [page]', m.text()); });
+  page.on('pageerror', (e) => console.log('  [pageerror]', e.message));
+  // SHORTS_QUERY='&src=puzzles-test.json' etc. is appended verbatim (debug/testing)
+  await page.goto(BASE + '/shorts/shorts.html?scene=' + query + (square ? '&fmt=square' : '') + (process.env.SHORTS_QUERY || ''));
   await page.waitForFunction('window.SCENE_DONE === true', null, { timeout: 180000 });
   const beats = await page.evaluate('window.SCENE_BEATS || []');
   await page.waitForTimeout(300);
