@@ -126,7 +126,12 @@ function lineKey(text) {
 function voFile(line, voice) {
   fs.mkdirSync(VO_DIR, { recursive: true });
   if (voice === 'pawn') {
-    const f = path.join(VO_DIR, 'pawn-' + lineKey(line) + '.mp3');
+    const key = lineKey(line);
+    for (const ext of ['.m4a', '.mp3', '.wav', '.ogg', '.aac']) {     // your own recording (harness/pawn-custom.py)
+      const c = path.join(VO_DIR, 'custom', 'pawn-' + key + ext);
+      if (fs.existsSync(c)) return c;
+    }
+    const f = path.join(VO_DIR, 'pawn-' + key + '.mp3');
     if (!fs.existsSync(f)) {
       execFileSync('python', [path.join(__dirname, 'pawn-vo.py'), '--line', line], { stdio: 'inherit' });
       console.log('pawn vo:', JSON.stringify(line));

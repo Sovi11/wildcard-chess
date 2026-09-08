@@ -618,10 +618,16 @@
   const pawnWrap = $('pawnWrap');
   let pawn = null, pawnIdle = null;
   const PAWN_VO = {};                        // line -> [{t0,t1}] word timings (from harness/pawn-vo.py)
+  const PAWN_ENV = {};                       // line -> loudness envelope of a real recording (harness/pawn-custom.py)
   async function preloadPawnLines(lines) {
     await Promise.all(lines.map(async (line) => {
+      const key = WCPAWN.lineKey(line);
       try {
-        const r = await fetch('vo/pawn-' + WCPAWN.lineKey(line) + '.json');
+        const r = await fetch('vo/custom/pawn-' + key + '.env.json');
+        if (r.ok) { PAWN_ENV[line] = await r.json(); return; }
+      } catch (e) {}
+      try {
+        const r = await fetch('vo/pawn-' + key + '.json');
         if (r.ok) { PAWN_VO[line] = (await r.json()).words; return; }
       } catch (e) {}
       // no recording yet: rough estimate so the mouth still moves (run pawn-vo.py for real sync)
@@ -643,6 +649,17 @@
   async function say(line, expr, cues) {
     if (expr) pawn.set(expr);
     vo(line, 'pawn');
+    if (PAWN_ENV[line]) {
+      // real recording: no word timings, so cues fire proportionally through the line
+      const env = PAWN_ENV[line], n = (line.match(/\S+/g) || []).length;
+      for (const c of (cues || [])) {
+        const idx = (line.match(/\S+/g) || []).findIndex((w) => c.word.test(w));
+        setTimeout(c.fn, Math.max(0, idx) / Math.max(1, n) * env.dur * 1000);
+      }
+      await WCPAWN.speakEnvelope(pawn, env);
+      await sleep(120);
+      return;
+    }
     const words = PAWN_VO[line] || [];
     for (const c of (cues || [])) {
       const w = words.find((x) => x.w && c.word.test(x.w));
