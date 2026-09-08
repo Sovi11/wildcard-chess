@@ -1,0 +1,89 @@
+[
+ {
+  "t": 0,
+  "sync": true
+ },
+ {
+  "t": 0.319,
+  "sfx": "braam"
+ },
+ {
+  "t": 0.31910000000009314,
+  "vo": "Mate in two. White to play.",
+  "voice": "pawn"
+ },
+ {
+  "t": 2.228899999999907,
+  "vo": "You can move a square. Right now.",
+  "voice": "pawn"
+ },
+ {
+  "t": 4.0545,
+  "vo": "Pause it. Find the mate.",
+  "voice": "pawn"
+ },
+ {
+  "t": 4.054700000000186,
+  "sfx": "lift"
+ },
+ {
+  "t": 5.05530000000028,
+  "sfx": "lift"
+ },
+ {
+  "t": 6.0668000000002795,
+  "sfx": "lift"
+ },
+ {
+  "t": 7.070399999999907,
+  "sfx": "lift"
+ },
+ {
+  "t": 8.083399999999907,
+  "sfx": "lift"
+ },
+ {
+  "t": 9.085100000000093,
+  "vo": "Here it is.",
+  "voice": "pawn"
+ },
+ {
+  "t": 9.789,
+  "vo": "Move the floor.",
+  "voice": "pawn"
+ },
+ {
+  "t": 10.39380000000028,
+  "sfx": "lift"
+ },
+ {
+  "t": 11.400100000000092,
+  "sfx": "hit"
+ },
+ {
+  "t": 15.157200000000186,
+  "sfx": "hit"
+ },
+ {
+  "t": 15.471700000000187,
+  "sfx": "braam"
+ },
+ {
+  "t": 15.471800000000279,
+  "vo": "Mate.",
+  "voice": "pawn"
+ },
+ {
+  "t": 17.433399999999907,
+  "sfx": "hit"
+ },
+ {
+  "t": 17.433399999999907,
+  "vo": "Play it yourself. Hollow chess dot com.",
+  "voice": "pawn"
+ },
+ {
+  "t": 17.433399999999907,
+  "sfx": "braam"
+ }
+]
