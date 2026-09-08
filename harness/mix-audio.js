@@ -168,7 +168,7 @@ function findSync(videoFile) {
 }
 
 // ---- mix one scene ---------------------------------------------------------
-const VOL = { bed: 0.42, vo: 1.9, pawn: 1.7, braam: 1.0, hit: 0.85, whoosh: 0.6, lift: 0.45 };
+const VOL = { bed: 0.24, vo: 1.9, pawn: 1.7, braam: 1.0, hit: 0.85, whoosh: 0.6, lift: 0.45 };   // bed was 0.42: too loud under dialogue
 
 function mixScene(scene) {
   const video = path.join(OUT, scene + '-video.mp4');
