@@ -114,6 +114,8 @@
   body.sq #hud { left:228px; top:24px; right:36px; }
   body.sq #hud .h1 { font-size:66px; } body.sq #hud .h2 { font-size:36px; margin-top:2px; }
   body.sq #hud .h3 { font-size:34px; margin-top:6px; } body.sq #hud .h3 .num { font-size:56px; }
+  body.sq.puzzle #boardWrap { left:40px; top:250px; width:1000px; height:810px; }
+  body.sq.puzzle #cam { transform-origin:540px 655px; }
 </style>
 </head>
 <body>
@@ -239,10 +241,13 @@
     const v = curView || view();
     const cols = v.maxC - v.minC + 1, rows = v.maxR - v.minR + 1;
     const M = 0.12, span = Math.max(cols, rows) + 2 * M;
-    const px = 980 / span;                                     // board px per square
-    const sx = 50 + (980 - (cols + 2 * M) * px) / 2 + (focus[0] - v.minC + .5 + M) * px;
-    const sy = 560 + (980 - (rows + 2 * M) * px) / 2 + (v.maxR - focus[1] + .5 + M) * px;
-    const dx = 540 - sx, dy = 1050 - sy;
+    // where the focus square sits on the stage (layout values ignore the cam transform)
+    const L = wrap.offsetLeft, T = wrap.offsetTop, Wd = wrap.offsetWidth, Ht = wrap.offsetHeight;
+    const px = Math.min(Wd, Ht) / span;                       // board px per square
+    const sx = L + (Wd - (cols + 2 * M) * px) / 2 + (focus[0] - v.minC + .5 + M) * px;
+    const sy = T + (Ht - (rows + 2 * M) * px) / 2 + (v.maxR - focus[1] + .5 + M) * px;
+    const [ox, oy] = getComputedStyle(cam).transformOrigin.split(' ').map(parseFloat);
+    const dx = ox - sx, dy = oy - sy;
     cam.style.transform = `translate(${dx * zoom}px, ${dy * zoom}px) scale(${zoom}) rotate(${rot || 0}deg)`;
   }
   function camReset(snap) { cam.classList.toggle('snap', !!snap); cam.style.transform = 'none'; }
@@ -286,17 +291,18 @@
   const easeInOut = (t) => (t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
 
   async function flySquare(fc, fr, tc, tr, ms) {
-    const pre = view();
-    holdView = { minC: Math.min(pre.minC, tc), maxC: Math.max(pre.maxC, tc), minR: Math.min(pre.minR, tr), maxR: Math.max(pre.maxR, tr) };
+    const pinned = holdView;                  // a scene may pin the camera; keep it
+    const pre = pinned || view();
+    holdView = pinned || { minC: Math.min(pre.minC, tc), maxC: Math.max(pre.maxC, tc), minR: Math.min(pre.minR, tr), maxR: Math.max(pre.maxR, tr) };
     const ok = game.wildcardMoveCell(fc, fr, tc, tr);
-    if (!ok) { holdView = null; render(); return false; }
+    if (!ok) { holdView = pinned; render(); return false; }
     sfx('lift');
     await animate(ms || 800, (t) => {
       const e = easeInOut(t);
       lifted = { c: fc, r: fr, dx: (tc - fc) * e, dy: (fr - tr) * e, alpha: 1 };
       render();
     });
-    lifted = null; holdView = null;
+    lifted = null; holdView = pinned;
     render();
     hit();
     return true;
@@ -694,6 +700,15 @@
     const pz = data.puzzles[id];
     if (!pz) throw new Error('no puzzle ' + id);
     game = gameFromSpec(pz.spec);
+    document.body.classList.add('puzzle');
+    const SQ = document.body.classList.contains('sq'), Z = SQ ? 0.82 : 1;
+    // pin the camera to the starting board; widen only where a square actually lands
+    const b0 = game.bounds();
+    holdView = { ...b0 };
+    for (const m of pz.line) if (m.kind === 'mc') {
+      holdView.minC = Math.min(holdView.minC, m.to[0]); holdView.maxC = Math.max(holdView.maxC, m.to[0]);
+      holdView.minR = Math.min(holdView.minR, m.to[1]); holdView.maxR = Math.max(holdView.maxR, m.to[1]);
+    }
     const N = pz.n, side = pz.spec.turn;
     const L = {
       intro: `Mate in ${['', 'one', 'two', 'three'][N]}. ${side === 'white' ? 'White' : 'Black'} to play.`,
@@ -730,14 +745,14 @@
       hudSet('hud3', attacker ? `${moveNo}. ${m.hcn}` : `${moveNo}\u2026 ${m.hcn}`);
       if (m.kind === 'mc') {
         overlays = [{ kind: 'flash', c: m.from[0], r: m.from[1], color: '#e7c14a' }]; render();
-        camTo(1.5, -3, m.from);
+        camTo(1.45 * Z, -3, m.from);
         if (attacker) { say(L.floor, 'hype'); pawnIdle.gesture(-70, 0, 1300); }
         await sleep(600);
         await flySquare(m.from[0], m.from[1], m.to[0], m.to[1], 1000);
         overlays = []; render();
       } else {
         overlays = [{ kind: 'flash', c: m.from[0], r: m.from[1], color: attacker ? '#e7c14a' : '#969aa1' }]; render();
-        camTo(1.3, attacker ? 2 : -2, m.to);
+        camTo(1.3 * Z, attacker ? 2 : -2, m.to);
         await sleep(400);
         await slidePiece(m.from[0], m.from[1], m.to[0], m.to[1], 650);
         if (/[x+#]/.test(m.hcn)) hit();
@@ -748,7 +763,7 @@
     }
     const kk = game.findKing(game.turn);
     overlays = [{ kind: 'flash', c: kk.c, r: kk.r, color: '#e05656' }]; render();
-    camTo(1.9, -4, [kk.c, kk.r], true);
+    camTo(1.8 * Z, -4, [kk.c, kk.r], true);
     slam('capMid', '<span class="red">MATE.</span>'); sfx('braam');
     await say(L.mate, 'smug');
     await sleep(1400);

@@ -417,8 +417,15 @@ function solveSpec(spec, n, meta) {
   const ideas = new Set(sols.map((s) => ideaOf(pos, s.move)));
   if (ideas.size !== 1) return 'dual';
   const ek = pos.kings[opp], ok = pos.kings[side];
-  const farness = (t) => t.move.kind !== 'mc' ? 0
-    : (ideaOf(pos, t.move).startsWith('fill') ? cheb(t.move.from, ek) + cheb(t.move.from, ok) : cheb(t.move.to, ek) + cheb(t.move.to, ok));
+  const bb = gameFromSpec(spec).bounds();
+  const inside = (k) => upC(k) >= bb.minC && upC(k) <= bb.maxC && upR(k) >= bb.minR && upR(k) <= bb.maxR;
+  // presentable: the free end of the square move stays on the existing board (a hole)
+  // or hugs its edge, and sits far from the action
+  const farness = (t) => {
+    if (t.move.kind !== 'mc') return 0;
+    const free = ideaOf(pos, t.move).startsWith('fill') ? t.move.from : t.move.to;
+    return (inside(free) ? 100 : 0) + cheb(free, ek) + cheb(free, ok);
+  };
   const tree = sols.slice().sort((a, b) => farness(b) - farness(a))[0];
   if (!solutionHasSquareMove(tree)) return { pieceOnly: true, tree };
   const v = verifyTree(spec, tree, n);
