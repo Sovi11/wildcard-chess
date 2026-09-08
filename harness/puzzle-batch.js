@@ -40,11 +40,18 @@ function curate() {
     if (p.span > 11) s -= 40;
     return s;
   };
-  const picked = [];
+  // a derived mate-in-2 is its parent mate-in-3 two plies in: same finish, so post only one of them
+  const family = (p) => p.line.slice(-2).map((m) => m.hcn.replace(/>.*$/, '>')).join(' ');
+  const picked = [], families = new Set();
   for (const n of [1, 2, 3]) {
     const pool = all.filter((p) => p.n === n).sort((a, b) => score(b) - score(a));
-    console.log(`mate-in-${n}: ${pool.length} candidates, taking ${Math.min(COUNT[n], pool.length)}`);
-    picked.push(...pool.slice(0, COUNT[n]));
+    let taken = 0;
+    for (const p of pool) {
+      if (taken >= COUNT[n]) break;
+      if (families.has(family(p))) continue;
+      families.add(family(p)); picked.push(p); taken++;
+    }
+    console.log(`mate-in-${n}: ${pool.length} candidates, taking ${taken}`);
   }
   // posting order: alternate lengths so the feed doesn't get 6 M2s in a row
   const order = [2, 1, 2, 3, 2, 2, 1, 2, 3, 2];

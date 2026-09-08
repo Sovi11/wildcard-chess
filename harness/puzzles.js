@@ -505,6 +505,23 @@ function report(r, results) {
   results[r.n].push(r);
   process.stdout.write('\nFOUND mate-in-' + r.n + (r.derived ? ' (derived)' : '') + ': ' + r.line.map((m) => m.hcn).join(' ')
     + ` [board move ${r.phase}] pieces ${r.pieces}, span ${r.span}, holes ${r.holes}\n`);
+  // a mate-in-3 contains a mate-in-2 two plies in, with the board move available right away
+  if (r.n === 3 && results[2].length < WANT[2]) {
+    const d = deriveShorter(r);
+    if (d) report(d, results);
+  }
+}
+
+// Position after the principal line's first move pair, solved as a mate-in-(n-1).
+function deriveShorter(r) {
+  const m0 = r.line[0], m1 = r.line[1];
+  if (!m0 || !m1) return null;
+  const toMove = (m) => ({ kind: m.kind, from: pack(m.from[0], m.from[1]), to: pack(m.to[0], m.to[1]) });
+  const s1 = stepEngine(r.spec, toMove(m0)); if (!s1) return null;
+  const s2 = stepEngine(specFromGame(s1.game), toMove(m1)); if (!s2) return null;
+  const spec2 = specFromGame(s2.game);
+  const rv = solveSpec(spec2, r.n - 1, { gameIdx: r.gameIdx, ply: r.ply + 2, residue: (spec2.counts.white + spec2.counts.black) % 3, derived: true });
+  return (typeof rv === 'string' || rv.pieceOnly) ? null : rv;
 }
 
 function countHoles(spec) {
@@ -516,7 +533,7 @@ function countHoles(spec) {
   return h;
 }
 
-(function main() {
+if (require.main === module) (function main() {
   const results = { 1: [], 2: [], 3: [] };
   const t0 = Date.now();
   let positions = 0;
@@ -531,3 +548,5 @@ function countHoles(spec) {
   }
   console.log('done:', OUT);
 })();
+
+module.exports = { solveSpec, stepEngine, specFromGame, gameFromSpec, deriveShorter, deriveFillVariants, countHoles, pack };

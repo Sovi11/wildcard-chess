@@ -80,3 +80,33 @@ The board-move rule: every 3rd turn you may pick up an EMPTY square and re-attac
 
 Posting cadence: Day-count video, then puzzle, then Day-count video… Puzzles are the
 retention engine (people rewind); the Day-count videos are the story.
+
+---
+
+## This batch (shorts/puzzles.json, curated 2026-09-08)
+
+| # | file | puzzle | board move | title |
+|---|---|---|---|---|
+| 0 | puzzle-0.mp4 / puzzle-0-sq.mp4 | Mate in 2, White to play | now | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #1 |
+| 1 | puzzle-1.mp4 / puzzle-1-sq.mp4 | Mate in 1, White to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #2 |
+| 2 | puzzle-2.mp4 / puzzle-2-sq.mp4 | Mate in 2, Black to play | now | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #3 |
+| 3 | puzzle-3.mp4 / puzzle-3-sq.mp4 | Mate in 3, Black to play | on move 2 | Mate in 3 — but you can move the FLOOR. Hollow Chess puzzle #4 |
+| 4 | puzzle-4.mp4 / puzzle-4-sq.mp4 | Mate in 2, Black to play | on move 2 | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #5 |
+| 5 | puzzle-5.mp4 / puzzle-5-sq.mp4 | Mate in 2, Black to play | now | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #6 |
+| 6 | puzzle-6.mp4 / puzzle-6-sq.mp4 | Mate in 1, White to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #7 |
+| 7 | puzzle-7.mp4 / puzzle-7-sq.mp4 | Mate in 2, Black to play | now | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #8 |
+| 8 | puzzle-8.mp4 / puzzle-8-sq.mp4 | Mate in 3, Black to play | on move 2 | Mate in 3 — but you can move the FLOOR. Hollow Chess puzzle #9 |
+| 9 | puzzle-9.mp4 / puzzle-9-sq.mp4 | Mate in 2, Black to play | now | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #10 |
+
+Solutions (for the pinned comment after 24h, or if someone asks):
+
+- #1: 1. d8>c7+ Kd7-d6 2. Qb7-e7#
+- #2: 1. f7>e7#
+- #3: 1. g2>e3+ Kf2-e1 2. Qd3-d1#
+- #4: 1. Na6-b4 d2-d3 2. d2>(-1)1 Rg3xg7 3. Nb4-c2#
+- #5: 1. Qb1-b6 Kh3-g2 2. h3>f3#
+- #6: 1. f2>f4+ Kg3-f3 2. Bc8-g4#
+- #7: 1. a1>e6#
+- #8: 1. f0>a9 d6xe7 2. Nc4-e3#
+- #9: 1. Rd8xd4 Bb2-c1 2. b2>e3 Bc1xf4 3. Nb4-d5#
+- #10: 1. e2>a0 Kf3-f4 2. Qb1-e4#
