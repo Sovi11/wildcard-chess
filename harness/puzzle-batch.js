@@ -62,7 +62,7 @@ const score = (p) => {
   s -= Math.abs(p.pieces - 13) * 1.2;
   if (p.line.some((m, i) => i % 2 === 0 && m.kind === 'mc' && /[+#]/.test(m.hcn))) s += 8;   // a checking board move is the most watchable
   if (p.span > 11) s -= 40;
-  if (p.line.some((m) => m.hcn.includes('('))) s -= 6;     // off-alphabet files read badly in captions
+  if (p.line.some((m) => m.hcn.includes('(') || /[a-z]-\d/.test(m.hcn))) s -= 6;   // off-alphabet files / negative ranks read badly in captions
   return s;
 };
 
