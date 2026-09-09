@@ -235,3 +235,33 @@ Solutions (pinned comment after 24h):
 - #48: 1. Qc4-h4 Ki1-j2 2. i1>i3#
 - #49: 1. Bg5-e3+ Kd4xe3 2. d4>f11 d6-d5 3. Rf7-f3#
 - #50: 1. d6>h9 Bh2xg1 2. Qd3-b5#
+
+---
+
+## Batch 6 (shorts/out/puzzles/batch-6/)
+
+| # | file | puzzle | board move | title |
+|---|---|---|---|---|
+| 50 | puzzle-50.mp4 / puzzle-50-sq.mp4 | Mate in 2, White to play | now | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #51 |
+| 51 | puzzle-51.mp4 / puzzle-51-sq.mp4 | Mate in 1, Black to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #52 |
+| 52 | puzzle-52.mp4 / puzzle-52-sq.mp4 | Mate in 2, Black to play | on move 2 | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #53 |
+| 53 | puzzle-53.mp4 / puzzle-53-sq.mp4 | Mate in 3, Black to play | on move 2 | Mate in 3 — but you can move the FLOOR. Hollow Chess puzzle #54 |
+| 54 | puzzle-54.mp4 / puzzle-54-sq.mp4 | Mate in 2, White to play | now | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #55 |
+| 55 | puzzle-55.mp4 / puzzle-55-sq.mp4 | Mate in 2, Black to play | now | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #56 |
+| 56 | puzzle-56.mp4 / puzzle-56-sq.mp4 | Mate in 1, White to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #57 |
+| 57 | puzzle-57.mp4 / puzzle-57-sq.mp4 | Mate in 2, Black to play | on move 2 | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #58 |
+| 58 | puzzle-58.mp4 / puzzle-58-sq.mp4 | Mate in 3, White to play | on move 2 | Mate in 3 — but you can move the FLOOR. Hollow Chess puzzle #59 |
+| 59 | puzzle-59.mp4 / puzzle-59-sq.mp4 | Mate in 2, Black to play | now | Mate in 2 — but you can move the FLOOR. Hollow Chess puzzle #60 |
+
+Solutions (pinned comment after 24h):
+
+- #51: 1. f9>d8+ Be9-d8 2. Qc8xd8#
+- #52: 1. b7>c5#
+- #53: 1. Qg2xh2 Qa7xb6 2. i1>h1#
+- #54: 1. Qd8-b6 Ra4xb4 2. h1>e2+ Kg2-f1 3. Qb6-f2#
+- #55: 1. b7>(-1)1 Kb8-c8 2. Qa5-d8#
+- #56: 1. e2>a-1 a4-a5 2. Nc6-b4#
+- #57: 1. e8>d6#
+- #58: 1. Qg2xg1+ Ke-1-e0 2. e1>d1#
+- #59: 1. Qa7-d10 Rb7-b8 2. b7>(-1)1 g6-g5 3. Nf7-e9#
+- #60: 1. g3>a0 Bb0-c1 2. Nf8-g6#
