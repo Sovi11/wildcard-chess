@@ -73,7 +73,8 @@ function curate() {
   if (final.puzzles.length !== (batch - 1) * BATCH) { console.error(`puzzles.json holds ${final.puzzles.length} puzzles; batch ${batch} must start at id ${(batch - 1) * BATCH}`); process.exit(1); }
   const all = candidates().filter((p) => !usedPos.has(posKey(p)));
   const picked = [];
-  for (const n of [1, 2, 3]) {
+  // scarce length first: a derived mate-in-2 shares its family with its parent mate-in-3
+  for (const n of [3, 2, 1]) {
     const pool = all.filter((p) => p.n === n).sort((a, b) => score(b) - score(a));
     let got = 0;
     for (const p of pool) {
