@@ -10,7 +10,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 import edge_tts
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
-OUT = os.path.join(ROOT, 'shorts', 'out')
+OUT = os.path.join(ROOT, 'shorts', 'out', 'mascot')
 TEXT = sys.argv[1] if len(sys.argv) > 1 else "Day 1 of posting until Hikaru plays my chess game."
 VOICE = sys.argv[2] if len(sys.argv) > 2 else "en-US-AndrewNeural"
 START = 0.9   # seconds of silence before the line inside the recording

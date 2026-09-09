@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
 
 const ROOT = path.join(__dirname, '..');
 const BASE = 'http://localhost:5180';
-const OUT = path.join(ROOT, 'shorts', 'out');
+const OUT = path.join(ROOT, 'shorts', 'out', 'mascot');
 const ffmpeg = (args) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error'].concat(args), { stdio: 'inherit' });
 
 async function sheet(browser) {

@@ -167,6 +167,18 @@ function findSync(videoFile) {
   return 0.55;
 }
 
+// ---- where a finished video lives --------------------------------------------
+// working files (raw -video.mp4, beats.json, sfx) stay in shorts/out; finals are
+// sorted by series so the folder is what you upload from.
+const BATCH = 10;                                   // mirrored in puzzle-batch.js
+function finalDir(scene) {
+  const base = scene.replace(/-sq$/, '');
+  let m;
+  if ((m = /^puzzle-(\d+)$/.exec(base))) return path.join(OUT, 'puzzles', 'batch-' + (Math.floor(+m[1] / BATCH) + 1));
+  if (/^day\d+$/.test(base)) return path.join(OUT, 'day');
+  return path.join(OUT, 'hooks');
+}
+
 // ---- mix one scene ---------------------------------------------------------
 const VOL = { bed: 0.24, vo: 1.9, pawn: 1.7, braam: 1.0, hit: 0.85, whoosh: 0.6, lift: 0.45 };   // bed was 0.42: too loud under dialogue
 
@@ -201,11 +213,13 @@ function mixScene(scene) {
   }
   const mixIn = Array.from({ length: ai }, (_, i) => `[a${i}]`).join('');
   chains.push(`${mixIn}amix=inputs=${ai}:normalize=0,alimiter=limit=0.92[aout]`);
-  const final = path.join(OUT, scene + '.mp4');
+  const dir = finalDir(scene);
+  fs.mkdirSync(dir, { recursive: true });
+  const final = path.join(dir, scene + '.mp4');
   ffmpeg(inputs.concat(['-filter_complex', chains.join(';'),
     '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', final]));
   fs.unlinkSync(bed);
-  console.log('mixed:', scene + '.mp4');
+  console.log('mixed:', path.relative(OUT, final).replace(/\\/g, '/'));
 }
 
 const only = process.argv[2];

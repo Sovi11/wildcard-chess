@@ -1,6 +1,11 @@
 # Post copy — Pawn series
 
-Files: `shorts/out/day1.mp4` (9:16), `shorts/out/puzzle-N.mp4` (9:16), `puzzle-N-sq.mp4` (1:1 feed).
+Where the finals are (`-sq` = 1:1 feed cut, the rest 9:16):
+- `shorts/out/day/` — Day-count videos (`day1.mp4`, `day1-sq.mp4`, …)
+- `shorts/out/puzzles/batch-N/` — puzzle shorts, ten per batch, ids global (`puzzle-0..9` = batch 1, `10..19` = batch 2, …)
+- `shorts/out/hooks/` — the five product hooks (rook, escape, island, cheese, morph)
+- `shorts/out/mascot/` — the Pawn's sheet and demo
+
 Put `hollowchess.com` in the first comment on Instagram — captions aren't clickable.
 
 ---
@@ -83,7 +88,7 @@ retention engine (people rewind); the Day-count videos are the story.
 
 ---
 
-## This batch (shorts/puzzles.json, curated 2026-09-08)
+## Batch 1 (shorts/out/puzzles/batch-1/)
 
 | # | file | puzzle | board move | title |
 |---|---|---|---|---|
