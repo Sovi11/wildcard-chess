@@ -311,7 +311,7 @@
     for (const id of Object.keys(remote.solved || {})) {
       const r = remote.solved[id], l = solved[id];
       if (!r || typeof r !== 'object') continue;
-      if (!l) { solved[id] = { at: r.at | 0, clean: !!r.clean }; continue; }
+      if (!l) { solved[id] = { at: Number(r.at) || 0, clean: !!r.clean }; continue; }   // ms epochs overflow `| 0`
       solved[id] = { at: Math.min(l.at || Infinity, r.at || Infinity) || 0, clean: !!(l.clean || r.clean) };
     }
     const merged = {
@@ -328,7 +328,7 @@
   }
   function latest(p) {
     let t = 0;
-    for (const id of Object.keys((p && p.solved) || {})) t = Math.max(t, (p.solved[id] && p.solved[id].at) | 0);
+    for (const id of Object.keys((p && p.solved) || {})) t = Math.max(t, Number(p.solved[id] && p.solved[id].at) || 0);
     return t;
   }
 
@@ -336,6 +336,8 @@
   function playReply(a) { return applyAction(a); }
 
   function exit() { idx = -1; step = 0; finished = false; failed = false; }
+  // Device-local progress belongs to the account that made it: wiped on sign-out / account switch.
+  function resetProgress() { try { localStorage.removeItem(KEY); } catch (e) {} }
 
   // Progress through the current puzzle, for the UI.
   function state() {
@@ -354,7 +356,7 @@
 
   window.WCPUZZLE = {
     attach, load, list, count, start, startById, next, nextUnsolved,
-    current, active, expected, submit, playReply, hint, state, progress, mergeProgress, exit,
+    current, active, expected, submit, playReply, hint, state, progress, mergeProgress, exit, resetProgress,
     rating, setRating, ratingOf, setPuzzleRatings, setPuzzleRating,
     actionText, sameAction, retry: function () { const p = current(); if (p) { step = 0; failed = true; finished = false; hinted = false; place(p); } },
   };

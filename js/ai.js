@@ -452,6 +452,11 @@
       const mvSrc = removes.slice(0, 4), mvDst = adds.slice(0, 4);
       for (const sM of mvSrc) for (const dM of mvDst) {
         if (sM.cell === dM.cell) continue;
+        // the engine re-attaches to the board WITHOUT the lifted square: a spot
+        // whose only neighbour is that square is not a legal destination
+        const dc0 = upC(dM.cell), dr0 = upR(dM.cell);
+        const attached = N4.some(([dx, dy]) => { const nk = pack(dc0 + dx, dr0 + dy); return nk !== sM.cell && this.has(nk); });
+        if (!attached) continue;
         picks.push({ kind: 'mc', from: sM.cell, to: dM.cell, s: sM.s + dM.s - 10 });
       }
       picks.sort((a, b) => b.s - a.s);

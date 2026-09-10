@@ -223,6 +223,8 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; al
   font-size: 11px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
   text-overflow: ellipsis;
 }
+/* iOS zooms the page when a focused field is under 16px and never zooms back */
+@media (pointer: coarse) { input.share-input { font-size: 16px; } }
 .share-btn {
   width: 100%; padding: 9px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px;
   background: var(--accent); color: #1a1a1a; border: 1px solid var(--accent); font-family: inherit;
@@ -716,14 +718,17 @@ body.puzzle-mode #newGame { display: none; }
 /* the tag that says this puzzle is the reason the mode exists */
 .pz-tag.terrain { color: var(--accent-text, var(--accent)); background: rgba(231,193,74,.14); border-color: rgba(231,193,74,.35); }
 .pz-msg { font-size: 13px; line-height: 1.5; min-height: 42px; margin: 10px 0 4px; color: var(--muted); }
-.pz-msg.good { color: #4caf50; font-weight: 600; }
+.pz-msg.good { color: #7ad67a; font-weight: 600; }
+body.light .pz-msg.good { color: #2e7d32; }
 .pz-msg.bad { color: #d8453a; font-weight: 600; }
 .pz-msg.done { color: var(--accent-text, var(--accent)); font-weight: 700; }
 .pz-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 10px; }
 .pz-progress { font-size: 12px; color: var(--muted); }
 .pz-progress b { color: var(--ink); }
-.pz-progress .pz-up { color: #1f7a1f; }
-.pz-progress .pz-down { color: #b32419; }
+.pz-progress .pz-up { color: #6fd36f; }
+.pz-progress .pz-down { color: #ff7a6e; }
+body.light .pz-progress .pz-up { color: #1f7a1f; }
+body.light .pz-progress .pz-down { color: #b32419; }
 .pz-progress .pz-note { color: var(--muted); font-size: 11px; }
 .mode-card.mode-wide { grid-column: 1 / -1; }
 /* A solved puzzle's board is done. The result is on the panel, so the game's

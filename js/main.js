@@ -178,6 +178,7 @@ function updateAmbient() {
 boardEl.addEventListener('click', (e) => {
   if (gameOver()) return;
   if (aiThinking) return;
+  if (puzzleMode && pzReplyPending) return;   // the scripted reply is on its way
   if (botEnabled() && game.turn === botSide()) return;
   if (linkMode() && linkPending) return;      // their turn — waiting on their link
   if (onlineActive && game.turn !== myColor) return;   // their move, over the wire
@@ -1400,6 +1401,7 @@ function resetDeviceProfile() {
     localStorage.removeItem(TUTKEY);               // a different person gets the tour
     localStorage.removeItem(OBSKIP);               // and the onboarding questions
     localStorage.removeItem('wildcardchess.namemig.v1');
+    if (window.WCPUZZLE && WCPUZZLE.resetProgress) WCPUZZLE.resetProgress();   // solves + puzzle rating
   } catch (e) {}
   signedInTracked = false;
 }
@@ -1422,7 +1424,7 @@ function enterSite() {
 function bindClick(id, fn) { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
 bindClick('welcomeGuest', function () { WCSTATS.track('enter', { as: 'guest' }); enterSite(); });
 bindClick('welcomeSignin', function () { openAuthModal(); });
-bindClick('welcomeHow', function () { WCTUT.open(updateAmbient); updateAmbient(); });
+bindClick('welcomeHow', function () { WCTUT.open(function () { markTutSeen(); updateAmbient(); }); updateAmbient(); });   // seen once is seen
 bindClick('howBtn', function () { WCTUT.open(updateAmbient); updateAmbient(); });
 
 WCCLOUD.onChange(function (u) {
@@ -1550,18 +1552,25 @@ async function cloudQueueSearch(elo) {
     const waiting = await WCCLOUD.findWaiting(elo, 250);
     if (stopped) return;
 
+    // closeLobby() runs cancelSearch, and this one tears the peer down — so it
+    // must be gone before the game starts, exactly as the direct-P2P path does
+    const handlers = netHandlers('Online player');
+    const onPeer = handlers.onPeer;
+    handlers.onPeer = function (info) { cancelSearch = null; onPeer(info); };
+
     if (waiting && waiting.peer_id) {
-      // Someone is already waiting: connect straight to them.
-      netSession = WCNET.join(waiting.peer_id, netHandlers('Online player'));
+      // Someone is already waiting: connect straight to them. The queue holds
+      // the bare room code; WCNET.join adds the prefix itself.
+      netSession = WCNET.join(String(waiting.peer_id).replace(/^wcxr-/, ''), handlers);
       await WCCLOUD.leaveQueue();
       return;
     }
 
     // Nobody waiting. Advertise ourselves and hold the slot.
-    const mySession = WCNET.host(Object.assign(netHandlers('Online player'), {
+    const mySession = WCNET.host(Object.assign(handlers, {
       onOpen: async function (info) {
         if (stopped) return;
-        await WCCLOUD.joinQueue(elo, 'wcxr-' + info.code);
+        await WCCLOUD.joinQueue(elo, info.code);
         if (searchBandEl) searchBandEl.textContent = 'Waiting in the queue\u2026';
       },
     }));
@@ -1675,10 +1684,26 @@ function startCasual(kind) {
   runAnalysis(); sync(); render();
 }
 
+// Leave puzzle mode without starting anything. Every game start funnels
+// through resetGameState(), so a match, a hotseat game, an online game or a
+// pasted link can never inherit puzzle grading (moves went to the puzzle
+// checker and a miss rewound the live board).
+function leavePuzzleMode() {
+  if (!puzzleMode) return;
+  puzzleMode = false;
+  if (pzReplyTimer) { clearTimeout(pzReplyTimer); pzReplyTimer = null; }
+  pzReplyPending = false;
+  WCPUZZLE.exit();
+  document.body.classList.remove('puzzle-mode', 'puzzle-solved');
+  hintMove = null;
+}
+
 function resetGameState() {
+  leavePuzzleMode();
   aiGen++;                   // invalidate any bot move still sitting on a timer
   aiThinking = false;
   endSounded = false;
+  resultRecorded = false;    // the next finished game must be scored
   WCSOUND.setAmbient(false); // a game is starting: the menu tune stops NOW
   game.reset();
   game.endReason = null;
@@ -2039,6 +2064,7 @@ window.addEventListener('hashchange', () => {
   } catch (e) {}
   try {
     if (!WCSHARE.fromLocation(game)) return;
+    leavePuzzleMode();
     selected = null; legal = []; hintMove = null;
     quality.length = 0; anaKey = null; linkPending = false; gameActs = [];
     if (oppModeEl) oppModeEl.value = 'link';
@@ -2071,15 +2097,10 @@ document.querySelectorAll('.wild-btn').forEach(b => b.addEventListener('click', 
 }));
 
 document.getElementById('newGame').addEventListener('click', () => {
-  game.reset();
-  endSounded = false;
-  selected = null; legal = []; hintMove = null;
-  quality.length = 0; anaKey = null;
-  setMode('normal');
-  ui.banner.classList.remove('show');
-  linkPending = false;
-  if (shareLinkEl) shareLinkEl.value = '';
-  history.replaceState(null, '', location.pathname + location.search);
+  // the full reset: bot timers, end reason, replay log and the scoring flag
+  // included — a partial one left the next rated game unscored and let a bot
+  // move queued for the old game land on the new board
+  resetGameState();
   runAnalysis(); sync(); render();
   refreshBotUI(); refreshShareUI(); maybeAI();
 });
@@ -2192,7 +2213,10 @@ function paintPuzzle() {
   pzEl.hint.disabled = !!st.finished;
 }
 
+let pzReplyTimer = null, pzReplyPending = false;
 function loadPuzzle(starter) {
+  if (pzReplyTimer) { clearTimeout(pzReplyTimer); pzReplyTimer = null; }
+  pzReplyPending = false;
   pzHintLevel = 0;
   hintMove = null;
   const p = starter();
@@ -2209,9 +2233,8 @@ async function startPuzzles() {
   if (netSession && netSession.cancel) { netSession.cancel(); netSession = null; }
   WCNET.destroy(); onlineActive = false; myColor = null;
   activeBot = null; ratedGame = false;
-  aiGen++; aiThinking = false;
   if (oppModeEl) oppModeEl.value = 'human';    // no bot may ever move in a puzzle
-  WCSOUND.setAmbient(false);
+  resetGameState();                            // no stale end reason / replay log / scoring flag
   puzzleMode = true;
   document.body.classList.add('puzzle-mode');
   closeLobby();
@@ -2223,10 +2246,7 @@ async function startPuzzles() {
 }
 
 function exitPuzzles() {
-  puzzleMode = false;
-  WCPUZZLE.exit();
-  document.body.classList.remove('puzzle-mode', 'puzzle-solved');
-  hintMove = null;
+  leavePuzzleMode();
   startCasual('hotseat');
 }
 
@@ -2264,7 +2284,9 @@ function puzzleSubmit(gm) {
   if (res.state === 'continue') {
     sync(); render();                             // your move, on its own, first
     pzSay(res.message + ' Mate in ' + res.moves + '.', 'good');
-    setTimeout(function () {
+    pzReplyPending = true;                        // no input until the reply lands
+    pzReplyTimer = setTimeout(function () {
+      pzReplyTimer = null; pzReplyPending = false;
       WCPUZZLE.playReply(res.pendingReply);
       actionFX();
       pzHintLevel = 0;
@@ -2286,6 +2308,8 @@ if (pzEl.next) pzEl.next.addEventListener('click', function () {
   loadPuzzle(function () { return WCPUZZLE.next(); });
 });
 if (pzEl.retry) pzEl.retry.addEventListener('click', function () {
+  if (pzReplyTimer) { clearTimeout(pzReplyTimer); pzReplyTimer = null; }
+  pzReplyPending = false;
   WCPUZZLE.retry(); pzHintLevel = 0; hintMove = null;
   pzSay('From the top.');
   sync(); render(); paintPuzzle();
@@ -2357,7 +2381,7 @@ function sync() {
 
   if (gameOver()) {
     applyTutorVisibility();
-    if (!endSounded) {
+    if (!endSounded && !puzzleMode) {          // a solved puzzle is not a game result
       endSounded = true;
       // One game_end per game (endSounded is the existing once-only guard).
       // boardMoves answers the design question: do people use the mechanic?
@@ -2376,7 +2400,7 @@ function sync() {
       else if (botEnabled() || onlineActive) WCSOUND.play(game.winner === localColor() ? 'win' : 'lose');
       else WCSOUND.play('win');            // hotseat: somebody at this screen won
     }
-    const r = settleResult();
+    const r = puzzleMode ? null : settleResult();
     const reason = game.endReason;
     let text;
     if (reason === 'resignation') {
