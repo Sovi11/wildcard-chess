@@ -33,6 +33,7 @@ create table if not exists games (
   unique (user_id, at)
 );
 alter table games enable row level security;
+drop policy if exists "read own games" on games;
 create policy "read own games"   on games for select using (auth.uid() = user_id);
 drop policy if exists "insert own games" on games;
 create policy "insert own games" on games for insert with check (auth.uid() = user_id);
