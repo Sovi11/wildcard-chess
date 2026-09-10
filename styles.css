@@ -787,6 +787,12 @@ body.puzzle-mode #banner { display: none; }
 .tut-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .tut-navright { display: flex; gap: 10px; align-items: center; }
 .tut-next { padding: 10px 22px; }
+.tut-inner.slide-l { animation: tutSlideL .24s cubic-bezier(.22,1,.36,1); }
+.tut-inner.slide-r { animation: tutSlideR .24s cubic-bezier(.22,1,.36,1); }
+@keyframes tutSlideL { from { transform: translateX(28px); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes tutSlideR { from { transform: translateX(-28px); opacity: .4; } to { transform: none; opacity: 1; } }
+.tut-lift-shadow { fill: #000; opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .tut-inner.slide-l, .tut-inner.slide-r { animation: none; } }
 
 /* humans on the blended leaderboard get a quiet tag */
 .lb-tag {

@@ -36,6 +36,38 @@
   const g4 = [];
   for (let c = 0; c < 4; c++) for (let r = 0; r < 3; r++) g4.push([c, r, '']);
 
+  // The board move, animated: the square at (fc,fr) lifts, glides to (tc,tr) — a
+  // dashed spot on the board's edge — and settles; the hole it left stays. Loops.
+  function liftAnim(w, h, cells, from, to) {
+    const [fc, fr] = from, [tc, tr] = to;
+    const base = cells.filter(function (x) { return !(x[0] === fc && x[1] === fr); });
+    let s = mini(w, h, base, []);
+    s = s.slice(0, -6);                                   // reopen the svg
+    const y = h - 1 - fr, dx = tc - fc, dy = (h - 1 - tr) - y;
+    const light = (fc + fr) % 2 === 1;
+    // SMIL wants plain decimals with a leading zero ("-0.16", never "-.16")
+    const f = function (n) { return (Math.round(n * 100) / 100).toFixed(2); };
+    const pt = function (x, y) { return f(x) + ' ' + f(y); };
+    const timing = ' keyTimes="0; 0.14; 0.3; 0.66; 0.74; 1" calcMode="spline"' +
+      ' keySplines="0.4 0 0.2 1; 0 0 1 1; 0.3 0 0.2 1; 0.4 0 0.2 1; 0 0 1 1" dur="4.2s" repeatCount="indefinite"';
+    const T = 'values="' + [pt(0, 0), pt(0, -0.16), pt(0, -0.16), pt(dx, dy - 0.16), pt(dx, dy), pt(dx, dy)].join('; ') + '"' + timing;
+    const TS = 'values="' + [pt(0, 0), pt(0, 0), pt(0, 0), pt(dx, dy), pt(dx, dy), pt(dx, dy)].join('; ') + '"' + timing;   // shadow stays on the ground
+    s += '<g class="tut-lift-anim">' +
+      '<rect x="' + (fc + .08) + '" y="' + (y + .18) + '" width=".84" height=".84" rx=".1" class="tut-lift-shadow">' +
+        '<animateTransform attributeName="transform" type="translate" ' + TS + '/>' +
+        '<animate attributeName="opacity" values="0;0.45;0.45;0.45;0;0" keyTimes="0;0.14;0.3;0.66;0.74;1" dur="4.2s" repeatCount="indefinite"/>' +
+      '</rect>' +
+      // the rect keeps the CSS "lift" look (its own CSS transform would override
+      // SMIL), so the motion goes on a wrapper group
+      '<g>' +
+        '<animateTransform attributeName="transform" type="translate" ' + T + '/>' +
+        '<animate attributeName="opacity" values="0;1;1;1;1;1;1;0" keyTimes="0;0.05;0.14;0.3;0.66;0.74;0.93;1" dur="4.2s" repeatCount="indefinite"/>' +
+        '<rect x="' + fc + '" y="' + y + '" width="1" height="1" class="tut-sq ' + (light ? 'lt' : 'dk') + ' lift"/>' +
+      '</g>' +
+      '</g></svg>';
+    return s;
+  }
+
   const STEPS = [
     {
       title: 'This is Hollow Chess',
@@ -54,11 +86,11 @@
     {
       title: 'Click a square to lift it',
       body: 'On your board turn, <b>click any empty square</b> — it lifts off the world. Then click one of the <b>dashed spots</b> to set it down anywhere <b>edge-adjacent</b> to the board (sharing a side, not just a corner). It leaves a hole where it was. Click the lifted square again to cancel.',
-      art: mini(4, 3, [
+      art: liftAnim(4, 3, [
         [0, 0, ''], [1, 0, ''], [2, 0, ''], [3, 0, ''],
-        [0, 1, ''], [1, 1, 'lift'], [2, 1, ''], [3, 1, ''],
+        [0, 1, ''], [1, 1, ''], [2, 1, ''], [3, 1, ''],
         [0, 2, 'dash'], [1, 2, ''], [2, 2, ''], [3, 2, 'dash'],
-      ], [], arrow(1.5, 1.35, 3.4, 0.75)),
+      ], [1, 1], [3, 2]),
     },
     {
       title: 'Holes change everything',
@@ -101,16 +133,40 @@
       '</div>';
     document.body.appendChild(el);
     el.querySelector('#tutSkip').addEventListener('click', close);
-    el.querySelector('#tutPrev').addEventListener('click', function () { go(step - 1); });
+    el.querySelector('#tutPrev').addEventListener('click', function () { go(step - 1, 'r'); });
     el.querySelector('#tutNext').addEventListener('click', function () {
-      if (step >= STEPS.length - 1) close(); else go(step + 1);
+      if (step >= STEPS.length - 1) close(); else go(step + 1, 'l');
     });
     el.addEventListener('click', function (e) { if (e.target === el) close(); });
+
+    // phones: swipe left/right through the steps
+    let tx = 0, ty = 0, tt = 0;
+    el.addEventListener('touchstart', function (e) {
+      const p = e.changedTouches[0]; tx = p.clientX; ty = p.clientY; tt = Date.now();
+    }, { passive: true });
+    el.addEventListener('touchend', function (e) {
+      const p = e.changedTouches[0];
+      const dx = p.clientX - tx, dy = p.clientY - ty;
+      if (Date.now() - tt > 800) return;                            // a slow drag is a scroll, not a swipe
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (dx < 0) { if (step >= STEPS.length - 1) close(); else go(step + 1, 'l'); }
+      else if (step > 0) go(step - 1, 'r');
+    }, { passive: true });
+    // desktop: arrow keys
+    document.addEventListener('keydown', function (e) {
+      if (!el.classList.contains('show')) return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); if (step >= STEPS.length - 1) close(); else go(step + 1, 'l'); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); if (step > 0) go(step - 1, 'r'); }
+      else if (e.key === 'Escape') close();
+    });
   }
 
-  function go(n) {
+  function go(n, dir) {
     step = Math.max(0, Math.min(STEPS.length - 1, n));
     const s = STEPS[step];
+    // slide the card in from the side the user is heading toward
+    const inner = el.querySelector('.tut-inner');
+    if (dir) { inner.classList.remove('slide-l', 'slide-r'); void inner.offsetWidth; inner.classList.add(dir === 'l' ? 'slide-l' : 'slide-r'); }
     el.querySelector('#tutArt').innerHTML = s.art || '';
     el.querySelector('#tutArt').style.display = s.art ? '' : 'none';
     el.querySelector('#tutTitle').textContent = s.title;

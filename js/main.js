@@ -643,7 +643,10 @@ function renderLobby() {
   if (count) count.textContent = '(' + rows.length + ' rated players)';
 }
 
-function openLobby() { renderLobby(); renderLeaderboard(); resetQueueUI(); lobbyEl.classList.add('show'); updateAmbient(); }
+function openLobby() {
+  renderLobby(); renderLeaderboard(); resetQueueUI(); lobbyEl.classList.add('show'); updateAmbient();
+  if (pendingOnboard) { const r = pendingOnboard; pendingOnboard = null; maybeOnboard(r); }
+}
 
 // Everyone in the pool plus you, ranked. Bot ratings drift, so this moves.
 // Signed in, the cloud's registered players are BLENDED with the resident
@@ -1027,19 +1030,27 @@ const OB_SEED = { new: 350, casual: 500, club: 800, rated: 1100 };
 const obEl = document.getElementById('onboard');
 const OBSKIP = 'wildcardchess.onboard.v1';
 
+// The form may only appear in the LOBBY. Auth events (token refresh, the tab
+// regaining focus on a phone) re-run the profile sync at any moment, and this
+// used to pop the form over a live game. Anywhere else it is remembered and
+// asked the next time the lobby opens.
+let pendingOnboard = null;
 function maybeOnboard(remote) {
   if (!obEl || !WCCLOUD.currentUser()) return;
   const local = WCLADDER.getProfile();
   const done = (remote && remote.chess_level) || local.chessLevel;
   let skipped = false;
   try { skipped = localStorage.getItem(OBSKIP) === '1'; } catch (e) {}
-  if (done || skipped) return;
-  // The walkthrough comes first — never stack the profile form on top of it.
+  if (done || skipped) { pendingOnboard = null; return; }
   const tut = document.getElementById('tutorial');
-  if (tut && tut.classList.contains('show')) {
-    setTimeout(function () { maybeOnboard(remote); }, 1200);
+  const tutUp = !!tut && tut.classList.contains('show');
+  if (!lobbyEl.classList.contains('show') || tutUp) {
+    pendingOnboard = remote || {};
+    // walkthrough opened from the lobby's own button: ask once it closes
+    if (tutUp) setTimeout(function () { if (pendingOnboard) maybeOnboard(pendingOnboard); }, 1200);
     return;
   }
+  pendingOnboard = null;
   const dobEl = document.getElementById('obDob');
   if (dobEl && !dobEl.max) dobEl.max = new Date().toISOString().slice(0, 10);
   const nameEl = document.getElementById('obName');
@@ -1122,7 +1133,11 @@ bindClick('obSave', function () {
   paintProfile(); renderLeaderboard();
   syncProfileUp();
 });
-if (obEl) obEl.addEventListener('click', function (e) { if (e.target === obEl) obEl.classList.remove('show'); });
+if (obEl) obEl.addEventListener('click', function (e) {
+  if (e.target !== obEl) return;
+  try { localStorage.setItem(OBSKIP, '1'); } catch (e2) {}    // a dismissal is a "Later", not a re-ask
+  obEl.classList.remove('show');
+});
 
 function syncProfileUp() {
   if (!WCCLOUD.enabled() || !WCCLOUD.currentUser()) return;
@@ -1431,9 +1446,19 @@ if (!bootOnInvite && welcomeEl && !hasCachedSession()) { welcomeEl.classList.add
   try {
     cloudReady = await WCCLOUD.init();
   } catch (e) { cloudReady = false; }
-  WCCLOUD.onChange(function () { paintAuth(); syncProfileDown(); });
+  // supabase-js fires an auth event on every token refresh and tab refocus;
+  // the profile only needs pulling once per account per page load
+  let syncedUid = null;
+  const syncOnce = function () {
+    const u = WCCLOUD.currentUser();
+    if (!u) { syncedUid = null; return; }
+    if (u.id === syncedUid) return;
+    syncedUid = u.id;
+    syncProfileDown();
+  };
+  WCCLOUD.onChange(function () { paintAuth(); syncOnce(); });
   paintAuth();
-  if (cloudReady && WCCLOUD.currentUser()) syncProfileDown();
+  if (cloudReady) syncOnce();
 
   if (bootOnInvite) { closeWelcome(); return; }
   if (WCCLOUD.currentUser()) {
