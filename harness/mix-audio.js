@@ -18,6 +18,13 @@ const SR = 44100;
 
 const ffmpeg = (args) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error'].concat(args), { stdio: 'inherit' });
 const ffprobe = (args) => execFileSync('ffprobe', ['-v', 'error'].concat(args)).toString();
+// `python` does not exist on a modern macOS/homebrew box; only `python3` does.
+const PY = (function () {
+  for (const c of ['python3', 'python']) {
+    try { execFileSync(c, ['-c', ''], { stdio: 'ignore' }); return c; } catch (e) {}
+  }
+  return 'python3';
+})();
 
 // ---- WAV writing -----------------------------------------------------------
 function writeWav(file, left, right) {
@@ -123,6 +130,9 @@ function lineKey(text) {
   for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
   return h.toString(16).padStart(8, '0');
 }
+const VOICE = process.env.HC_VOICE || 'en-US-AndrewMultilingualNeural';
+const VOICE_RATE = process.env.HC_VOICE_RATE || '+0%';
+
 function voFile(line, voice) {
   fs.mkdirSync(VO_DIR, { recursive: true });
   if (voice === 'pawn') {
@@ -133,15 +143,20 @@ function voFile(line, voice) {
     }
     const f = path.join(VO_DIR, 'pawn-' + key + '.mp3');
     if (!fs.existsSync(f)) {
-      execFileSync('python', [path.join(__dirname, 'pawn-vo.py'), '--line', line], { stdio: 'inherit' });
+      execFileSync(PY, [path.join(__dirname, 'pawn-vo.py'), '--line', line], { stdio: 'inherit' });
       console.log('pawn vo:', JSON.stringify(line));
     }
     return f;
   }
-  const f = path.join(VO_DIR, crypto.createHash('md5').update(line).digest('hex').slice(0, 12) + '.mp3');
+  // The trailer voice was ChristopherNeural — a NEWSREADER voice — pitched down
+  // 14Hz and slowed 6%. Pitch-shifting a neural voice smears its formants and
+  // is the loudest "this is a robot" tell there is. Andrew is a conversational
+  // voice and is left completely unprocessed: no pitch shift, natural rate.
+  // (The pawn above is your own recording and is untouched.)
+  const tag = crypto.createHash('md5').update(VOICE + '|' + VOICE_RATE + '|' + line).digest('hex').slice(0, 12);
+  const f = path.join(VO_DIR, tag + '.mp3');
   if (!fs.existsSync(f)) {
-    execFileSync('python', ['-m', 'edge_tts',
-      '--voice', 'en-US-ChristopherNeural', '--rate=-6%', '--pitch=-14Hz',
+    execFileSync(PY, ['-m', 'edge_tts', '--voice', VOICE, '--rate=' + VOICE_RATE,
       '--text', line, '--write-media', f], { stdio: 'inherit' });
     console.log('vo:', JSON.stringify(line));
   }
@@ -180,7 +195,24 @@ function finalDir(scene) {
 }
 
 // ---- mix one scene ---------------------------------------------------------
-const VOL = { bed: 0.24, vo: 1.9, pawn: 1.7, braam: 1.0, hit: 0.85, whoosh: 0.6, lift: 0.45 };   // bed was 0.42: too loud under dialogue
+// Gain staging, then ONE loudness target at the end.
+//
+// Dropping the bed to 0.24 helped, but the shorts still measured -10 to -12
+// LUFS with the dynamic range crushed to ~5 LU: the voice was pushed to +6dB,
+// the sum was slammed into a brickwall limiter, and every platform then turned
+// the result back DOWN again — so the loudness only ever bought distortion and
+// listening fatigue. Now the bed ducks under the voice (sidechain), so the
+// voice is clear without being loud, and the finished mix is normalised
+// two-pass to -14 LUFS / -2 dBTP, which is what X, YouTube and Instagram all
+// normalise to anyway.
+const VOL = { bed: 0.24, vo: 1.0, pawn: 0.95, braam: 0.55, hit: 0.50, whoosh: 0.40, lift: 0.35 };
+const TARGET = { I: -14, TP: -2.0, LRA: 11 };
+// The limiter works on sample peaks; the AAC encoder afterwards creates
+// inter-sample peaks above them, so leave real headroom. NOTE: alimiter's
+// `level` option defaults to TRUE ("auto level"), which normalises the output
+// back up to 0 dB and silently undoes both this ceiling and the loudness
+// target — it must be disabled wherever the filter follows loudnorm.
+const CEILING = 0.841;
 
 function mixScene(scene) {
   const video = path.join(OUT, scene + '-video.mp4');
@@ -199,26 +231,66 @@ function mixScene(scene) {
   }
 
   const inputs = ['-i', video, '-i', bed];
-  const chains = ['[1]volume=' + VOL.bed + '[a0]'];
-  let idx = 2, ai = 1;
+  const chains = [`[1]volume=${VOL.bed}[bed]`];
+  const voLabels = [], sfxLabels = [];
+  let idx = 2;
   for (const b of beats) {
     if (b.sync) continue;
     const at = Math.max(0, Math.round((sync + b.t) * 1000));
-    let file, vol;
-    if (b.vo) { file = voFile(b.vo, b.voice); vol = b.voice === 'pawn' ? VOL.pawn : VOL.vo; }
-    else { file = path.join(OUT, 'sfx-' + b.sfx + '.wav'); vol = VOL[b.sfx] || 0.7; }
+    const isVo = !!b.vo;
+    const file = isVo ? voFile(b.vo, b.voice) : path.join(OUT, 'sfx-' + b.sfx + '.wav');
+    const vol = isVo ? (b.voice === 'pawn' ? VOL.pawn : VOL.vo) : (VOL[b.sfx] || 0.5);
+    const lbl = (isVo ? 'v' : 's') + idx;
     inputs.push('-i', file);
-    chains.push(`[${idx}]adelay=${at}|${at},volume=${vol}[a${ai}]`);
-    idx++; ai++;
+    chains.push(`[${idx}]adelay=${at}|${at},volume=${vol}[${lbl}]`);
+    (isVo ? voLabels : sfxLabels).push(`[${lbl}]`);
+    idx++;
   }
-  const mixIn = Array.from({ length: ai }, (_, i) => `[a${i}]`).join('');
-  chains.push(`${mixIn}amix=inputs=${ai}:normalize=0,alimiter=limit=0.92[aout]`);
+
+  const merge = (labels, out) => {
+    if (!labels.length) return null;
+    if (labels.length === 1) { chains.push(`${labels[0]}anull[${out}]`); return `[${out}]`; }
+    chains.push(`${labels.join('')}amix=inputs=${labels.length}:normalize=0[${out}]`);
+    return `[${out}]`;
+  };
+  const vo = merge(voLabels, 'vo');
+  const sfx = merge(sfxLabels, 'sfx');
+
+  // Duck the bed under any dialogue — trailer voice or pawn — so speech is the
+  // clearest thing in the mix without having to be the loudest.
+  let bedOut = '[bed]';
+  if (vo) {
+    chains.push(`${vo}asplit=2[vomix][vokeyraw]`);
+    // The key must run the FULL length: sidechaincompress ends when EITHER
+    // input ends, which otherwise truncates the mix at the last spoken word
+    // and cuts the end card — and the URL on it — off the video.
+    chains.push(`[vokeyraw]apad=whole_dur=${dur}[vokey]`);
+    chains.push(`[bed][vokey]sidechaincompress=threshold=0.02:ratio=6:attack=15:release=350:makeup=1[bedduck]`);
+    bedOut = '[bedduck]';
+  }
+  const stems = [bedOut, vo ? '[vomix]' : null, sfx].filter(Boolean);
+  chains.push(`${stems.join('')}amix=inputs=${stems.length}:normalize=0,` +
+    `apad=whole_dur=${dur},atrim=0:${dur},alimiter=limit=0.97:level=disabled[mixed]`);
+
+  // Two-pass loudness: measure the finished mix, then normalise to the target
+  // exactly. Single-pass loudnorm guesses, and pumps.
+  const raw = path.join(OUT, scene + '-mix.wav');
+  ffmpeg(inputs.concat(['-filter_complex', chains.join(';'), '-map', '[mixed]', '-c:a', 'pcm_s16le', raw]));
+  const probe = require('child_process').spawnSync('ffmpeg', ['-hide_banner', '-i', raw,
+    '-af', `loudnorm=I=${TARGET.I}:TP=${TARGET.TP}:LRA=${TARGET.LRA}:print_format=json`,
+    '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
+  const m = JSON.parse(probe.slice(probe.lastIndexOf('{'), probe.lastIndexOf('}') + 1));
+  const ln = `loudnorm=I=${TARGET.I}:TP=${TARGET.TP}:LRA=${TARGET.LRA}` +
+    `:measured_I=${m.input_i}:measured_TP=${m.input_tp}:measured_LRA=${m.input_lra}` +
+    `:measured_thresh=${m.input_thresh}:offset=${m.target_offset}:linear=true:print_format=summary`;
+  console.log(`  measured ${m.input_i} LUFS -> ${TARGET.I}`);
+
   const dir = finalDir(scene);
   fs.mkdirSync(dir, { recursive: true });
   const final = path.join(dir, scene + '.mp4');
-  ffmpeg(inputs.concat(['-filter_complex', chains.join(';'),
-    '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', final]));
-  fs.unlinkSync(bed);
+  ffmpeg(['-i', video, '-i', raw, '-filter_complex', `[1:a]${ln},alimiter=limit=${CEILING}:level=disabled[aout]`,
+    '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-shortest', final]);
+  fs.unlinkSync(bed); fs.unlinkSync(raw);
   console.log('mixed:', path.relative(OUT, final).replace(/\\/g, '/'));
 }
 

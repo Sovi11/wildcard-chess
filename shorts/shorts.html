@@ -360,11 +360,11 @@
     camTo(2.7, -7, [0, 0]);
     await sleep(500);
     slam('capMid', 'THE <span class="gold">ROOK</span>.');
-    vo('THE ROOK.'); sfx('braam');
+    vo('The rook.'); sfx('braam');
     await sleep(2100);
     hide('capMid');
     cap('capTop', 'eight squares.<br/>one straight line.');
-    vo('Eight squares. One straight line. NOTHING stops it.');
+    vo('Eight squares, one straight line, and nothing in chess stops it.');
     camTo(1.5, -3, [0, 3]);
     await sleep(2600);
     hideCaps();
@@ -387,13 +387,13 @@
     await sleep(900);
     hideCaps();
     slam('capMid', 'THE FILE<br/>IS <span class="red">GONE</span>.');
-    vo('Even the rook... stops... at the VOID.');
+    vo('Take the floor away, and even a rook has to stop.');
     await sleep(3100);
     hideCaps();
     camReset();
     slam('capTop', 'the board is<br/>the <span class="gold">weapon</span>.');
     await sleep(2200);
-    await endCard(5200, 'HOLLOW CHESS. The board is the weapon. Play free at hollow chess dot com.');
+    await endCard(5200, 'Hollow Chess. The board is the weapon. Play it free, at hollow chess dot com.');
   }
 
   // =================== ISLAND ===================
@@ -417,18 +417,18 @@
     camTo(2.0, 5, [6, 7]);
     render();
     slam('capTop', 'HIS KING<br/>WAS <span class="red">DOOMED</span>.');
-    vo('His king... was DOOMED.'); sfx('braam');
+    vo('His king was dead.'); sfx('braam');
     await sleep(2400);
     hideCaps();
     slam('capTop', 'SO HE DID THE<br/><span class="gold">UNTHINKABLE</span>.');
-    vo('So he did... the unthinkable.');
+    vo('So he did something else.');
     game.turn = 'black';
     await slidePiece(6, 7, 7, 7, 600);          // Kg8 -> h8
     overlays = [];
     await sleep(1200);
     hideCaps();
     cap('capTop', 'he left<br/>the <span class="gold">MAP</span>.');
-    vo('He LEFT. The MAP.'); sfx('whoosh');
+    vo('He left the map.'); sfx('whoosh');
     camTo(1.5, -3, [6, 6]);
     // tear the moat: h6, g6, g7, g8 fly to the far shore
     const moat = [[7, 5, -1, 2], [6, 5, -1, 3], [6, 6, -1, 4], [6, 7, -1, 5]];
@@ -439,7 +439,7 @@
     }
     hideCaps();
     slam('capMid', 'AN <span class="gold">ISLAND</span>.');
-    vo('An ISLAND.'); sfx('braam');
+    vo('An island.'); sfx('braam');
     await sleep(1700);
     hide('capMid');
     // the queen charges and hits the void
@@ -450,12 +450,12 @@
     render();
     camTo(2.1, 4, [6, 6], true);
     slam('capTop', 'SHE CANNOT<br/><span class="green">TOUCH</span> HIM.');
-    vo('She cannot... TOUCH him.');
+    vo('She can\'t reach him.');
     await sleep(2500);
     hideCaps();
     // bridge: white drops a square back into g7 — this is CHECK through g7
     slam('capTop', 'SO SHE BUILDS<br/>A <span class="red">BRIDGE</span> —');
-    vo('So she builds a BRIDGE.');
+    vo('So she builds a bridge.');
     game.turn = 'white';
     await flySquare(-1, 2, 6, 6, 700);
     overlays = [{ kind: 'beam', pts: [[5, 5], [7, 7]] }, { kind: 'flash', c: 7, r: 7, color: '#e05656' }];
@@ -463,7 +463,7 @@
     await sleep(1100);
     hideCaps();
     slam('capTop', 'HE <span class="gold">BURNS</span> IT.');
-    vo('He BURNS it.');
+    vo('He burns it.');
     game.turn = 'black';
     await flySquare(6, 6, -1, 6, 550);
     overlays = [{ kind: 'beam', pts: [[5, 5], [6, 6]] }];
@@ -476,7 +476,7 @@
     await flySquare(6, 6, -1, 7, 380);
     hideCaps();
     slam('capMid', 'FOREVER.');
-    vo('Again. And again. FOREVER.'); sfx('braam');
+    vo('Again. And again.'); sfx('braam');
     await sleep(2300);
     hide('capMid');
     camReset();
@@ -484,9 +484,9 @@
     render();
     slam('capTop', '<span class="green">DRAW.</span>');
     cap('capBottom', 'the first <span class="gold">man-made fortress</span> in chess.');
-    vo('DRAW. The fortress... HOLDS.');
+    vo('Draw. The fortress holds.');
     await sleep(3000);
-    await endCard(5200, 'HOLLOW CHESS. Build your own endgame. Play free at hollow chess dot com.');
+    await endCard(5200, 'Hollow Chess. Build your own endgame, free at hollow chess dot com.');
   }
 
   // =================== ESCAPE ===================
@@ -512,16 +512,16 @@
     camTo(2.2, 5, [7, 7]);
     await sleep(450);
     slam('capMid', '<span class="red">CHECKMATE.</span>');
-    vo('CHECKMATE.'); sfx('braam');
+    vo('That\'s checkmate.'); sfx('braam');
     await sleep(2000);
     hide('capMid');
     cap('capTop', '…or <span class="gold">is it</span>?');
-    vo('Or... is it?');
+    vo('Or it should be.');
     camTo(1.25, -2, [5, 5]);
     await sleep(2300);
     hideCaps();
     slam('capTop', 'HE MOVES<br/>THE <span class="gold">FLOOR</span>.');
-    vo('He moves... the FLOOR. ITSELF.'); sfx('whoosh');
+    vo('But he doesn\'t move a piece.'); sfx('whoosh');
     await sleep(900);
     overlays = [{ kind: 'flash', c: 7, r: 7, color: '#e05656' }];
     await flySquare(5, 5, 0, 8, 1000);
@@ -531,13 +531,13 @@
     await sleep(700);
     hideCaps();
     slam('capMid', '<span class="green">NOT. MATE.</span>');
-    vo('The check line? GONE. NOT. MATE.'); sfx('braam');
+    vo('He moves the floor, and the check line goes with it. Not mate.'); sfx('braam');
     await sleep(2900);
     hide('capMid');
     camReset();
     slam('capTop', 'escape the<br/><span class="gold">inescapable</span>.');
     await sleep(2100);
-    await endCard(5200, 'HOLLOW CHESS. Escape the inescapable. hollow chess dot com.');
+    await endCard(5200, 'Hollow Chess. Escape the inescapable, at hollow chess dot com.');
   }
 
   // =================== CHEESE ===================
@@ -546,18 +546,18 @@
     await sleep(300);
     $('cheese').classList.add('show');
     slam('capTop', 'YOUR CHEESE<br/>HAS <span class="gold">HOLES</span>.');
-    vo('Your cheese has holes!'); sfx('hit');
+    vo('Your cheese has holes.'); sfx('hit');
     await sleep(2300);
     $('cheese').classList.remove('show');
     hideCaps();
     slam('capTop', 'DOES YOUR<br/><span class="gold">CHESS</span>?');
-    vo('But does your CHESS?'); sfx('braam');
+    vo('Does your chess?'); sfx('braam');
     wrap.classList.add('show'); render();
     camTo(1.15, -2);
     await sleep(1900);
     game.rules = { cadence: 1, budget: Infinity, actions: { ac: false, rc: false, mc: true } };
     game.turn = 'white';
-    vo('RIP OUT THE SQUARES. Break the board. Trap the pieces.');
+    vo('Pull the squares out. Break the board. Trap whatever\'s left standing.');
     const moves = [[4, 3, 8, 4], [3, 4, -1, 3], [5, 4, 4, 8], [2, 2, 8, 2], [5, 2, -1, 6]];
     for (const [a, b, c, d] of moves) {
       await flySquare(a, b, c, d, 620);
@@ -568,7 +568,7 @@
     slam('capBottom', 'holes <span class="red">block</span> bishops.<br/>the board is a <span class="gold">weapon</span>.');
     await sleep(3000);
     camReset();
-    await endCard(5200, 'HOLLOW CHESS. Free. In your browser.');
+    await endCard(5200, 'Hollow Chess. Free, in your browser.');
   }
 
   // =================== MORPH ===================
@@ -585,11 +585,11 @@
     await startScene();
     wrap.classList.add('show'); render();
     slam('capTop', 'THIS IS A<br/>CHESS BOARD.');
-    vo('This... is a chess board.');
+    vo('This is a chess board.');
     await sleep(2300);
     hideCaps();
     slam('capMid', '<span class="red">WAS.</span>');
-    vo('WAS. A chess board.'); sfx('braam');
+    vo('Or it was.'); sfx('braam');
     await sleep(1500);
     hide('capMid');
     $('counter').classList.add('show');
@@ -606,8 +606,8 @@
       game.turn = rand() < .5 ? 'white' : 'black';
       applied++;
       $('counter').textContent = 'board move ' + applied;
-      if (applied === 10) vo('Ten board moves.');
-      if (applied === 22) { vo('Where does it END?'); camTo(1.2, -3); }
+      if (applied === 10) vo('Ten board moves later.');
+      if (applied === 22) { vo('Where does it end?'); camTo(1.2, -3); }
       delay = Math.max(80, delay * 0.86);
       await sleep(delay * .4);
     }
@@ -615,10 +615,10 @@
     $('counter').classList.remove('show');
     camReset();
     slam('capTop', 'STILL <span class="gold">100%</span><br/>LEGAL.');
-    vo('Still. One hundred percent. LEGAL.'); sfx('braam');
+    vo('Every move of that was legal.'); sfx('braam');
     cap('capBottom', 'every move validated by the engine.');
     await sleep(3200);
-    await endCard(5200, 'HOLLOW CHESS. hollow chess dot com.');
+    await endCard(5200, 'Hollow Chess. At hollow chess dot com.');
   }
 
   // =================== THE PAWN (mascot) ===================
