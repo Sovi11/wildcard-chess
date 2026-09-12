@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hollow Chess — shorts mixer</title>
+<style>
+  :root{--bg:#0f1115;--panel:#171a21;--line:#272c36;--ink:#e9e9e4;--muted:#8e949f;--accent:#e7c14a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,"Inter","Segoe UI",Helvetica,Arial,sans-serif}
+  .wrap{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:22px;padding:22px;max-width:1200px;margin:0 auto}
+  h1{font-size:19px;margin:0 0 2px}
+  .sub{color:var(--muted);font-size:12.5px;margin:0 0 16px}
+  video{width:100%;border-radius:12px;background:#000;display:block}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .transport{display:flex;gap:8px;align-items:center;margin:12px 0 0}
+  button{font:inherit;font-weight:600;color:var(--ink);background:#20242d;border:1px solid var(--line);
+         border-radius:9px;padding:8px 14px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);color:#1a1a1a;border-color:var(--accent)}
+  #scrub{flex:1;accent-color:var(--accent)}
+  .time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;min-width:78px;text-align:right}
+  .row{display:grid;grid-template-columns:76px 1fr 62px 30px 30px;gap:10px;align-items:center;
+       padding:9px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:none}
+  .name{font-weight:700;font-size:13px}
+  .name small{display:block;font-weight:400;color:var(--muted);font-size:10.5px}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .db{font-variant-numeric:tabular-nums;font-size:12.5px;text-align:right;color:var(--muted)}
+  .db.hot{color:#e0704a}
+  .tog{width:30px;height:26px;padding:0;font-size:11px;font-weight:700}
+  .tog.on{background:var(--accent);color:#1a1a1a;border-color:var(--accent)}
+  .tog.solo.on{background:#5aa9e6;border-color:#5aa9e6}
+  .meter{height:4px;background:#0b0d11;border-radius:3px;overflow:hidden;margin-top:5px}
+  .meter i{display:block;height:100%;width:0;background:var(--accent);transition:width .05s}
+  .foot{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+  code{background:#0b0d11;border:1px solid var(--line);border-radius:7px;padding:9px 11px;
+       display:block;margin-top:12px;font-size:11.5px;color:var(--muted);overflow-x:auto;white-space:pre}
+  .err{color:#e0704a;font-size:12.5px;margin-top:10px}
+  .hint{color:var(--muted);font-size:11.5px;margin-top:10px;line-height:1.55}
+  @media(max-width:820px){.wrap{grid-template-columns:1fr}}
+</style></head><body>
+<div class="wrap">
+  <div>
+    <h1>Shorts mixer</h1>
+    <p class="sub">Balance the layers live. Nothing re-renders until you say so.</p>
+    <video id="vid" playsinline></video>
+    <div class="transport">
+      <button id="play" class="primary">▶ Play</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0" />
+      <span class="time" id="time">0.0 / 0.0</span>
+    </div>
+    <p class="hint">Scene: <input id="scene" style="background:#0b0d11;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 7px;font:inherit;width:130px" />
+      <button id="load" style="padding:4px 10px">Load</button><br>
+      Export stems first: <code style="display:inline;padding:2px 6px">node harness/mix-audio.js SCENE --stems</code></p>
+    <div id="err" class="err"></div>
+  </div>
+
+  <div class="panel">
+    <div id="rows"></div>
+    <div class="foot">
+      <button id="save" class="primary">Download mix-levels.json</button>
+      <button id="copy">Copy as command</button>
+      <button id="reset">Reset</button>
+    </div>
+    <code id="cmd"></code>
+    <p class="hint">Drop <b>mix-levels.json</b> into <b>shorts/</b> and every future mix uses these levels
+      — <code style="display:inline;padding:2px 6px">node harness/mix-audio.js</code> picks it up automatically.
+      Env vars (HC_BED, HC_BRAAM…) still win over the file.</p>
+  </div>
+</div>
+
+<script>
+// Each stem is a full-length, time-aligned wav at unity gain, so balancing is
+// just a gain per buffer — no re-render to hear a change. The (silent) video is
+// the clock; audio sources are started at its currentTime and restarted on seek.
+const $ = (id) => document.getElementById(id);
+const LABEL = {
+  bed: ['bed', 'music'], vo: ['voice', 'narration'], pawn: ['pawn', 'mascot'],
+  braam: ['braam', 'the big hit'], hit: ['hit', 'impact'], whoosh: ['whoosh', 'movement'],
+  lift: ['lift', 'square rises'], bass: ['sub bass', 'inside the bed'],
+};
+const toDb = (v) => (v <= 0.0001 ? -60 : 20 * Math.log10(v));
+const toLin = (db) => (db <= -59.5 ? 0 : Math.pow(10, db / 20));
+
+let ctx, manifest, buffers = {}, gains = {}, sources = {}, playing = false, startedAt = 0, offset = 0;
+let levels = {}, base = {};
+const vid = $('vid');
+
+async function load(scene) {
+  $('err').textContent = '';
+  try {
+    const dir = 'out/stems/' + scene + '/';
+    manifest = await (await fetch(dir + 'manifest.json?t=' + Date.now())).json();
+    vid.src = dir + manifest.video;
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    buffers = {}; gains = {};
+    levels = Object.assign({}, manifest.levels);
+    base = Object.assign({}, manifest.levels);
+    for (const name of manifest.stems) {
+      const buf = await ctx.decodeAudioData(await (await fetch(dir + name + '.wav')).arrayBuffer());
+      buffers[name] = buf;
+      const g = ctx.createGain();
+      g.gain.value = levels[name] ?? 1;
+      // meter tap: post-gain, so the bar shows what you'd actually hear
+      const an = ctx.createAnalyser();
+      an.fftSize = 1024;
+      g.connect(an);
+      g.connect(ctx.destination);
+      g._an = an; g._buf = new Float32Array(an.fftSize);
+      gains[name] = g;
+    }
+    render();
+    $('scene').value = scene;
+    history.replaceState(null, '', '?scene=' + encodeURIComponent(scene));
+  } catch (e) {
+    $('err').textContent = 'Could not load "' + scene + '" — run:  node harness/mix-audio.js ' + scene + ' --stems';
+  }
+}
+
+function render() {
+  const solo = manifest.stems.some((n) => gains[n] && gains[n]._solo);
+  $('rows').innerHTML = manifest.stems.map((n) => {
+    const [t, s] = LABEL[n] || [n, ''];
+    const db = toDb(levels[n] ?? 1);
+    return `<div class="row" data-n="${n}">
+      <div class="name">${t}<small>${s}</small></div>
+      <div><input type="range" min="-60" max="12" step="0.5" value="${db.toFixed(1)}" data-n="${n}">
+        <div class="meter"><i data-m="${n}"></i></div></div>
+      <div class="db ${db > 3 ? 'hot' : ''}" data-d="${n}">${db > -59.5 ? db.toFixed(1) + ' dB' : '−∞'}</div>
+      <button class="tog mute" data-mute="${n}">M</button>
+      <button class="tog solo" data-solo="${n}">S</button>
+    </div>`;
+  }).join('');
+  $('rows').oninput = (e) => {
+    const n = e.target.dataset.n; if (!n) return;
+    levels[n] = toLin(+e.target.value);
+    applyGains();
+    const d = document.querySelector(`[data-d="${n}"]`);
+    d.textContent = +e.target.value > -59.5 ? (+e.target.value).toFixed(1) + ' dB' : '−∞';
+    d.className = 'db' + (+e.target.value > 3 ? ' hot' : '');
+    cmd();
+  };
+  $('rows').onclick = (e) => {
+    const m = e.target.dataset.mute, s = e.target.dataset.solo;
+    if (m) { gains[m]._mute = !gains[m]._mute; e.target.classList.toggle('on', gains[m]._mute); }
+    if (s) { gains[s]._solo = !gains[s]._solo; e.target.classList.toggle('on', gains[s]._solo); }
+    if (m || s) applyGains();
+  };
+  applyGains(); cmd();
+}
+
+function applyGains() {
+  const soloing = manifest.stems.some((n) => gains[n]._solo);
+  for (const n of manifest.stems) {
+    const on = gains[n]._mute ? 0 : (soloing && !gains[n]._solo ? 0 : 1);
+    gains[n].gain.setTargetAtTime((levels[n] ?? 1) * on, ctx.currentTime, 0.01);
+  }
+}
+
+function startAudio(at) {
+  stopAudio();
+  for (const n of manifest.stems) {
+    const src = ctx.createBufferSource();
+    src.buffer = buffers[n];
+    src.connect(gains[n]);
+    src.start(0, Math.min(at, buffers[n].duration));
+    sources[n] = src;
+  }
+}
+function stopAudio() { for (const n in sources) { try { sources[n].stop(); } catch (e) {} } sources = {}; }
+
+$('play').onclick = async () => {
+  if (!manifest) return;
+  await ctx.resume();
+  if (playing) { vid.pause(); stopAudio(); playing = false; $('play').textContent = '▶ Play'; }
+  else { startAudio(vid.currentTime); vid.play(); playing = true; $('play').textContent = '❚❚ Pause'; }
+};
+vid.addEventListener('timeupdate', () => {
+  $('time').textContent = vid.currentTime.toFixed(1) + ' / ' + (vid.duration || 0).toFixed(1);
+  if (!seeking) $('scrub').value = (vid.currentTime / (vid.duration || 1)) * 1000;
+});
+vid.addEventListener('ended', () => { stopAudio(); playing = false; $('play').textContent = '▶ Play'; });
+let seeking = false;
+$('scrub').oninput = () => { seeking = true; vid.currentTime = (+$('scrub').value / 1000) * (vid.duration || 0); };
+$('scrub').onchange = () => { seeking = false; if (playing) startAudio(vid.currentTime); };
+
+function cmd() {
+  const parts = manifest.stems.concat(['bass'])
+    .filter((n) => levels[n] !== undefined && Math.abs((levels[n] ?? 0) - (base[n] ?? 0)) > 1e-4)
+    .map((n) => 'HC_' + n.toUpperCase() + '=' + (levels[n]).toFixed(3));
+  $('cmd').textContent = (parts.length ? parts.join(' ') + ' ' : '') + 'node harness/mix-audio.js ' + manifest.scene;
+}
+$('copy').onclick = () => navigator.clipboard.writeText($('cmd').textContent);
+$('save').onclick = () => {
+  const out = {}; for (const n of Object.keys(levels)) out[n] = +(levels[n]).toFixed(4);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }));
+  a.download = 'mix-levels.json'; a.click();
+};
+$('reset').onclick = () => { levels = Object.assign({}, base); render(); };
+$('load').onclick = () => load($('scene').value.trim());
+
+// Meters: peak per stem, so "which one is blasting" is visible rather than a
+// guess. Decays slowly so a 40ms transient is still readable.
+const peaks = {};
+(function meter() {
+  requestAnimationFrame(meter);
+  if (!manifest || !playing) return;
+  for (const n of manifest.stems) {
+    const g = gains[n]; if (!g || !g._an) continue;
+    g._an.getFloatTimeDomainData(g._buf);
+    let p = 0;
+    for (let i = 0; i < g._buf.length; i++) { const a = Math.abs(g._buf[i]); if (a > p) p = a; }
+    peaks[n] = Math.max(p, (peaks[n] || 0) * 0.92);
+    const el = document.querySelector(`[data-m="${n}"]`);
+    if (el) {
+      const db = toDb(peaks[n]);                       // -60..0 -> 0..100%
+      el.style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + '%';
+      el.style.background = db > -1 ? '#e0704a' : (db > -6 ? '#e7c14a' : '#6aa84f');
+    }
+  }
+})();
+
+load(new URLSearchParams(location.search).get('scene') || 'escape-sq');
+</script>
+</body></html>

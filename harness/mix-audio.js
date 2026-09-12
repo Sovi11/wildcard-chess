@@ -115,8 +115,12 @@ function synthSfx(kind, file) {
         const ph = (f * drift * t) % 1;
         s += (2 * ph - 1) * (f < 200 ? 0.45 : 0.15);
       }
-      s *= Math.min(1, t / 0.03) * Math.exp(-t * 1.9);
-      s = clip(s * 2.2) * 0.9;
+      // A slower attack so it swells under a word instead of hitting it, and a
+      // faster decay so it is out of the way by the end of the line.
+      s *= Math.min(1, t / 0.10) * Math.exp(-t * 2.6);
+      s = clip(s * 1.5) * 0.9;           // was 2.2: less hard saturation
+      lp += (s - lp) * 0.06;             // ~420Hz: keeps the weight, drops the buzz
+      s = lp;
     } else if (kind === 'hit') {
       const w = Math.random() * 2 - 1;
       lp += (w - lp) * 0.12;                       // lowpass
@@ -226,9 +230,20 @@ function finalDir(scene) {
 // whole, a quieter bed is what makes the voice sit forward — not a quieter
 // voice. Bed and SFX come down instead, so the voice dominates the normalised
 // result. HC_BED overrides the bed level without editing anything.
-const VOL = { bed: +(process.env.HC_BED || 0.10), vo: 1.9, pawn: 1.7,
-              braam: 0.55, hit: 0.50, whoosh: 0.40, lift: 0.35 };
-const BASS = +(process.env.HC_BASS || 0.09);   // 0 removes the sub bass entirely
+// Levels. shorts/mix-levels.json (written by the mixer UI -- open
+// shorts/mixer.html) overrides any of these, and env vars override that.
+const LEVELS_FILE = path.join(__dirname, '..', 'shorts', 'mix-levels.json');
+const SAVED = fs.existsSync(LEVELS_FILE) ? JSON.parse(fs.readFileSync(LEVELS_FILE, 'utf8')) : {};
+const lvl = (k, d) => +(process.env['HC_' + k.toUpperCase()] ?? SAVED[k] ?? d);
+
+// The braam is the one that blasts: it lands 1ms after the word it punctuates
+// and sustains 1.6s straight through it. Four saw waves hard-saturated at 2.2x
+// is a lot of energy right on top of a syllable, so it sits well down now.
+const VOL = {
+  bed: lvl('bed', 0.17), vo: lvl('vo', 1.9), pawn: lvl('pawn', 1.7),
+  braam: lvl('braam', 0.30), hit: lvl('hit', 0.45), whoosh: lvl('whoosh', 0.38), lift: lvl('lift', 0.35),
+};
+const BASS = lvl('bass', 0.09);          // 0 removes the sub bass entirely
 // The overall loudness is held where it always was (~-12 LUFS integrated) --
 // the shorts never sounded "too loud" because of the voice, they sounded loud
 // because of a harsh bed running wall to wall. So the bed comes down ~17dB and
@@ -242,10 +257,25 @@ const TARGET = { I: +(process.env.HC_LUFS || -12), TP: +(process.env.HC_TP || -1
 // target — it must be disabled wherever the filter follows loudnorm.
 const CEILING = +(process.env.HC_CEIL || 0.94);
 
-function mixScene(scene) {
+// The square cuts were only kept as finished mixes, so the silent source can be
+// missing. The video stream is untouched by mixing, so recover it by stripping
+// the audio off the old mix rather than re-recording the scene.
+function ensureSilentSource(scene) {
   const video = path.join(OUT, scene + '-video.mp4');
+  if (fs.existsSync(video)) return video;
+  for (const cand of [path.join(finalDir(scene), scene + '.mp4'), path.join(OUT, scene + '.mp4')]) {
+    if (fs.existsSync(cand)) {
+      ffmpeg(['-i', cand, '-map', '0:v', '-c:v', 'copy', '-an', video]);
+      return video;
+    }
+  }
+  return null;
+}
+
+function mixScene(scene) {
+  const video = ensureSilentSource(scene);
   const beatsFile = path.join(OUT, scene + '.beats.json');
-  if (!fs.existsSync(video) || !fs.existsSync(beatsFile)) { console.warn('skip', scene, '(not recorded)'); return; }
+  if (!video || !fs.existsSync(beatsFile)) { console.warn('skip', scene, '(not recorded)'); return; }
   const beats = JSON.parse(fs.readFileSync(beatsFile, 'utf8'));
   const dur = parseFloat(ffprobe(['-show_entries', 'format=duration', '-of', 'csv=p=0', video]));
   const sync = findSync(video);
@@ -322,11 +352,71 @@ function mixScene(scene) {
   console.log('mixed:', path.relative(OUT, final).replace(/\\/g, '/'));
 }
 
+// ---- stems, for the mixer UI ------------------------------------------------
+// Writes every layer separately at unity gain, already time-aligned, so
+// shorts/mixer.html can balance them live in the browser instead of you
+// re-rendering to hear a change.
+//
+//   node harness/mix-audio.js escape-sq --stems
+function exportStems(scene) {
+  const video = ensureSilentSource(scene);
+  const beatsFile = path.join(OUT, scene + '.beats.json');
+  if (!video || !fs.existsSync(beatsFile)) { console.warn('skip', scene, '(not recorded)'); return; }
+  const beats = JSON.parse(fs.readFileSync(beatsFile, 'utf8'));
+  const dur = parseFloat(ffprobe(['-show_entries', 'format=duration', '-of', 'csv=p=0', video]));
+  const sync = findSync(video);
+  const dir = path.join(OUT, 'stems', scene);
+  fs.mkdirSync(dir, { recursive: true });
+
+  const bed = path.join(dir, 'bed.wav');
+  synthBed(bed, dur);
+  for (const k of ['braam', 'hit', 'whoosh', 'lift']) {
+    const f = path.join(OUT, 'sfx-' + k + '.wav');
+    if (!fs.existsSync(f)) synthSfx(k, f);
+  }
+
+  const groups = {};
+  for (const b of beats) {
+    if (b.sync) continue;
+    const at = Math.max(0, Math.round((sync + b.t) * 1000));
+    const name = b.vo ? (b.voice === 'pawn' ? 'pawn' : 'vo') : b.sfx;
+    const file = b.vo ? voFile(b.vo, b.voice) : path.join(OUT, 'sfx-' + b.sfx + '.wav');
+    (groups[name] = groups[name] || []).push({ file, at });
+  }
+
+  const stems = ['bed'];
+  for (const name of Object.keys(groups)) {
+    const parts = groups[name];
+    const inputs = [], chains = [], labels = [];
+    parts.forEach((p, i) => {
+      inputs.push('-i', p.file);
+      chains.push(`[${i}]adelay=${p.at}|${p.at}[x${i}]`);
+      labels.push(`[x${i}]`);
+    });
+    const mix = labels.length > 1
+      ? `${labels.join('')}amix=inputs=${labels.length}:normalize=0[m]`
+      : `${labels[0]}anull[m]`;
+    chains.push(mix);
+    chains.push(`[m]apad=whole_dur=${dur},atrim=0:${dur}[o]`);
+    ffmpeg(inputs.concat(['-filter_complex', chains.join(';'), '-map', '[o]',
+      '-c:a', 'pcm_s16le', '-ar', '44100', path.join(dir, name + '.wav')]));
+    stems.push(name);
+  }
+
+  // the UI reads this: which stems exist, the video to sync to, current levels
+  fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({
+    scene, duration: dur, video: '../../' + scene + '-video.mp4',
+    stems, levels: Object.assign({}, VOL, { bass: BASS }),
+  }, null, 1));
+  console.log('stems:', path.relative(OUT, dir), '->', stems.join(', '));
+}
+
 const only = process.argv[2];
 const BASE_SCENES = ['rook', 'island', 'escape', 'cheese', 'morph'];
 // '--square' mixes the 1:1 feed cuts instead of the 9:16 ones.
-const list = only && only !== '--square'
+const list = only && !only.startsWith('--')
   ? [only]
   : BASE_SCENES.map((x) => x + (process.argv.includes('--square') ? '-sq' : ''));
-for (const scene of list) mixScene(scene);
-console.log('audio done.');
+const STEMS = process.argv.includes('--stems');
+for (const scene of list) (STEMS ? exportStems : mixScene)(scene);
+console.log(STEMS ? 'stems done — open shorts/mixer.html' : 'audio done.');
