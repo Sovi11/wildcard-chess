@@ -51,7 +51,7 @@ function synthBed(file, seconds) {
   const beat = 60 / 128;
   // A minor movement: A1 A1 C2 G1, one note per bar (4 beats)
   const bassNotes = [55, 55, 65.41, 49];
-  let noise = 0;
+  let hatLp = 0, outLp = 0;
   for (let i = 0; i < n; i++) {
     const t = i / SR;
     const inBeat = t % beat;
@@ -62,23 +62,31 @@ function synthBed(file, seconds) {
       const f = 45 + 105 * Math.exp(-inBeat * 26);
       s += Math.sin(2 * Math.PI * f * inBeat) * Math.exp(-inBeat * 9) * 0.9;
     }
-    // sub bass: gated eighth notes, one chord tone per bar
+    // Sub bass. This used to be Math.sign(sin()) — a SQUARE wave, which at 55Hz
+    // is a buzzsaw of odd harmonics running all the way up the spectrum with
+    // nothing filtering them. It was also gated on eighth notes with a hard
+    // on/off and no ramp, so every one of the ~4.3 notes per second began and
+    // ended on a discontinuity: a click. Square + clicks + eighths is exactly
+    // the harsh "duh-duh-duh-duh" buzz. Now it is a pure sine, one note per
+    // beat, with a soft attack and a long release — a pulse, not a buzz.
     const bass = bassNotes[Math.floor(beatIdx / 4) % 4];
-    const eighth = (t % (beat / 2)) / (beat / 2);
-    if (eighth < 0.72) {
-      s += Math.sign(Math.sin(2 * Math.PI * bass * t)) * 0.16 * (1 - eighth * 0.4);
-    }
-    // hats on the offbeat: differenced noise ~ highpass
+    const q = inBeat / beat;
+    const env = Math.min(1, q / 0.06) * Math.min(1, (1 - q) / 0.35);
+    s += Math.sin(2 * Math.PI * bass * t) * 0.22 * env;
+    // Hats. Differenced noise is a differentiator — i.e. a harsh highpass that
+    // leaves nothing but bright hiss, and it sat at 0.5. Now a soft lowpassed
+    // tick at a third of the level: it keeps the offbeat without the sizzle.
     const off = (t + beat / 2) % beat;
-    if (off < 0.05) {
+    if (off < 0.04) {
       const w = Math.random() * 2 - 1;
-      s += (w - noise) * Math.exp(-off * 90) * 0.5;
-      noise = w;
+      hatLp += (w - hatLp) * 0.55;
+      s += hatLp * Math.exp(-off * 120) * 0.16;
     }
     // fade in / out
-    const env = Math.min(1, t / 0.8) * Math.min(1, (seconds - t) / 1.2);
-    const v = clip(s) * env;
-    L[i] = v; R[i] = v;
+    const env2 = Math.min(1, t / 0.8) * Math.min(1, (seconds - t) / 1.2);
+    const v = clip(s) * env2;
+    outLp += (v - outLp) * 0.72;            // gentle overall lowpass, ~5kHz
+    L[i] = outLp; R[i] = outLp;
   }
   writeWav(file, L, R);
 }
