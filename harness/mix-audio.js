@@ -57,10 +57,11 @@ function synthBed(file, seconds) {
     const inBeat = t % beat;
     const beatIdx = Math.floor(t / beat);
     let s = 0;
-    // kick: pitch 150->45 sweep, sharp decay
-    if (inBeat < 0.32) {
+    // kick: pitch 150->45 sweep. The decay used to run 0.32s of a 0.47s beat,
+    // so the low end never cleared between hits and smeared into the bass.
+    if (inBeat < 0.18) {
       const f = 45 + 105 * Math.exp(-inBeat * 26);
-      s += Math.sin(2 * Math.PI * f * inBeat) * Math.exp(-inBeat * 9) * 0.9;
+      s += Math.sin(2 * Math.PI * f * inBeat) * Math.exp(-inBeat * 22) * 0.55;
     }
     // Sub bass. This used to be Math.sign(sin()) — a SQUARE wave, which at 55Hz
     // is a buzzsaw of odd harmonics running all the way up the spectrum with
@@ -69,10 +70,17 @@ function synthBed(file, seconds) {
     // ended on a discontinuity: a click. Square + clicks + eighths is exactly
     // the harsh "duh-duh-duh-duh" buzz. Now it is a pure sine, one note per
     // beat, with a soft attack and a long release — a pulse, not a buzz.
+    // The bass has to be SILENT between notes. The previous attempt gave it a
+    // long release that ran to the end of the beat and then restarted, so it
+    // never stopped — which turned the old rhythmic buzz into a continuous
+    // 55Hz drone, the "dhhhhh". It now sounds for under half the beat and
+    // then genuinely stops, at less than half the level.
     const bass = bassNotes[Math.floor(beatIdx / 4) % 4];
     const q = inBeat / beat;
-    const env = Math.min(1, q / 0.06) * Math.min(1, (1 - q) / 0.35);
-    s += Math.sin(2 * Math.PI * bass * t) * 0.22 * env;
+    if (q < 0.40) {
+      const env = Math.min(1, q / 0.05) * Math.min(1, (0.40 - q) / 0.14);
+      s += Math.sin(2 * Math.PI * bass * t) * BASS * env;
+    }
     // Hats. Differenced noise is a differentiator — i.e. a harsh highpass that
     // leaves nothing but bright hiss, and it sat at 0.5. Now a soft lowpassed
     // tick at a third of the level: it keeps the offbeat without the sizzle.
@@ -80,7 +88,7 @@ function synthBed(file, seconds) {
     if (off < 0.04) {
       const w = Math.random() * 2 - 1;
       hatLp += (w - hatLp) * 0.55;
-      s += hatLp * Math.exp(-off * 120) * 0.16;
+      s += hatLp * Math.exp(-off * 120) * 0.10;
     }
     // fade in / out
     const env2 = Math.min(1, t / 0.8) * Math.min(1, (seconds - t) / 1.2);
@@ -213,14 +221,26 @@ function finalDir(scene) {
 // voice is clear without being loud, and the finished mix is normalised
 // two-pass to -14 LUFS / -2 dBTP, which is what X, YouTube and Instagram all
 // normalise to anyway.
-const VOL = { bed: 0.24, vo: 1.0, pawn: 0.95, braam: 0.55, hit: 0.50, whoosh: 0.40, lift: 0.35 };
-const TARGET = { I: -14, TP: -2.0, LRA: 11 };
+// Dialogue keeps the levels it had. Lowering the voice was a mistake: the
+// complaint was never the voice, and because the final mix is normalised as a
+// whole, a quieter bed is what makes the voice sit forward — not a quieter
+// voice. Bed and SFX come down instead, so the voice dominates the normalised
+// result. HC_BED overrides the bed level without editing anything.
+const VOL = { bed: +(process.env.HC_BED || 0.10), vo: 1.9, pawn: 1.7,
+              braam: 0.55, hit: 0.50, whoosh: 0.40, lift: 0.35 };
+const BASS = +(process.env.HC_BASS || 0.09);   // 0 removes the sub bass entirely
+// The overall loudness is held where it always was (~-12 LUFS integrated) --
+// the shorts never sounded "too loud" because of the voice, they sounded loud
+// because of a harsh bed running wall to wall. So the bed comes down ~17dB and
+// the voice stays put. Every knob here is an env var: HC_LUFS, HC_TP, HC_BED,
+// HC_BASS (0 kills the sub bass entirely), HC_CEIL.
+const TARGET = { I: +(process.env.HC_LUFS || -12), TP: +(process.env.HC_TP || -1.0), LRA: 11 };
 // The limiter works on sample peaks; the AAC encoder afterwards creates
 // inter-sample peaks above them, so leave real headroom. NOTE: alimiter's
 // `level` option defaults to TRUE ("auto level"), which normalises the output
 // back up to 0 dB and silently undoes both this ceiling and the loudness
 // target — it must be disabled wherever the filter follows loudnorm.
-const CEILING = 0.841;
+const CEILING = +(process.env.HC_CEIL || 0.94);
 
 function mixScene(scene) {
   const video = path.join(OUT, scene + '-video.mp4');
