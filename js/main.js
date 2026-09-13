@@ -34,8 +34,15 @@ const mod2 = (n) => ((n % 2) + 2) % 2;
 // ---- view: fit the board tightly; open a ring of expandable space only
 // while a square is lifted (or a board-action hint points off-board), so the
 // squares get the whole canvas the rest of the time.
+// The position being LOOKED AT. Normally the live game; while browsing the
+// move history it is a replay of the game up to that ply. Only drawing reads
+// this — the rules, the clock and the opponent all still run off `game`.
+let browsePly = null;               // null = live; otherwise plies replayed
+let browseGame = null;
+const shown = () => browseGame || game;
+
 function view() {
-  const b = game.bounds();
+  const b = shown().bounds();
   let pad = 0;
   if (mode === 'movecell' && selected) pad = 1;
   if (hintMove && hintMove.kind && hintMove.kind !== 'm') pad = 1;
@@ -44,6 +51,7 @@ function view() {
 }
 
 function render() {
+  const B = shown();
   const v = view();
   const M = 0.09;                       // thin frame inside the rounded container
   boardEl.setAttribute('viewBox', `${-M} ${-M} ${v.cols + 2 * M} ${v.rows + 2 * M}`);
@@ -59,10 +67,10 @@ function render() {
   // the frame from reading as a heavy border made holes vanish into the light
   // squares (1.01:1 contrast). Drawing the hole separates the two: the frame
   // stays quiet, the hole gets to look like a pit on every theme.
-  const hb = game.bounds();
+  const hb = B.bounds();
   for (let c = hb.minC; c <= hb.maxC; c++) {
     for (let r = hb.minR; r <= hb.maxR; r++) {
-      if (game.hasCell(c, r)) continue;
+      if (B.hasCell(c, r)) continue;
       svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" class="hole"/>`;
       // The rim is what actually reads when fill and square are close in tone,
       // so it is not decoration — inset so it never bleeds onto a neighbour.
@@ -70,26 +78,26 @@ function render() {
     }
   }
 
-  for (const k of game.cells) {
+  for (const k of B.cells) {
     const { c, r } = parseKeyJS(k);
     const light = mod2(c + r) === 1;
     svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" class="sq ${light ? 'lt' : 'dk'}"/>`;
   }
 
-  if (game.lastAction) for (const s of [game.lastAction.from, game.lastAction.to]) {
-    if (s && game.hasCell(s.c, s.r)) svg += `<rect x="${X(s.c)}" y="${Y(s.r)}" width="1" height="1" class="last"/>`;
+  if (B.lastAction) for (const s of [B.lastAction.from, B.lastAction.to]) {
+    if (s && B.hasCell(s.c, s.r)) svg += `<rect x="${X(s.c)}" y="${Y(s.r)}" width="1" height="1" class="last"/>`;
   }
 
   if (mode === 'addcell' || (mode === 'movecell' && selected)) {
     const targets = mode === 'addcell'
-      ? game.addTargets()
-      : [...game._attachTargetsExcluding(keyJS(selected.c, selected.r))].map(parseKeyJS);
+      ? B.addTargets()
+      : [...B._attachTargetsExcluding(keyJS(selected.c, selected.r))].map(parseKeyJS);
     for (const t of targets)
       svg += `<rect x="${X(t.c) + 0.07}" y="${Y(t.r) + 0.07}" width="0.86" height="0.86" rx="0.08" class="guide"/>`;
   }
   if (mode === 'removecell' || (mode === 'movecell' && !selected)) {
-    for (const k of game.cells) {
-      if (game.board.has(k)) continue;
+    for (const k of B.cells) {
+      if (B.board.has(k)) continue;
       const { c, r } = parseKeyJS(k);
       svg += `<rect x="${X(c) + 0.05}" y="${Y(r) + 0.05}" width="0.9" height="0.9" rx="0.09" class="target ${mode === 'removecell' ? 'remove' : 'movecell'}"/>`;
     }
@@ -99,14 +107,19 @@ function render() {
     svg += `<rect x="${X(selected.c)}" y="${Y(selected.r)}" width="1" height="1" class="${mode === 'movecell' ? 'selcell' : 'sel'}"/>`;
   }
 
-  const dangerColors = game.status === 'checkmate' ? [game.winner === 'white' ? 'black' : 'white']
-    : (game.status === 'check' ? [game.turn] : []);
+  if (wrongCell) {
+    svg += `<rect x="${X(wrongCell.c)}" y="${Y(wrongCell.r)}" width="1" height="1" class="wrongcell"/>`;
+    svg += `<rect x="${X(wrongCell.c) + 0.04}" y="${Y(wrongCell.r) + 0.04}" width="0.92" height="0.92" rx="0.1" class="wrongcell-rim"/>`;
+  }
+
+  const dangerColors = B.status === 'checkmate' ? [B.winner === 'white' ? 'black' : 'white']
+    : (B.status === 'check' ? [B.turn] : []);
   for (const col of dangerColors) {
-    const kp = game.findKing(col);
+    const kp = B.findKing(col);
     if (kp) svg += `<rect x="${X(kp.c) + 0.04}" y="${Y(kp.r) + 0.04}" width="0.92" height="0.92" rx="0.1" class="danger"/>`;
   }
 
-  for (const [k, p] of game.board) {
+  for (const [k, p] of B.board) {
     const { c, r } = parseKeyJS(k);
     svg += `<use href="#${symFor(p.type)}" x="${X(c)}" y="${Y(r)}" width="1" height="1" class="pc ${p.color === 'white' ? 'w' : 'b'}"/>`;
   }
@@ -136,16 +149,16 @@ function render() {
 
   // labels live inside the edge squares so no canvas is spent on a gutter;
   // colour is the opposite square shade for contrast on any theme
-  const b = game.bounds();
+  const b = B.bounds();
   const parity = (c, r) => (((c + r) % 2) + 2) % 2 === 1 ? 'on-lt' : 'on-dk';
   const fileRow = flipped ? b.maxR : b.minR;
   const rankCol = flipped ? b.maxC : b.minC;
   for (let c = b.minC; c <= b.maxC; c++) {
-    if (!game.hasCell(c, fileRow)) continue;
+    if (!B.hasCell(c, fileRow)) continue;
     svg += `<text x="${X(c) + 0.92}" y="${Y(fileRow) + 0.94}" class="lbl insq ${parity(c, fileRow)}" text-anchor="end">${fileLabel(c)}</text>`;
   }
   for (let r = b.minR; r <= b.maxR; r++) {
-    if (!game.hasCell(rankCol, r)) continue;
+    if (!B.hasCell(rankCol, r)) continue;
     svg += `<text x="${X(rankCol) + 0.07}" y="${Y(r) + 0.27}" class="lbl insq ${parity(rankCol, r)}">${rankLabel(r)}</text>`;
   }
 
@@ -176,6 +189,7 @@ function updateAmbient() {
 
 // ---- interaction ----------------------------------------------------------
 boardEl.addEventListener('click', (e) => {
+  if (browsePly !== null) { browseTo(null); return; }   // looking at history: first click returns
   if (gameOver()) return;
   if (aiThinking) return;
   if (puzzleMode && pzReplyPending) return;   // the scripted reply is on its way
@@ -232,6 +246,56 @@ boardEl.addEventListener('click', (e) => {
   }
 });
 
+// ---- browsing the game so far ----------------------------------------------
+// Arrow keys step through the moves already played, without disturbing the
+// game: it is a view, so the position you can actually move in is always the
+// live one and any attempt to move snaps back to it.
+function browseTo(n) {
+  const total = gameActs.length;
+  if (n === null || n >= total) {
+    browsePly = null; browseGame = null;
+  } else {
+    browsePly = Math.max(0, Math.min(total, n));
+    const g = new Game();
+    for (let i = 0; i < browsePly; i++) if (!WCAI.applyToGame(g, gameActs[i])) break;
+    browseGame = g;
+  }
+  selected = null; legal = []; hintMove = null;
+  paintBrowse();
+  render();
+  renderLog();
+}
+
+function paintBrowse() {
+  const el = document.getElementById('browseBar');
+  if (!el) return;
+  document.body.classList.toggle('browsing', browsePly !== null);
+  if (browsePly === null) { el.classList.remove('show'); return; }
+  const h = game.history[browsePly - 1];
+  el.innerHTML = '<span class="bb-pos">' +
+    (browsePly === 0 ? 'Start position' : plyLabel(browsePly - 1) + ' ' + esc(h ? h.text : '')) +
+    '</span><span class="bb-of">' + browsePly + ' / ' + gameActs.length + '</span>' +
+    '<button class="bb-live">Back to live ✕</button>';
+  el.classList.add('show');
+}
+
+document.addEventListener('keydown', function (e) {
+  // only when a board is actually in front of you
+  if (document.querySelector('.lobby.show, .tut.show')) return;
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  if (!gameActs.length) return;
+  const at = browsePly === null ? gameActs.length : browsePly;
+  if (e.key === 'ArrowLeft') { browseTo(at - 1); e.preventDefault(); }
+  else if (e.key === 'ArrowRight') { browseTo(at + 1); e.preventDefault(); }
+  else if (e.key === 'Home') { browseTo(0); e.preventDefault(); }
+  else if (e.key === 'End' || e.key === 'Escape') { browseTo(null); e.preventDefault(); }
+});
+
+document.addEventListener('click', function (e) {
+  if (e.target.classList && e.target.classList.contains('bb-live')) browseTo(null);
+});
+
 function done(gm) {
   // In puzzle mode the action has landed on the board but is not yet accepted:
   // the puzzle grades it, and a miss rewinds the position. Nothing else in the
@@ -267,6 +331,7 @@ function actionFX() {
 }
 
 function afterMove() {
+  browsePly = null; browseGame = null; paintBrowse();   // a move snaps back to live
   selected = null; legal = []; hintMove = null;
   setMode('normal');
   actionFX();
@@ -1922,6 +1987,56 @@ function analyzeCurrentGame() {
 }
 
 // Rebuild the position at ply n and draw it.
+// The whole game as one line: eval per ply, White's advantage above the
+// midline in the same mustard as the eval bar. Blunders and mistakes are
+// marked where they happened, which is usually the only thing you want from a
+// game summary — "where did it go wrong". Click anywhere to seek there.
+function drawEvalGraph() {
+  const el = document.getElementById('revGraph');
+  if (!el) return;
+  const n = revEvals.length;
+  const W = 300, H = 72, mid = H / 2;
+  if (n < 2) { el.innerHTML = '<line class="rg-mid" x1="0" y1="' + mid + '" x2="' + W + '" y2="' + mid + '"/>'; return; }
+
+  // evalToPct gives White's share 0..100 with mate pinned to the ends, which
+  // is exactly the clamping a graph wants — no runaway spikes off a +M3.
+  const x = (i) => (i / (n - 1)) * W;
+  const y = (i) => H - (WCAN.evalToPct(revEvals[i]) / 100) * H;
+
+  let top = `M0,${mid}`, line = '';
+  for (let i = 0; i < n; i++) {
+    line += (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(i).toFixed(1);
+    top += 'L' + x(i).toFixed(1) + ',' + y(i).toFixed(1);
+  }
+  // two areas: above the midline is White's, below is Black's
+  const areaW = top + `L${W},${mid}Z`;
+  let svg = `<clipPath id="rgTop"><rect x="0" y="0" width="${W}" height="${mid}"/></clipPath>`
+          + `<clipPath id="rgBot"><rect x="0" y="${mid}" width="${W}" height="${mid}"/></clipPath>`
+          + `<path d="${areaW}" class="rg-fill-w" clip-path="url(#rgTop)"/>`
+          + `<path d="${areaW}" class="rg-fill-b" clip-path="url(#rgBot)"/>`
+          + `<line class="rg-mid" x1="0" y1="${mid}" x2="${W}" y2="${mid}"/>`
+          + `<path d="${line}" class="rg-line"/>`;
+
+  // where it went wrong
+  for (let i = 0; i < revQuality.length; i++) {
+    const q = revQuality[i];
+    if (!q || !/blunder|mistake/.test(q.key)) continue;
+    const at = i + 1;
+    if (at >= n) continue;
+    svg += `<circle cx="${x(at).toFixed(1)}" cy="${y(at).toFixed(1)}" r="2.6" class="rg-${q.key}"/>`;
+  }
+  svg += `<line class="rg-cursor" x1="${x(revPos).toFixed(1)}" y1="0" x2="${x(revPos).toFixed(1)}" y2="${H}"/>`;
+  el.innerHTML = svg;
+}
+
+const revGraphEl = document.getElementById('revGraph');
+if (revGraphEl) revGraphEl.addEventListener('click', function (e) {
+  const n = revEvals.length;
+  if (n < 2) return;
+  const r = revGraphEl.getBoundingClientRect();
+  revSeek(Math.round(((e.clientX - r.left) / r.width) * (n - 1)));
+});
+
 function revSeek(n) {
   revPos = Math.max(0, Math.min(revActs.length, n));
   const g = new Game();
@@ -1948,6 +2063,8 @@ function revSeek(n) {
     info.innerHTML = '<b>' + plyLabel(revPos - 1) + '</b> ' + esc(h ? h.text : '') +
       (q ? ' <span class="q q-' + q.key + '">' + q.mark + ' ' + q.label + '</span>' : '');
   }
+
+  drawEvalGraph();
 
   const logEl = document.getElementById('revLog');
   logEl.innerHTML = revMoves.map(function (h, i) {
@@ -2096,6 +2213,17 @@ document.querySelectorAll('.wild-btn').forEach(b => b.addEventListener('click', 
   render();
 }));
 
+// The banner's second action. Same opponent, same settings, straight back in —
+// the point is not having to go via the lobby to play another one.
+function playAgain() {
+  ui.banner.classList.remove('show');
+  browsePly = null; browseGame = null; paintBrowse();
+  resetGameState();
+  runAnalysis(); sync(); render();
+  refreshBotUI(); refreshShareUI(); maybeAI();
+}
+bind('playAgainBtn', playAgain);
+
 document.getElementById('newGame').addEventListener('click', () => {
   // the full reset: bot timers, end reason, replay log and the scoring flag
   // included — a partial one left the next rated game unscored and let a bot
@@ -2118,6 +2246,9 @@ function renderLog() {
     const q = quality[i];
     d.innerHTML = `<span class="ln">${plyLabel(i)}</span> <span class="mv">${h.text}</span>` +
       (q ? ` <span class="q q-${q.key}" title="${q.label} (−${(q.loss / 100).toFixed(2)})">${q.mark}</span>` : '');
+    if (browsePly !== null && i === browsePly - 1) d.classList.add('cur');
+    d.title = 'Jump to this move';
+    d.addEventListener('click', function () { browseTo(i + 1); });
     ui.log.appendChild(d);
   });
   ui.log.scrollTop = ui.log.scrollHeight;
@@ -2155,6 +2286,15 @@ if (copyNotationBtn) copyNotationBtn.addEventListener('click', async function ()
 // of being sent to an opponent.
 let puzzleMode = false;
 let pzHintLevel = 0;
+// What you attempted this session, in order, so a puzzle can be revisited
+// without hunting for it — and so a run reads as a run.
+let pzSession = [];
+function pzLog(id, solved, clean) {
+  if (!id) return;
+  const row = pzSession.find(function (r) { return r.id === id; });
+  if (row) { row.solved = row.solved || solved; row.clean = row.clean && clean; }
+  else pzSession.push({ id: id, solved: solved, clean: clean });
+}
 
 const pzEl = {
   panel: document.getElementById('puzzlePanel'),
@@ -2167,7 +2307,10 @@ const pzEl = {
   next: document.getElementById('pzNext'),
   exit: document.getElementById('pzExit'),
   progress: document.getElementById('pzProgress'),
+  phase: document.getElementById('pzPhase'),
+  session: document.getElementById('pzSession'),
 };
+let wrongCell = null, wrongTimer = null, pzAdvance = null;
 
 function pzSay(text, cls) {
   if (!pzEl.msg) return;
@@ -2211,12 +2354,53 @@ function paintPuzzle() {
     (pr.best ? ' · best <b>' + pr.best + '</b>' : '');
   document.body.classList.toggle('puzzle-solved', !!st.finished);
   pzEl.hint.disabled = !!st.finished;
+  paintPhase();
+  paintSession();
 }
 
 let pzReplyTimer = null, pzReplyPending = false;
+// Board turns land every 3rd ply, so "can I move a square right now" depends
+// on a counter you cannot see. In a mode built entirely around the wildcard
+// that belongs on screen: a dot per ply of the cadence, the current one
+// filled, the eligible one ringed in gold.
+function paintPhase() {
+  if (!pzEl.phase) return;
+  const cad = game.rules.cadence || 3;
+  const total = game.moveCount.white + game.moveCount.black;
+  const pos = ((total % cad) + cad) % cad;
+  const wildAt = ((cad - 2) % cad + cad) % cad;
+  let dots = '';
+  for (let i = 0; i < cad; i++) {
+    dots += '<i class="' + (i === wildAt ? 'wild' : '') + (i === pos ? ' now' : '') + '"></i>';
+  }
+  const away = ((wildAt - pos) % cad + cad) % cad;
+  pzEl.phase.innerHTML = '<span class="pz-dots">' + dots + '</span>' +
+    (game.canWildcard() ? '<b>\u2726 board turn \u2014 you may move a square</b>'
+                        : 'piece move only \u00b7 board turn in ' + away + (away === 1 ? ' ply' : ' plies'));
+}
+
+function paintSession() {
+  if (!pzEl.session) return;
+  if (!pzSession.length) { pzEl.session.innerHTML = ''; return; }
+  const cur = WCPUZZLE.current();
+  pzEl.session.innerHTML = '<div class="pz-sess-label">This session</div>' +
+    pzSession.map(function (r) {
+      const p = WCPUZZLE.list().find(function (x) { return x.id === r.id; }) || {};
+      return '<button class="pz-sess-row ' + (r.solved && r.clean ? 'ok' : 'miss') +
+        (cur && cur.id === r.id ? ' cur' : '') + '" data-pz="' + esc(r.id) + '">' +
+        '<span class="pz-sess-mark">' + (r.solved ? '\u2713' : '\u2715') + '</span>' +
+        '<span class="pz-sess-name">Mate in ' + (p.mateIn || '?') +
+        (r.solved && !r.clean ? ' \u00b7 missed first' : '') + '</span>' +
+        '<span class="pz-sess-d">' + esc(r.id.replace('hc-', '#')) + '</span></button>';
+    }).join('');
+}
+
 function loadPuzzle(starter) {
   if (pzReplyTimer) { clearTimeout(pzReplyTimer); pzReplyTimer = null; }
   pzReplyPending = false;
+  clearTimeout(pzAdvance); clearTimeout(wrongTimer);
+  document.body.classList.remove('pz-wrong');
+  wrongCell = null;
   pzHintLevel = 0;
   hintMove = null;
   const p = starter();
@@ -2277,6 +2461,17 @@ function puzzleSubmit(gm) {
     WCSOUND.play('wrong');
     pzSay(res.message, 'bad');
     afterRated(res.rated);
+    pzLog(before && before.id, false, false);
+    // Say it ON the board. A line of text in the side panel is easy to miss
+    // when your eyes are on the pieces, which is exactly where they are: the
+    // square you played flashes red and the board shakes.
+    wrongCell = gm ? (gm.cell || gm.to) : null;
+    const bd = document.body;
+    bd.classList.remove('pz-wrong'); void bd.offsetWidth; bd.classList.add('pz-wrong');
+    clearTimeout(wrongTimer);
+    wrongTimer = setTimeout(function () {
+      bd.classList.remove('pz-wrong'); wrongCell = null; render();
+    }, 750);
     sync(); render(); paintPuzzle();
     return;
   }
@@ -2296,6 +2491,12 @@ function puzzleSubmit(gm) {
   }
   if (res.state === 'solved') {
     WCSOUND.play('win');
+    pzLog(before && before.id, true, !(before && before.failed));
+    // straight on to the next one — a run should not stall waiting on a button
+    clearTimeout(pzAdvance);
+    pzAdvance = setTimeout(function () {
+      if (puzzleMode) loadPuzzle(function () { return WCPUZZLE.nextUnsolved(); });
+    }, 1600);
     pzSay(before && before.failed ? 'Solved.' : 'Solved, first try.', 'done');
     WCSTATS.track('puzzle_solved', { id: before && before.id, mateIn: before && before.mateIn, clean: !(before && before.failed) });
     afterRated(res.rated);
@@ -2303,6 +2504,13 @@ function puzzleSubmit(gm) {
   }
   sync(); render(); paintPuzzle();
 }
+
+// Re-open an attempted puzzle to look at it again.
+if (pzEl.session) pzEl.session.addEventListener('click', function (e) {
+  const btn = e.target.closest('[data-pz]');
+  if (!btn) return;
+  loadPuzzle(function () { return WCPUZZLE.startById(btn.dataset.pz); });
+});
 
 if (pzEl.next) pzEl.next.addEventListener('click', function () {
   loadPuzzle(function () { return WCPUZZLE.next(); });
