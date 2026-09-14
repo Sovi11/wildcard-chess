@@ -13,7 +13,11 @@ import edge_tts
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 VO = os.path.join(ROOT, 'shorts', 'vo')
 LINES = os.path.join(ROOT, 'shorts', 'pawn-lines.json')
-VOICE, RATE, PITCH = 'en-US-AndrewNeural', '+10%', '+18Hz'
+# Andrew *Multilingual* is the conversational build of the same voice, and the
+# pitch shift is nearly gone: +18Hz smears a neural voice's formants, which is
+# the loudest "this is a robot" tell there is. A little lift is kept so the Pawn
+# still reads as a small character rather than a narrator.
+VOICE, RATE, PITCH = 'en-US-AndrewMultilingualNeural', '+3%', '+4Hz'
 
 
 def line_key(text: str) -> str:

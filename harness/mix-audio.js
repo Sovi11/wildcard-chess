@@ -101,10 +101,10 @@ function synthBed(file, seconds) {
 
 // ---- SFX -------------------------------------------------------------------
 function synthSfx(kind, file) {
-  let dur = { braam: 1.6, hit: 0.4, whoosh: 0.55, lift: 0.3 }[kind];
+  let dur = { braam: 1.6, boom: 1.1, hit: 0.4, whoosh: 0.55, lift: 0.3 }[kind];
   const n = Math.floor(dur * SR);
   const L = new Float32Array(n), R = new Float32Array(n);
-  let lp = 0;
+  let lp = 0, lp2 = 0;
   for (let i = 0; i < n; i++) {
     const t = i / SR;
     let s = 0;
@@ -121,6 +121,18 @@ function synthSfx(kind, file) {
       s = clip(s * 1.5) * 0.9;           // was 2.2: less hard saturation
       lp += (s - lp) * 0.06;             // ~420Hz: keeps the weight, drops the buzz
       s = lp;
+    } else if (kind === 'boom') {
+      // The mate landing. The braam was doing this job and it is the wrong tool:
+      // a stack of saw waves saturated at 2.2x, sustaining 1.6s over the moment
+      // you actually want to read. This is weight without buzz — a low sine
+      // thump and a short, heavily filtered body, no saws, no saturation.
+      const f = 38 + 62 * Math.exp(-t * 9);
+      s = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 3.0) * 0.72;
+      const w = Math.random() * 2 - 1;
+      lp += (w - lp) * 0.03;                        // ~200Hz: body, not sizzle
+      lp2 += (lp - lp2) * 0.03;                     // twice, so nothing survives up top
+      s += lp2 * Math.exp(-t * 5.5) * 0.7;
+      s *= Math.min(1, t / 0.012);
     } else if (kind === 'hit') {
       const w = Math.random() * 2 - 1;
       lp += (w - lp) * 0.12;                       // lowpass
@@ -241,7 +253,8 @@ const lvl = (k, d) => +(process.env['HC_' + k.toUpperCase()] ?? SAVED[k] ?? d);
 // is a lot of energy right on top of a syllable, so it sits well down now.
 const VOL = {
   bed: lvl('bed', 0.17), vo: lvl('vo', 1.9), pawn: lvl('pawn', 1.7),
-  braam: lvl('braam', 0.30), hit: lvl('hit', 0.45), whoosh: lvl('whoosh', 0.38), lift: lvl('lift', 0.35),
+  braam: lvl('braam', 0.30), boom: lvl('boom', 0.40),
+  hit: lvl('hit', 0.45), whoosh: lvl('whoosh', 0.38), lift: lvl('lift', 0.35),
 };
 const BASS = lvl('bass', 0.09);          // 0 removes the sub bass entirely
 // The overall loudness is held where it always was (~-12 LUFS integrated) --
@@ -283,7 +296,7 @@ function mixScene(scene) {
 
   const bed = path.join(OUT, scene + '-bed.wav');
   synthBed(bed, dur);
-  for (const k of ['braam', 'hit', 'whoosh', 'lift']) {
+  for (const k of ['braam', 'boom', 'hit', 'whoosh', 'lift']) {
     const f = path.join(OUT, 'sfx-' + k + '.wav');
     if (!fs.existsSync(f)) synthSfx(k, f);
   }
@@ -370,7 +383,7 @@ function exportStems(scene) {
 
   const bed = path.join(dir, 'bed.wav');
   synthBed(bed, dur);
-  for (const k of ['braam', 'hit', 'whoosh', 'lift']) {
+  for (const k of ['braam', 'boom', 'hit', 'whoosh', 'lift']) {
     const f = path.join(OUT, 'sfx-' + k + '.wav');
     if (!fs.existsSync(f)) synthSfx(k, f);
   }

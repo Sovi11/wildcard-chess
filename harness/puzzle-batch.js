@@ -5,8 +5,7 @@
 //   node harness/puzzle-batch.js table  [--batch N]   # append the post table + solutions for that batch to shorts/POSTS.md
 //   node harness/puzzle-batch.js status               # candidate pool vs what is already curated
 //
-// Batches are 10 puzzles: 20% mate-in-1, 60% mate-in-2, 20% mate-in-3 (the user's
-// call), ordered so the feed alternates lengths. Ids are global (batch N holds ids
+// Batches are 10 puzzles, all mate-in-1 (see MIX). Ids are global (batch N holds ids
 // (N-1)*10 .. N*10-1) and finals land in shorts/out/puzzles/batch-N/.
 // Ranking favours phone legibility: compact board, fewer holes, moderate piece count.
 
@@ -19,8 +18,11 @@ const SHORTS = path.join(ROOT, 'shorts');
 const FINAL = path.join(SHORTS, 'puzzles.json');
 const POSTS = path.join(SHORTS, 'POSTS.md');
 const BATCH = 10;                                  // mirrored in mix-audio.js finalDir()
-const MIX = { 1: 2, 2: 6, 3: 2 };
-const ORDER = [2, 1, 2, 3, 2, 2, 1, 2, 3, 2];
+// Mate-in-1 only. Every curated mate-in-1 is solved by a BOARD move played
+// immediately, which is the one thing a ten-second video can actually teach —
+// a mate-in-3 needs the viewer to hold a line in their head, and they will not.
+const MIX = { 1: 10 };
+const ORDER = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
 function argOf(name, def) { const i = process.argv.indexOf('--' + name); return i >= 0 ? process.argv[i + 1] : def; }
 

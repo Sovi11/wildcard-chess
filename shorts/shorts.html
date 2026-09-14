@@ -711,25 +711,36 @@
       holdView.minR = Math.min(holdView.minR, m.to[1]); holdView.maxR = Math.max(holdView.maxR, m.to[1]);
     }
     const N = pz.n, side = pz.spec.turn;
+    const Side = side === 'white' ? 'White' : 'Black';
+    // Most viewers arrive knowing chess and not knowing this, so the rule comes
+    // first and the board-turn timing is stated outright — "can they move a
+    // square on THIS move" is the whole puzzle, and it is invisible otherwise.
     const L = {
-      intro: `Mate in ${['', 'one', 'two', 'three'][N]}. ${side === 'white' ? 'White' : 'Black'} to play.`,
-      phase: pz.phase === 'now' ? 'You can move a square. Right now.' : 'You get to move a square on your second move.',
-      pause: 'Pause it. Find the mate.',
+      rule: 'Hollow Chess is normal chess, with one extra rule. Every third turn, you can move an empty square of the board instead of moving a piece.',
+      intro: `${Side} to play, and mate in ${['', 'one', 'two', 'three'][N]}.`,
+      phase: pz.phase === 'now'
+        ? `This is one of those turns. So ${Side} can pick up an empty square right now, on this move.`
+        : `${Side} cannot move a square yet. That turn comes on the second move.`,
+      pause: 'Pause it, and find the mate.',
       sol: 'Here it is.',
       floor: 'Move the floor.',
-      mate: 'Mate.',
-      outro: 'Play it yourself. Hollow chess dot com.',
+      mate: 'And that is mate. The king has nowhere left to stand.',
+      outro: 'Play it at hollow chess dot com.',
     };
     await preloadPawnLines(Object.values(L));
     await startScene();
     wrap.classList.add('show'); render();
     pawnIn();
+    hudSlam('hud1', 'EVERY <span class="gold">3rd</span> TURN:<br/>MOVE A <span class="gold">SQUARE</span>');
+    sfx('lift');
+    await say(L.rule, 'neutral', [{ word: /square/i, fn: () => pawnIdle.gesture(-60, 0, 900) }]);
+    await sleep(200);
     hudSlam('hud1', `MATE IN <span class="gold">${N}</span>`);
-    sfx('braam');
+    sfx('boom');
     await say(L.intro, 'neutral');
-    hudSet('hud2', `${side === 'white' ? 'White' : 'Black'} to play`);
+    hudSet('hud2', `${Side} to play`);
     await sleep(250);
-    hudSlam('hud3', pz.phase === 'now' ? '\u2726 board move: NOW' : '\u2726 board move: on move 2');
+    hudSlam('hud3', pz.phase === 'now' ? '\u2726 board move: THIS MOVE' : '\u2726 board move: on move 2');
     await say(L.phase, 'hype', [{ word: /square/i, fn: () => pawnIdle.gesture(-60, 0, 900) }]);
     pawn.set('think');
     say(L.pause, 'think');
@@ -765,7 +776,7 @@
     const kk = game.findKing(game.turn);
     overlays = [{ kind: 'flash', c: kk.c, r: kk.r, color: '#e05656' }]; render();
     camTo(1.8 * Z, -4, [kk.c, kk.r], true);
-    slam('capMid', '<span class="red">MATE.</span>'); sfx('braam');
+    slam('capMid', '<span class="red">MATE.</span>'); sfx('boom');
     await say(L.mate, 'smug');
     await sleep(1400);
     hide('capMid'); camReset();
