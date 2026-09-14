@@ -265,3 +265,33 @@ Solutions (pinned comment after 24h):
 - #58: 1. Qg2xg1+ Ke-1-e0 2. e1>d1#
 - #59: 1. Qa7-d10 Rb7-b8 2. b7>(-1)1 g6-g5 3. Nf7-e9#
 - #60: 1. g3>a0 Bb0-c1 2. Nf8-g6#
+
+---
+
+## Batch 7 (shorts/out/puzzles/batch-7/)
+
+| # | file | puzzle | board move | title |
+|---|---|---|---|---|
+| 60 | puzzle-60.mp4 / puzzle-60-sq.mp4 | Mate in 1, Black to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #61 |
+| 61 | puzzle-61.mp4 / puzzle-61-sq.mp4 | Mate in 1, White to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #62 |
+| 62 | puzzle-62.mp4 / puzzle-62-sq.mp4 | Mate in 1, Black to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #63 |
+| 63 | puzzle-63.mp4 / puzzle-63-sq.mp4 | Mate in 1, White to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #64 |
+| 64 | puzzle-64.mp4 / puzzle-64-sq.mp4 | Mate in 1, White to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #65 |
+| 65 | puzzle-65.mp4 / puzzle-65-sq.mp4 | Mate in 1, White to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #66 |
+| 66 | puzzle-66.mp4 / puzzle-66-sq.mp4 | Mate in 1, White to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #67 |
+| 67 | puzzle-67.mp4 / puzzle-67-sq.mp4 | Mate in 1, White to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #68 |
+| 68 | puzzle-68.mp4 / puzzle-68-sq.mp4 | Mate in 1, Black to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #69 |
+| 69 | puzzle-69.mp4 / puzzle-69-sq.mp4 | Mate in 1, White to play | now | Mate in 1 — but you can move the FLOOR. Hollow Chess puzzle #70 |
+
+Solutions (pinned comment after 24h):
+
+- #61: 1. f4>d3#
+- #62: 1. f9>f8#
+- #63: 1. d5>b5#
+- #64: 1. e5>c6#
+- #65: 1. h8>e8#
+- #66: 1. d9>e7#
+- #67: 1. h9>e8#
+- #68: 1. g3>h3#
+- #69: 1. a7>b1#
+- #70: 1. g9>h7#
