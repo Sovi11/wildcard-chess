@@ -252,7 +252,7 @@ const lvl = (k, d) => +(process.env['HC_' + k.toUpperCase()] ?? SAVED[k] ?? d);
 // and sustains 1.6s straight through it. Four saw waves hard-saturated at 2.2x
 // is a lot of energy right on top of a syllable, so it sits well down now.
 const VOL = {
-  bed: lvl('bed', 0.17), vo: lvl('vo', 1.9), pawn: lvl('pawn', 1.7),
+  bed: lvl('bed', 0.24), vo: lvl('vo', 1.9), pawn: lvl('pawn', 1.7),
   braam: lvl('braam', 0.30), boom: lvl('boom', 0.40),
   hit: lvl('hit', 0.45), whoosh: lvl('whoosh', 0.38), lift: lvl('lift', 0.35),
 };
@@ -336,7 +336,7 @@ function mixScene(scene) {
     // input ends, which otherwise truncates the mix at the last spoken word
     // and cuts the end card — and the URL on it — off the video.
     chains.push(`[vokeyraw]apad=whole_dur=${dur}[vokey]`);
-    chains.push(`[bed][vokey]sidechaincompress=threshold=0.02:ratio=6:attack=15:release=350:makeup=1[bedduck]`);
+    chains.push(`[bed][vokey]sidechaincompress=threshold=0.02:ratio=3:attack=15:release=350:makeup=1[bedduck]`);
     bedOut = '[bedduck]';
   }
   const stems = [bedOut, vo ? '[vomix]' : null, sfx].filter(Boolean);

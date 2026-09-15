@@ -326,7 +326,7 @@
     hit();
     $('endcard').classList.add('show');
     if (voLine) vo(voLine, voice);
-    sfx('braam');
+    sfx('boom');
     await sleep(holdMs || 5200);
     window.SCENE_BEATS = beats;
     window.SCENE_DONE = true;
@@ -360,7 +360,7 @@
     camTo(2.7, -7, [0, 0]);
     await sleep(500);
     slam('capMid', 'THE <span class="gold">ROOK</span>.');
-    vo('The rook.'); sfx('braam');
+    vo('The rook.'); sfx('hit');
     await sleep(2100);
     hide('capMid');
     cap('capTop', 'eight squares.<br/>one straight line.');
@@ -376,7 +376,7 @@
     hit();
     await sleep(350);
     slam('capTop', '<span class="red">UNTIL NOW.</span>');
-    vo('Until now.'); sfx('braam');
+    vo('Until now.'); sfx('boom');
     // tear a6 out of the file, right in its face
     game.turn = 'black';
     await flySquare(0, 5, 4, 8, 950);
@@ -417,7 +417,7 @@
     camTo(2.0, 5, [6, 7]);
     render();
     slam('capTop', 'HIS KING<br/>WAS <span class="red">DOOMED</span>.');
-    vo('His king was dead.'); sfx('braam');
+    vo('His king was dead.'); sfx('hit');
     await sleep(2400);
     hideCaps();
     slam('capTop', 'SO HE DID THE<br/><span class="gold">UNTHINKABLE</span>.');
@@ -439,7 +439,7 @@
     }
     hideCaps();
     slam('capMid', 'AN <span class="gold">ISLAND</span>.');
-    vo('An island.'); sfx('braam');
+    vo('An island.'); sfx('boom');
     await sleep(1700);
     hide('capMid');
     // the queen charges and hits the void
@@ -476,7 +476,7 @@
     await flySquare(6, 6, -1, 7, 380);
     hideCaps();
     slam('capMid', 'FOREVER.');
-    vo('Again. And again.'); sfx('braam');
+    vo('Again. And again.'); sfx('boom');
     await sleep(2300);
     hide('capMid');
     camReset();
@@ -512,7 +512,7 @@
     camTo(2.2, 5, [7, 7]);
     await sleep(450);
     slam('capMid', '<span class="red">CHECKMATE.</span>');
-    vo('That\'s checkmate.'); sfx('braam');
+    vo('That\'s checkmate.'); sfx('hit');
     await sleep(2000);
     hide('capMid');
     cap('capTop', '…or <span class="gold">is it</span>?');
@@ -531,7 +531,7 @@
     await sleep(700);
     hideCaps();
     slam('capMid', '<span class="green">NOT. MATE.</span>');
-    vo('He moves the floor, and the check line goes with it. Not mate.'); sfx('braam');
+    vo('He moves the floor, and the check line goes with it. Not mate.'); sfx('boom');
     await sleep(2900);
     hide('capMid');
     camReset();
@@ -551,7 +551,7 @@
     $('cheese').classList.remove('show');
     hideCaps();
     slam('capTop', 'DOES YOUR<br/><span class="gold">CHESS</span>?');
-    vo('Does your chess?'); sfx('braam');
+    vo('Does your chess?'); sfx('hit');
     wrap.classList.add('show'); render();
     camTo(1.15, -2);
     await sleep(1900);
@@ -589,7 +589,7 @@
     await sleep(2300);
     hideCaps();
     slam('capMid', '<span class="red">WAS.</span>');
-    vo('Or it was.'); sfx('braam');
+    vo('Or it was.'); sfx('hit');
     await sleep(1500);
     hide('capMid');
     $('counter').classList.add('show');
@@ -615,7 +615,7 @@
     $('counter').classList.remove('show');
     camReset();
     slam('capTop', 'STILL <span class="gold">100%</span><br/>LEGAL.');
-    vo('Every move of that was legal.'); sfx('braam');
+    vo('Every move of that was legal.'); sfx('boom');
     cap('capBottom', 'every move validated by the engine.');
     await sleep(3200);
     await endCard(5200, 'Hollow Chess. At hollow chess dot com.');
@@ -796,7 +796,7 @@
     await startScene();
     pawnIn(true);
     await sleep(350);
-    slam('capTop', 'DAY <span class="gold">1</span>'); sfx('braam');
+    slam('capTop', 'DAY <span class="gold">1</span>'); sfx('hit');
     await say(L.day, 'neutral', [
       { word: /hikaru/i, fn: () => { pawn.set('hype'); pawnIdle.gesture(-70, 0, 1100); } },
       { word: /game/i, fn: () => pawn.set('smug') },
@@ -850,7 +850,7 @@
     overlays = [{ kind: 'beam', pts: [[3, 3], [4, 4]] }, { kind: 'flash', c: 7, r: 7, color: '#57c974' }];
     render(); camTo(1.8, -4, [5, 5], true);
     pawn.set('smug');
-    slam('capMid', '<span class="green">NOT MATE.</span>'); sfx('braam');
+    slam('capMid', '<span class="green">NOT MATE.</span>'); sfx('boom');
     await sleep(1800);
     hideCaps(); camReset();
     await endCard(5200, L.free, 'pawn');
