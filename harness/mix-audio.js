@@ -254,7 +254,7 @@ const lvl = (k, d) => +(process.env['HC_' + k.toUpperCase()] ?? SAVED[k] ?? d);
 const VOL = {
   bed: lvl('bed', 0.24), vo: lvl('vo', 1.9), pawn: lvl('pawn', 1.7),
   braam: lvl('braam', 0.30), boom: lvl('boom', 0.40),
-  hit: lvl('hit', 0.45), whoosh: lvl('whoosh', 0.38), lift: lvl('lift', 0.35),
+  hit: lvl('hit', 0.22), whoosh: lvl('whoosh', 0.38), lift: lvl('lift', 0.35),
 };
 const BASS = lvl('bass', 0.09);          // 0 removes the sub bass entirely
 // The overall loudness is held where it always was (~-12 LUFS integrated) --
