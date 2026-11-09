@@ -1764,6 +1764,7 @@ function leavePuzzleMode() {
 }
 
 function resetGameState() {
+  if (window.WCPOSTGAME) WCPOSTGAME.hide();
   leavePuzzleMode();
   aiGen++;                   // invalidate any bot move still sitting on a timer
   aiThinking = false;
@@ -2604,6 +2605,14 @@ function sync() {
         rated: !!ratedGame,
         signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()),
       });
+      if (window.WCPOSTGAME) WCPOSTGAME.show({
+        result: game.winner ? (game.winner === me ? 'win' : 'loss') : 'draw',
+        reason: game.endReason || game.status,
+        plies: game.history.length,
+        boardMoves: gameActs.filter(function (a) { return a && a.kind !== 'm'; }).length,
+        vsBot: !!activeBot, rated: !!ratedGame,
+        version: '64',
+      });
       if (!game.winner) WCSOUND.play('draw');
       else if (botEnabled() || onlineActive) WCSOUND.play(game.winner === localColor() ? 'win' : 'lose');
       else WCSOUND.play('win');            // hotseat: somebody at this screen won
@@ -2630,6 +2639,7 @@ function sync() {
     if (ab) ab.style.display = gameActs.length ? '' : 'none';
     ui.banner.classList.add('show');
   }
+  if ((!over || puzzleMode) && window.WCPOSTGAME) WCPOSTGAME.hide();
   updateAmbient();
 }
 

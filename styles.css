@@ -568,7 +568,7 @@ body.brd-neon #board { box-shadow: 0 20px 55px rgba(0,0,0,.6), 0 0 34px rgba(77,
   header { flex-wrap: wrap; gap: 8px; }
   header h1 { font-size: 19px; margin: 2px 0 6px; }
   header .sub { display: block; margin: 2px 0 0; font-size: 11px; }
-  .head-right { margin-bottom: 4px; }
+  .head-right { margin-bottom: 4px; max-width: 100%; flex-wrap: wrap; }
 
   main { grid-template-columns: 1fr; gap: 12px; }
 
@@ -920,6 +920,22 @@ select.ob-field { cursor: pointer; }
 .banner .analyze-btn:hover { filter: brightness(1.08); }
 
 /* feedback form */
+.postgame-feedback { order: 0; padding: 16px; margin-bottom: 16px; border: 1px solid var(--accent); border-radius: 12px; background: var(--panel2); }
+.postgame-feedback[hidden], .postgame-feedback [hidden] { display: none; }
+.postgame-feedback h2 { margin: 0 0 6px; font-size: 19px; color: var(--ink); }
+.postgame-feedback p { margin: 6px 0 12px; font-size: 14px; line-height: 1.45; }
+.postgame-reactions { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 14px; }
+.postgame-feedback button { font: inherit; cursor: pointer; min-height: 44px; touch-action: manipulation; border-radius: 8px; }
+.postgame-reactions button { flex: 1; padding: 8px; font-size: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.postgame-reactions button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: #14161b; font-weight: 700; }
+.postgame-feedback label { display: block; font-size: 13px; line-height: 1.5; }
+.postgame-feedback label span { color: var(--muted); }
+.postgame-feedback textarea { box-sizing: border-box; width: 100%; margin: 8px 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; font-size: 16px; resize: vertical; }
+.postgame-send { width: 100%; padding: 10px; border: 0; background: var(--accent); color: #14161b; font-weight: 700 !important; }
+.postgame-feedback button:disabled { cursor: default; opacity: .55; }
+.postgame-feedback .postgame-status { font-size: 12px; color: var(--muted); margin-bottom: 0; }
+.postgame-dismiss { padding: 6px 0; color: var(--muted); background: none; border: 0; text-decoration: underline; }
+.postgame-feedback :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .fb-text {
   width: 100%; min-height: 150px; margin: 4px 0 12px; resize: vertical;
   font-family: inherit; font-size: 14px; line-height: 1.5; padding: 10px 12px;

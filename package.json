@@ -5,6 +5,7 @@
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
+    "test:feedback": "node --test tests/postgame-feedback.test.cjs",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win --x64"
   },

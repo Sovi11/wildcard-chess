@@ -280,16 +280,28 @@
   // attached automatically so a bug report is actionable without interrogating
   // the reporter.
   async function sendFeedback(entry) {
-    if (!client) return { ok: false, error: 'cloud off' };
+    if (!configured()) return { ok: false, error: 'cloud off' };
     const row = {
       kind: String(entry.kind || 'other').slice(0, 24),
       body: String(entry.body || '').slice(0, 1200),
       contact: String(entry.contact || '').slice(0, 120) || null,
       context: entry.context || {},
     };
-    const { error } = await client.from('feedback').insert(row);
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
+    // Feedback is deliberately anonymous, including when an account is signed in.
+    // Its insert-only RLS policy is TO anon; never attach the player's session.
+    const controller = new AbortController();
+    const timeout = setTimeout(function () { controller.abort(); }, 10000);
+    try {
+      const headers = { apikey: cfg.supabaseKey, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+      // Legacy anon keys are JWTs. New publishable keys use only the apikey header.
+      if (!cfg.supabaseKey.startsWith('sb_publishable_')) headers.Authorization = 'Bearer ' + cfg.supabaseKey;
+      const response = await fetch(cfg.supabaseUrl.replace(/\/$/, '') + '/rest/v1/feedback', {
+        method: 'POST', headers: headers, body: JSON.stringify(row), signal: controller.signal,
+      });
+      return response.ok ? { ok: true } : { ok: false, error: 'Feedback could not be saved.' };
+    } catch (_) {
+      return { ok: false, error: 'Please check your connection and try again.' };
+    } finally { clearTimeout(timeout); }
   }
 
   window.WCCLOUD = {
