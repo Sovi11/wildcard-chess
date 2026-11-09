@@ -49,6 +49,7 @@ class Game {
       this._put(c, 6, PIECE.P, BLACK); this._put(c, 7, back[c], BLACK);
     }
     this._evaluate();
+    this.repCount.set(this._posKey(), 1);
   }
 
   _put(c, r, type, color, hasMoved = false) { this.board.set(key(c, r), { type, color, hasMoved }); }
@@ -64,7 +65,8 @@ class Game {
     return total % cad === ((cad - 2) % cad + cad) % cad && this.wildUsed[color] < this.rules.budget;
   }
   wildcardEligible() { return this._eligibleFor(this.turn); }
-  canWildcard() { return this.wildcardEligible() && !this.winner; }
+  isOver() { return !!this.winner || ['checkmate', 'stalemate', 'repetition', 'fifty'].includes(this.status); }
+  canWildcard() { return this.wildcardEligible() && !this.isOver(); }
   budgetLeft(color) { return Math.max(0, this.rules.budget - this.wildUsed[color]); }
 
   bounds() {
@@ -193,7 +195,7 @@ class Game {
 
   legalMoves(c, r) {
     const p = this.get(c, r);
-    if (!p || p.color !== this.turn || this.winner) return [];
+    if (!p || p.color !== this.turn || this.isOver()) return [];
     return this._pseudo(c, r).filter(m => this._trial(p.color, () => {
       this.board.delete(key(c, r));
       // en passant: the captured pawn sits beside the destination, not on it
@@ -254,7 +256,7 @@ class Game {
 
   makeMove(fc, fr, tc, tr) {
     const p = this.get(fc, fr);
-    if (!p || p.color !== this.turn || this.winner) return false;
+    if (!p || p.color !== this.turn || this.isOver()) return false;
     const mv = this.legalMoves(fc, fr).find(m => m.c === tc && m.r === tr);
     if (!mv) return false;
     const target = this.get(tc, tr);
@@ -379,11 +381,33 @@ class Game {
   _posKey() {
     const cad = this.rules.cadence;
     const cells = [...this.cells].sort().join(';');
-    const pieces = [...this.board.entries()].map(([k, p]) => k + p.type[0] + p.color[0]).sort().join(';');
+    // Full piece names distinguish king from knight. A pawn's first-move
+    // right matters; a knight's hasMoved flag does not change its legal moves.
+    const pieces = [...this.board.entries()].map(([k, p]) => k + ':' + p.type + ':' + p.color
+      + (p.type === PIECE.P ? ':' + !!p.hasMoved : '')).sort().join(';');
+    const castle = [];
+    for (const [kk, king] of this.board) {
+      if (king.type !== PIECE.K || king.hasMoved) continue;
+      const k = parseKey(kk);
+      for (const [rk, rook] of this.board) {
+        const r = parseKey(rk);
+        if (rook.type === PIECE.R && rook.color === king.color && !rook.hasMoved
+          && r.r === k.r && Math.abs(r.c - k.c) >= 3) castle.push(king.color + ':' + kk + ':' + rk);
+      }
+    }
     const phase = this.turn + '|' + ((this.moveCount.white + this.moveCount.black) % cad)
-      + '|' + (this.budgetLeft(WHITE) > 0 ? 1 : 0) + (this.budgetLeft(BLACK) > 0 ? 1 : 0);
-    const ep = this.epTarget ? `${this.epTarget.c},${this.epTarget.r}` : '-';
-    return phase + '|' + ep + '#' + cells + '#' + pieces;
+      + '|' + this.budgetLeft(WHITE) + ':' + this.budgetLeft(BLACK);
+    // An unusable en-passant target does not change the legal position.
+    let ep = '-';
+    if (this.epTarget) {
+      const t = this.epTarget, r = t.r + (this.turn === WHITE ? -1 : 1);
+      for (const c of [t.c - 1, t.c + 1]) {
+        const pawn = this.get(c, r);
+        if (pawn && pawn.type === PIECE.P && pawn.color === this.turn
+          && this.legalMoves(c, r).some(m => m.c === t.c && m.r === t.r)) ep = `${t.c},${t.r}`;
+      }
+    }
+    return phase + '|' + ep + '#' + castle.sort().join(';') + '#' + cells + '#' + pieces;
   }
   _record(text) { this.history.push({ color: this.turn, text }); }
 

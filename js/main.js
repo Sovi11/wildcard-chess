@@ -112,7 +112,7 @@ function render() {
     svg += `<rect x="${X(wrongCell.c) + 0.04}" y="${Y(wrongCell.r) + 0.04}" width="0.92" height="0.92" rx="0.1" class="wrongcell-rim"/>`;
   }
 
-  const dangerColors = B.status === 'checkmate' ? [B.winner === 'white' ? 'black' : 'white']
+  const dangerColors = B.status === 'checkmate' && !B.endReason ? [B.winner === 'white' ? 'black' : 'white']
     : (B.status === 'check' ? [B.turn] : []);
   for (const col of dangerColors) {
     const kp = B.findKing(col);
@@ -352,7 +352,7 @@ const linkMode = () => oppModeEl && oppModeEl.value === 'link';
 let linkPending = false;          // true after your move: waiting on your friend
 const botEnabled = () => oppModeEl && oppModeEl.value === 'bot';
 const botSide = () => (botSideEl ? botSideEl.value : 'black');
-function gameOver() { return !!game.winner || ['stalemate', 'repetition', 'fifty'].includes(game.status); }
+function gameOver() { return game.isOver(); }
 
 function refreshBotUI() {
   const on = botEnabled();
@@ -443,6 +443,14 @@ function runAnalysis() {
   if (!anaOn()) { anaKey = null; paintEval(null); return; }
   const key = game.history.length;
   if (gameOver()) {
+    // Resignation/agreement ends play, not the position. Do not invent a mate
+    // score or grade the previous move as a forced win because someone quit.
+    if (game.endReason) {
+      const res = WCAN.analyse(game, anaDepth(), 900);
+      anaKey = key; anaStm = res.stmScore; anaBest = null;
+      paintEval(Object.assign({}, res, { best: null }));
+      return;
+    }
     // the move that ended the game was, by definition, not a mistake
     if (key - 1 >= 0 && anaKey === key - 1) quality[key - 1] = WCAN.classify(0);
     const finalWhite = game.status === 'checkmate' ? (game.winner === 'white' ? WCAN.MATE : -WCAN.MATE) : 0;
@@ -548,7 +556,7 @@ function analysisVisible() { return devOn() || gameOver(); }
 function applyTutorVisibility() {
   const show = analysisVisible();
   if (evalBarEl) evalBarEl.style.display = show ? '' : 'none';
-  if (hintBtn) { hintBtn.disabled = !show; hintBtn.style.opacity = show ? '' : '.4'; }
+  if (hintBtn) { hintBtn.disabled = !show || gameOver(); hintBtn.style.opacity = hintBtn.disabled ? '.4' : ''; }
   if (ui.anaLine) ui.anaLine.style.display = show ? '' : 'none';
   if (ui.anaWhy) ui.anaWhy.style.display = show ? '' : 'none';
   if (ui.lastQuality) ui.lastQuality.style.display = show ? '' : 'none';
@@ -601,6 +609,8 @@ function endGame(winner, reason) {
   game.winner = winner;
   game.status = winner ? 'checkmate' : 'stalemate';
   game.endReason = reason || null;
+  hintMove = null; anaBest = null; anaKey = null;
+  runAnalysis();
   sync(); render();
 }
 
@@ -2202,7 +2212,7 @@ const HINTS = {
 function setMode(m) {
   mode = m; selected = null; legal = [];
   for (const b of document.querySelectorAll('.wild-btn')) b.classList.toggle('active', b.dataset.mode === m);
-  if (m === 'normal') ui.hint.textContent = game.canWildcard()
+  if (m === 'normal') ui.hint.textContent = gameOver() ? 'Game over — play again or review the game.' : game.canWildcard()
     ? '✦ Board turn — move a piece, or click an empty square to lift it.'
     : (game.status === 'check' ? 'You are in check — get out of it.' : 'Make your move.');
   else ui.hint.textContent = HINTS[m];
@@ -2563,8 +2573,9 @@ function wildOnset(on) {
 }
 
 function sync() {
+  const over = gameOver();
   const side = game.turn === 'white' ? 'White' : 'Black';
-  ui.turn.textContent = `${side} to move`;
+  ui.turn.textContent = over ? 'Game over' : `${side} to move`;
   ui.turn.className = 'turn ' + game.turn;
 
   const eligible = game.canWildcard();
@@ -2584,12 +2595,13 @@ function sync() {
 
   setMode('normal');
   renderLog();
-  const over = gameOver();
   if (resignBtn) resignBtn.disabled = over;
   if (drawBtn) drawBtn.disabled = over;
 
-  if (gameOver()) {
-    applyTutorVisibility();
+  // Replay/new-game paths also pass here: never leave post-game engine help
+  // exposed on a fresh live board.
+  applyTutorVisibility();
+  if (over) {
     if (!endSounded && !puzzleMode) {          // a solved puzzle is not a game result
       endSounded = true;
       // One game_end per game (endSounded is the existing once-only guard).
@@ -2611,7 +2623,7 @@ function sync() {
         plies: game.history.length,
         boardMoves: gameActs.filter(function (a) { return a && a.kind !== 'm'; }).length,
         vsBot: !!activeBot, rated: !!ratedGame,
-        version: '64',
+        version: '65',
       });
       if (!game.winner) WCSOUND.play('draw');
       else if (botEnabled() || onlineActive) WCSOUND.play(game.winner === localColor() ? 'win' : 'lose');
