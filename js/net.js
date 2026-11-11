@@ -67,6 +67,21 @@
     });
   }
 
+  // A peer that is waiting to be found must stay registered with the broker.
+  // Phones drop that socket whenever the tab is backgrounded — which is exactly
+  // when the host goes to WhatsApp to send the link — and PeerJS does not
+  // reconnect by itself, so the room silently died ("room not found").
+  function keepAlive(p) {
+    p.on('disconnected', () => {
+      setTimeout(() => { try { if (!p.destroyed && p.disconnected) p.reconnect(); } catch (e) {} }, 400);
+    });
+    p.on('error', () => {});      // post-open errors must not throw
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !peer) return;
+    try { if (!peer.destroyed && peer.disconnected) peer.reconnect(); } catch (e) {}
+  });
+
   function wireConn(c) {
     conn = c;
     c.on('data', (msg) => { if (handlers.onData) handlers.onData(msg); });
@@ -110,6 +125,7 @@
     newPeer(roomId(code)).then((p) => {
       if (cancelled) { try { p.destroy(); } catch (e) {} return; }
       peer = p;
+      keepAlive(p);
       if (handlers.onOpen) handlers.onOpen({ code, link });
       p.on('connection', (c) => {
         if (conn) { try { c.close(); } catch (e) {} return; }   // room is full
@@ -131,7 +147,14 @@
     newPeer(null).then(async (p) => {
       if (cancelled) { try { p.destroy(); } catch (e) {} return; }
       peer = p;
-      const c = await probe(p, roomId(code), 8000);
+      keepAlive(p);
+      // The host may be mid-reconnect (their tab was in the background), so a
+      // single miss is not "no such room". Try a few times before giving up.
+      let c = null;
+      for (let attempt = 0; attempt < 3 && !c && !cancelled; attempt++) {
+        if (attempt && handlers.onRetry) handlers.onRetry(attempt);
+        c = await probe(p, roomId(code), 8000);
+      }
       if (cancelled) return;
       if (!c) { if (handlers.onError) handlers.onError(new Error('room not found')); return; }
       wireConn(c);
@@ -194,6 +217,7 @@
         }
         if (cancelled) { try { wp.destroy(); } catch (e) {} return; }
         peer = wp;
+        keepAlive(wp);
         if (handlers.onTick) handlers.onTick({ phase: 'waiting', bucket: mine });
         wp.on('connection', (c) => {
           if (conn) { try { c.close(); } catch (e) {} return; }

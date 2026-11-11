@@ -1623,3 +1623,9 @@ body.fixed-opp .opp-cfg, body.fixed-opp #botBlurb { display: none; }
 .banner:not(.show) { visibility: hidden; transition: opacity .25s, transform .25s, visibility 0s linear .25s; }
 .banner.show { visibility: visible; transition: opacity .25s, transform .25s, visibility 0s; }
 .banner:not(.show) .analyze-btn { pointer-events: none; }
+
+/* bot-only settings disappear when there is no bot, instead of sitting greyed out */
+body.no-bot #botSide, body.no-bot #botLevel { display: none; }
+/* "+M1" broke over two lines in the narrow phone eval bar */
+.evalbar-num { white-space: nowrap; letter-spacing: -.4px; }
+@media (max-width: 880px) { .evalbar-num { font-size: 9.5px; } }

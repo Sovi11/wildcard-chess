@@ -175,7 +175,7 @@ function render() {
   const rankCol = flipped ? b.maxC : b.minC;
   for (let c = b.minC; c <= b.maxC; c++) {
     if (!B.hasCell(c, fileRow)) continue;
-    svg += `<text x="${X(c) + 0.92}" y="${Y(fileRow) + 0.94}" class="lbl insq ${parity(c, fileRow)}" text-anchor="end">${fileLabel(c)}</text>`;
+    svg += `<text x="${X(c) + 0.92}" y="${Y(fileRow) + 0.94}" class="lbl insq ${parity(c, fileRow)}" text-anchor="end">${c < 0 ? '' : fileLabel(c)}</text>`;  // "(-1)" belongs in notation, not on a tile
   }
   for (let r = b.minR; r <= b.maxR; r++) {
     if (!B.hasCell(rankCol, r)) continue;
@@ -287,7 +287,13 @@ function onSquare(c, r) {
     if (game.wildcardMoveCell(selected.c, selected.r, c, r)) {
       done({ kind: 'mc', from: { c: selected.c, r: selected.r }, to: { c: c, r: r } }); return;
     }
-    if (game.hasCell(c, r) && !game.get(c, r)) { selected = { c, r }; render(); }
+    if (game.hasCell(c, r) && !game.get(c, r)) { selected = { c, r }; render(); return; }
+    // Tapping one of your pieces means you wanted to move a piece after all:
+    // put the square down and pick the piece up, instead of ignoring the tap.
+    if (p && p.color === game.turn) {
+      setMode('normal');
+      selected = { c, r }; legal = game.legalMoves(c, r); render(); return;
+    }
     return;
   }
 
@@ -353,7 +359,20 @@ function openPromo(from, to, color) {
     }
   };
 }
-document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && promoOpen()) closePromo(); });
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  if (promoOpen()) { closePromo(); return; }
+  // Esc closes the topmost panel. Welcome, tutorial and onboarding are steps
+  // you are taken through, so they are left alone.
+  for (const id of ['authModal', 'feedback', 'profile', 'lobby']) {
+    const el = document.getElementById(id);
+    if (!el || !el.classList.contains('show')) continue;
+    if (id === 'lobby') closeLobby(); else el.classList.remove('show');
+    if (typeof updateAmbient === 'function') updateAmbient();
+    e.stopImmediatePropagation();
+    return;
+  }
+});
 
 // ---- drag to move -----------------------------------------------------------
 // Mouse and pen only: on a phone a drag across the board has to stay a scroll,
@@ -742,6 +761,7 @@ function refreshBotUI() {
   const on = botEnabled();
   if (botLevelEl) botLevelEl.disabled = !on;
   if (botSideEl) botSideEl.disabled = !on;
+  document.body.classList.toggle('no-bot', !on);   // hide bot-only settings, not grey them out
   if (botBlurbEl) {
     const lv = WCAI.levelById(botLevelEl ? botLevelEl.value : 3);
     botBlurbEl.textContent = on ? `${lv.name} — ${lv.blurb}` : 'Two players, one screen.';
@@ -771,12 +791,25 @@ function maybeAI() {
       const pos = activeBot
         ? WCAI.Pos.fromGame(game, WCLADDER.weightsFor(activeBot))
         : WCAI.Pos.fromGame(game);
-      const res = activeBot
-        ? WCAI.chooseMoveFor(pos, activeBot.search)
+      // Thinking time comes out of the bot's clock too: cap it to a slice of
+      // what is left, so a fast time control speeds the bot up, not flags it.
+      let persona = activeBot ? activeBot.search : null;
+      if (clockActive()) {
+        const cap = Math.max(60, clockLeft(botSide()) / 40);
+        const base = persona || lv;
+        persona = Object.assign({}, base, { movetime: Math.min(base.movetime || 1200, cap) });
+      }
+      const res = persona
+        ? WCAI.chooseMoveFor(pos, persona)
         : WCAI.chooseMove(pos, lv.id);
       gmBot = WCAI.moveToGame(res.move);
     } catch (e) { gmBot = null; }
-    const wait = Math.max(0, 900 + Math.random() * 400 - (Date.now() - t0));
+    // The pause is for feel, not strength. On a clock it must never be what
+    // loses the game: it shrinks to a small slice of the time left (a 1+0 game
+    // used to leave the bot flagging on a fixed ~1.1s a move).
+    let feel = 900 + Math.random() * 400;
+    if (clockActive()) feel = Math.min(feel, clockLeft(botSide()) / 40);
+    const wait = Math.max(0, feel - (Date.now() - t0));
     setTimeout(() => {
       if (myGen !== aiGen || !botEnabled() || gameOver() || game.turn !== botSide()) {
         aiThinking = false;
@@ -1330,11 +1363,34 @@ function netHandlers(labelWhenJoined) {
       onlineActive = false; paintNetCard();
       ui.hint.textContent = 'Your opponent disconnected.';
     },
+    onRetry: function (n) {
+      showRoomBox('Still trying to reach your friend\u2026 (' + (n + 1) + ' of 3)', roomLinkEl ? roomLinkEl.value : '');
+    },
     onError: function (e) {
-      showRoomBox('Could not connect: ' + (e && e.message ? e.message : 'unknown error') +
-                  '. Check the code, or try again.', roomLinkEl ? roomLinkEl.value : '');
+      const msg = e && e.message === 'room not found'
+        ? 'Could not reach that room. Ask your friend to keep Hollow Chess open on their screen, then try the link again.'
+        : 'Could not connect: ' + (e && e.message ? e.message : 'unknown error') + '. Check the code, or try again.';
+      showRoomBox(msg, roomLinkEl ? roomLinkEl.value : '');
     },
   };
+}
+
+// Leaving a live game for something else. A rated or online game you have
+// played into counts as a resignation (it used to vanish: no loss, no record,
+// which was both a lost game and a free rating dodge). Before two plies it is
+// an abort. Casual games just go, they come back via resume if reloaded.
+function liveCounts() {
+  if (gameOver() || puzzleMode) return false;
+  if (onlineActive) return true;
+  return !!(activeBot && ratedGame && game.history.length >= 2);
+}
+function leaveLiveGame() {
+  if (!liveCounts()) return true;
+  if (!confirm('Leave this game? It counts as a resignation.')) return false;
+  const me = localColor();
+  if (netOnline()) WCNET.send({ t: 'resign' });
+  endGame(me === 'white' ? 'black' : 'white', 'resignation');   // scores and logs it
+  return true;
 }
 
 function hostRoom() {
@@ -1366,6 +1422,7 @@ if (copyRoomBtn) copyRoomBtn.addEventListener('click', async function () {
   setTimeout(function () { copyRoomBtn.textContent = 'Copy'; }, 1600);
 });
 if (joinRoomBtn) joinRoomBtn.addEventListener('click', function () {
+  if (!leaveLiveGame()) return;
   joinRoom((joinCodeEl.value || '').trim().toLowerCase());
 });
 if (cancelRoomBtn) cancelRoomBtn.addEventListener('click', function () {
@@ -1961,6 +2018,7 @@ function resetQueueUI() {
 
 function beginSearch() {
   if (cancelSearch) return;
+  if (!leaveLiveGame()) return;
   const elo = WCLADDER.getProfile().elo;
   if (findBtn) findBtn.style.display = 'none';
   if (matchFoundEl) matchFoundEl.classList.remove('show');
@@ -2232,6 +2290,7 @@ if (closeLobbyBtn) closeLobbyBtn.addEventListener('click', closeLobby);
 document.querySelectorAll('.mode-card').forEach(function (el) {
   el.addEventListener('click', function () {
     const kind = el.dataset.lobbymode;
+    if (!leaveLiveGame()) return;
     if (kind === 'online') { hostRoom(); return; }
     if (kind === 'puzzles') { startPuzzles(); return; }
     startCasual(kind);
@@ -2376,6 +2435,8 @@ const REV_DEPTH = 7;              // analysis-grade: far deeper than any bot pla
 const REV_MOVETIME = 2500;   // ~depth 6-7 per ply; it streams, so nothing blocks
 
 function openReview(acts, title, expectedPlies) {
+  reviewFromBoard = false;
+  { const rb = document.getElementById('reviewBack'); if (rb) rb.textContent = '\u2190 Back to games'; }
   const token = ++revToken;
   revActs = acts;
   revPos = 0;
@@ -2453,6 +2514,8 @@ function analyzeCurrentGame() {
   const me = onlineActive ? myColor : (botEnabled() ? (botSide() === 'white' ? 'black' : 'white') : 'white');
   const outcome = game.winner ? (game.winner === me ? 'you won' : 'you lost') : 'draw';
   openReview(gameActs.slice(), 'vs ' + opp + ' · ' + outcome);
+  reviewFromBoard = true;
+  const rb = document.getElementById('reviewBack'); if (rb) rb.textContent = '\u2190 Back to the board';
   renderProfile();
   profileEl.classList.add('show');
   updateAmbient();
@@ -2580,7 +2643,13 @@ const bind = function (id, fn) { const el = document.getElementById(id); if (el)
 bind('openProfile', function () { closeLobby(); openProfile(); });
 bind('openProfileTop', openProfile);
 bind('closeProfile', closeProfile);
-bind('reviewBack', showMatchList);
+// Back goes where you came from: the board if you opened it from the game
+// that just ended, the game list if you picked it from your history.
+let reviewFromBoard = false;
+bind('reviewBack', function () {
+  if (reviewFromBoard) { reviewFromBoard = false; if (profileEl) profileEl.classList.remove('show'); showMatchList(); updateAmbient(); return; }
+  showMatchList();
+});
 bind('analyzeBtn', analyzeCurrentGame);
 const revLogEl = document.getElementById('revLog');
 if (revLogEl) revLogEl.addEventListener('click', function (e) {
@@ -2699,6 +2768,7 @@ function playAgain() {
 bind('playAgainBtn', playAgain);
 
 document.getElementById('newGame').addEventListener('click', () => {
+  if (!leaveLiveGame()) return;
   // the full reset: bot timers, end reason, replay log and the scoring flag
   // included — a partial one left the next rated game unscored and let a bot
   // move queued for the old game land on the new board
@@ -2906,9 +2976,16 @@ async function startPuzzles() {
   if (WCCLOUD.enabled()) WCCLOUD.puzzleRatings().then(function (m) { WCPUZZLE.setPuzzleRatings(m); if (puzzleMode) paintPuzzle(); });
 }
 
+// Out of puzzles: back to the lobby to pick what's next, not onto an empty
+// same-screen board (which also logged a fake "hotseat game_start").
 function exitPuzzles() {
   leavePuzzleMode();
-  startCasual('hotseat');
+  activeBot = null; ratedGame = false;
+  if (oppModeEl) oppModeEl.value = 'bot';
+  resetGameState();
+  paintOppCard(); applyTutorVisibility(); refreshBotUI(); refreshShareUI();
+  runAnalysis(); sync(); render();
+  openLobby();
 }
 
 // A rating game just settled locally. Signed in, the server is the authority:
@@ -3138,6 +3215,7 @@ try {
   if (WCSHARE.fromLocation(game)) {
     bootedFromLink = true;
     if (oppModeEl) oppModeEl.value = 'link';
+    flipped = (game.turn === 'black');   // whoever opens the link is the side to move
   }
 } catch (e) {
   console.warn('bad game link:', e.message);
