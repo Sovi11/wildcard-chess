@@ -254,7 +254,9 @@ class Game {
     return true;
   }
 
-  makeMove(fc, fr, tc, tr) {
+  // promo: what a pawn becomes at the edge of the world (queen if omitted or
+  // not a legal choice). Only consulted when the move actually promotes.
+  makeMove(fc, fr, tc, tr, promo) {
     const p = this.get(fc, fr);
     if (!p || p.color !== this.turn || this.isOver()) return false;
     const mv = this.legalMoves(fc, fr).find(m => m.c === tc && m.r === tr);
@@ -280,15 +282,15 @@ class Game {
       ? { c: fc, r: (fr + tr) / 2 } : null;
     // Promotion: the pawn reached the edge of the world in its file.
     const promoted = wasPawn && this._atWorldEdge(tc, tr, p.color);
-    if (promoted) p.type = PIECE.Q;
+    if (promoted) p.type = [PIECE.Q, PIECE.R, PIECE.B, PIECE.N].indexOf(promo) >= 0 ? promo : PIECE.Q;
     this.lastAction = { kind: 'move', from: { c: fc, r: fr }, to: { c: tc, r: tr } };
     // HCN (Hollow Chess Notation): long algebraic — piece letter (pawns bare),
-    // from, '-' or 'x', to; '=Q' promotion; ' ep' en passant; O-O castling.
+    // from, '-' or 'x', to; '=Q' (or =R/=B/=N) promotion; ' ep' en passant; O-O castling.
     // Check '+' and mate '#' are appended in _endTurn once the reply is known.
     this._record(mv.castle
       ? (mv.castle > 0 ? 'O-O' : 'O-O-O')
       : (wasPawn ? '' : L(p.type)) + sq(fc, fr) + ((target || epCaptured) ? 'x' : '-') + sq(tc, tr)
-        + (promoted ? '=Q' : '') + (epCaptured ? ' ep' : ''));
+        + (promoted ? '=' + L(p.type) : '') + (epCaptured ? ' ep' : ''));
     this._endTurn();
     return true;
   }

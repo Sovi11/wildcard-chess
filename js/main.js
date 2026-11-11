@@ -57,6 +57,11 @@ const GRAIN = (function () {
   } catch (e) { return null; }
 })();
 
+// The frame margin, in squares. Drawing and click-reading MUST share it: v67
+// widened the frame in render() but left the click handler on the old 0.09,
+// so clicks at the edge of a square landed on its neighbour.
+const BOARD_M = 0.16;
+
 function view() {
   const b = shown().bounds();
   let pad = 0;
@@ -69,7 +74,7 @@ function view() {
 function render() {
   const B = shown();
   const v = view();
-  const M = 0.16;                       // the frame: wide enough to read as a bezel
+  const M = BOARD_M;                    // the frame: wide enough to read as a bezel
   boardEl.setAttribute('viewBox', `${-M} ${-M} ${v.cols + 2 * M} ${v.rows + 2 * M}`);
   // Flipping swaps both axes so the side you play always sits at the bottom.
   const X = flipped ? (c) => v.maxC - c : (c) => c - v.minC;
@@ -97,7 +102,7 @@ function render() {
   for (const k of B.cells) {
     const { c, r } = parseKeyJS(k);
     const light = mod2(c + r) === 1;
-    svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" class="sq ${light ? 'lt' : 'dk'}"/>`;
+    svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" class="sq ${light ? 'lt' : 'dk'}" data-k="${c},${r}"/>`;
   }
   // One soft light across the whole board — brighter in the middle, falling
   // off to the rim — so it reads as a surface rather than a flat grid.
@@ -150,7 +155,7 @@ function render() {
 
   for (const [k, p] of B.board) {
     const { c, r } = parseKeyJS(k);
-    svg += `<use href="#${symFor(p.type)}" x="${X(c)}" y="${Y(r)}" width="1" height="1" class="pc ${p.color === 'white' ? 'w' : 'b'}"/>`;
+    svg += `<use href="#${symFor(p.type)}" x="${X(c)}" y="${Y(r)}" width="1" height="1" class="pc ${p.color === 'white' ? 'w' : 'b'}" data-k="${c},${r}"/>`;
   }
 
   for (const m of legal) {
@@ -192,6 +197,33 @@ function render() {
   }
 
   boardEl.innerHTML = svg;
+  if (B === game) animateLast(X, Y);
+}
+
+// Pieces used to teleport. Now the piece that just moved (or the square, on a
+// board move) is drawn at its destination and slid in from where it came from:
+// same final DOM, so nothing about rules or rendering changes, it just arrives.
+// Keyed on the lastAction object so each move animates exactly once, whoever
+// made it (you, the bot, the opponent online, a puzzle reply).
+let animatedAction = null;
+let skipNextAnim = false;          // a drag already carried the piece there
+const reduceMotion = (function () {
+  try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+})();
+function animateLast(X, Y) {
+  const la = game.lastAction;
+  if (la === animatedAction) return;
+  animatedAction = la;
+  const skip = skipNextAnim; skipNextAnim = false;
+  if (!la || !la.from || !la.to || skip || reduceMotion) return;
+  const sel = la.kind === 'move' ? `.pc[data-k="${la.to.c},${la.to.r}"]`
+            : la.kind === 'movecell' ? `.sq[data-k="${la.to.c},${la.to.r}"]` : null;
+  const el = sel && boardEl.querySelector(sel);
+  if (!el || !el.animate) return;
+  const dx = X(la.from.c) - X(la.to.c), dy = Y(la.from.r) - Y(la.to.r);
+  if (la.kind === 'move') el.parentNode.appendChild(el);      // travel above the others
+  el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0px, 0px)' }],
+    { duration: la.kind === 'move' ? 180 : 320, easing: 'cubic-bezier(.2,.75,.25,1)' });
 }
 
 // Anything that reaches innerHTML goes through this. Player names come from a
@@ -217,24 +249,39 @@ function updateAmbient() {
 }
 
 // ---- interaction ----------------------------------------------------------
-boardEl.addEventListener('click', (e) => {
-  if (browsePly !== null) { browseTo(null); return; }   // looking at history: first click returns
-  if (gameOver()) return;
-  if (aiThinking) return;
-  if (puzzleMode && pzReplyPending) return;   // the scripted reply is on its way
-  if (botEnabled() && game.turn === botSide()) return;
-  if (linkMode() && linkPending) return;      // their turn — waiting on their link
-  if (onlineActive && game.turn !== myColor) return;   // their move, over the wire
+// Which board square is under a screen point (inverts render()'s viewBox).
+function squareFromPoint(clientX, clientY) {
   const v = view();
   const rect = boardEl.getBoundingClientRect();
-  // invert the viewBox mapping exactly, including the 0.09 frame margin
-  const M = 0.09;
-  const bx = ((e.clientX - rect.left) / rect.width) * (v.cols + 2 * M) - M;
-  const by = ((e.clientY - rect.top) / rect.height) * (v.rows + 2 * M) - M;
-  const fx = Math.floor(bx);
-  const fy = Math.floor(by);
-  const c = flipped ? v.maxC - fx : v.minC + fx;
-  const r = flipped ? v.minR + fy : v.maxR - fy;
+  const M = BOARD_M;
+  const bx = ((clientX - rect.left) / rect.width) * (v.cols + 2 * M) - M;
+  const by = ((clientY - rect.top) / rect.height) * (v.rows + 2 * M) - M;
+  const fx = Math.floor(bx), fy = Math.floor(by);
+  return { c: flipped ? v.maxC - fx : v.minC + fx, r: flipped ? v.minR + fy : v.maxR - fy };
+}
+
+// Is it the person at this screen's turn to act on the board?
+function canActNow() {
+  if (gameOver() || aiThinking) return false;
+  if (puzzleMode && pzReplyPending) return false;   // the scripted reply is on its way
+  if (botEnabled() && game.turn === botSide()) return false;
+  if (linkMode() && linkPending) return false;      // their turn — waiting on their link
+  if (onlineActive && game.turn !== myColor) return false;   // their move, over the wire
+  if (clockFlagged()) return false;
+  return true;
+}
+
+boardEl.addEventListener('click', (e) => {
+  if (dragSuppressClick) { dragSuppressClick = false; return; }   // a drag already handled it
+  if (promoOpen()) { closePromo(); return; }
+  if (browsePly !== null) { browseTo(null); return; }   // looking at history: first click returns
+  if (!canActNow()) return;
+  const sq = squareFromPoint(e.clientX, e.clientY);
+  onSquare(sq.c, sq.r);
+});
+
+// Everything a click (or a drop) on a square means.
+function onSquare(c, r) {
   const p = game.hasCell(c, r) ? game.get(c, r) : null;
 
   if (mode === 'addcell') { if (game.wildcardAddCell(c, r)) done({ kind: 'ac', cell: { c: c, r: r } }); return; }
@@ -256,6 +303,14 @@ boardEl.addEventListener('click', (e) => {
   }
 
   if (selected) {
+    // A pawn reaching the edge of the world: ask what it becomes. (Puzzles
+    // keep the proven line, which always queens.)
+    const sp = game.get(selected.c, selected.r);
+    if (sp && sp.type === 'pawn' && !puzzleMode && legal.some(function (m) { return m.c === c && m.r === r; }) &&
+        game._atWorldEdge(c, r, sp.color)) {
+      openPromo({ c: selected.c, r: selected.r }, { c: c, r: r }, sp.color);
+      return;
+    }
     if (game.makeMove(selected.c, selected.r, c, r)) {
       done({ kind: 'm', from: { c: selected.c, r: selected.r }, to: { c: c, r: r } }); return;
     }
@@ -273,6 +328,89 @@ boardEl.addEventListener('click', (e) => {
     ui.hint.textContent = 'Square lifted — click a dashed spot to place it, or click it again to cancel.';
     render();
   }
+}
+
+// ---- promotion ------------------------------------------------------------
+// Four pieces over the destination square; Esc or a click elsewhere cancels and
+// leaves the pawn selected.
+const promoEl = document.getElementById('promoPick');
+function promoOpen() { return !!(promoEl && promoEl.classList.contains('show')); }
+function closePromo() { if (promoEl) promoEl.classList.remove('show'); }
+function openPromo(from, to, color) {
+  if (!promoEl) return;
+  const set = WCTHEME.get().pieces;
+  const sym = function (t) { return 'pc-' + (PIECE_SETS[set] ? set : 'staunton') + '-' + t; };
+  promoEl.innerHTML = ['queen', 'rook', 'bishop', 'knight'].map(function (t) {
+    return '<button class="promo-opt" data-t="' + t + '" title="' + t + '" aria-label="Promote to ' + t + '">' +
+      '<svg viewBox="0 0 45 45"><use href="#' + sym(t) + '" class="pc ' + (color === 'white' ? 'w' : 'b') + '"/></svg></button>';
+  }).join('');
+  // sit it over the destination square, kept inside the board
+  const v = view(), rect = boardEl.getBoundingClientRect(), wrap = promoEl.parentNode.getBoundingClientRect();
+  const sqW = rect.width / (v.cols + 2 * BOARD_M);
+  const col = flipped ? v.maxC - to.c : to.c - v.minC, row = flipped ? to.r - v.minR : v.maxR - to.r;
+  const left = rect.left - wrap.left + (BOARD_M + col) * sqW;
+  const top = rect.top - wrap.top + (BOARD_M + row) * sqW;
+  promoEl.style.setProperty('--sq', sqW + 'px');
+  promoEl.style.left = Math.max(0, Math.min(left, rect.right - wrap.left - sqW)) + 'px';
+  promoEl.style.top = Math.max(0, Math.min(top, rect.bottom - wrap.top - sqW * 4)) + 'px';
+  promoEl.classList.add('show');
+  promoEl.onclick = function (e) {
+    const b = e.target.closest('.promo-opt');
+    if (!b) return;
+    e.stopPropagation();
+    closePromo();
+    if (game.makeMove(from.c, from.r, to.c, to.r, b.dataset.t)) {
+      done({ kind: 'm', from: from, to: to, promo: b.dataset.t });
+    }
+  };
+}
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && promoOpen()) closePromo(); });
+
+// ---- drag to move -----------------------------------------------------------
+// Mouse and pen only: on a phone a drag across the board has to stay a scroll,
+// and tap-tap is the norm there anyway. A press that never moves 5px is a click
+// and is left to the click handler.
+let drag = null, dragSuppressClick = false;
+boardEl.addEventListener('pointerdown', function (e) {
+  if (e.pointerType === 'touch' || e.button !== 0) return;
+  if (browsePly !== null || promoOpen() || mode !== 'normal' || !canActNow()) return;
+  const sq = squareFromPoint(e.clientX, e.clientY);
+  const p = game.hasCell(sq.c, sq.r) ? game.get(sq.c, sq.r) : null;
+  if (!p || p.color !== game.turn) return;
+  drag = { c: sq.c, r: sq.r, x0: e.clientX, y0: e.clientY, id: e.pointerId, active: false };
+});
+window.addEventListener('pointermove', function (e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (!drag.active) {
+    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 5) return;
+    drag.active = true;
+    selected = { c: drag.c, r: drag.r }; legal = game.legalMoves(drag.c, drag.r); hintMove = null;
+    render();
+    boardEl.classList.add('dragging');
+  }
+  const el = boardEl.querySelector('.pc[data-k="' + drag.c + ',' + drag.r + '"]');
+  if (!el) return;
+  if (el.parentNode.lastChild !== el) el.parentNode.appendChild(el);   // on top of everything
+  const pt = boardEl.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  const u = pt.matrixTransform(boardEl.getScreenCTM().inverse());
+  el.style.transform = 'translate(' + (u.x - (+el.getAttribute('x') + 0.5)) + 'px, ' +
+                                      (u.y - (+el.getAttribute('y') + 0.5)) + 'px)';
+  el.style.pointerEvents = 'none';
+});
+window.addEventListener('pointerup', function (e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag; drag = null;
+  boardEl.classList.remove('dragging');
+  if (!d.active) return;                         // never moved: it is a click
+  dragSuppressClick = true;
+  setTimeout(function () { dragSuppressClick = false; }, 0);   // if the click never comes
+  const t = squareFromPoint(e.clientX, e.clientY);
+  if (t.c === d.c && t.r === d.r) { render(); return; }      // put back: stays selected
+  const before = game.lastAction;
+  skipNextAnim = true;                           // the hand already carried it there
+  onSquare(t.c, t.r);
+  if (game.lastAction === before) skipNextAnim = false;      // no move happened (or a picker opened)
+  if (game.lastAction === before) render();                  // illegal drop: snap home
 });
 
 // ---- browsing the game so far ----------------------------------------------
@@ -325,6 +463,92 @@ document.addEventListener('click', function (e) {
   if (e.target.classList && e.target.classList.contains('bb-live')) browseTo(null);
 });
 
+// ---- clocks -----------------------------------------------------------------
+// Untimed online games let a losing player simply stop moving. Every game but
+// puzzles and link-correspondence can now be timed. White's first move is
+// free; after that the side to move runs, and the increment lands after each
+// of your moves. Online, the mover reports both clocks with the move and the
+// other side takes them as truth; a remote flag waits 1.5s in case their move
+// is in flight.
+const TC_KEY = 'hollowchess.tc.v1';
+const TIME_CONTROLS = { none: null, '1+0': [1, 0], '3+2': [3, 2], '5+3': [5, 3], '10+5': [10, 5], '15+10': [15, 10] };
+function tcPref() {
+  try { const v = localStorage.getItem(TC_KEY); if (v && Object.prototype.hasOwnProperty.call(TIME_CONTROLS, v)) return v; } catch (e) {}
+  return '10+5';
+}
+const clock = { key: 'none', inc: 0, white: 0, black: 0, running: null, last: 0, flagged: null };
+function clockActive() { return clock.key !== 'none' && !puzzleMode && !linkMode(); }
+function clockFlagged() { return clockActive() && !!clock.flagged; }
+function clockReset(key) {
+  const k = (key && Object.prototype.hasOwnProperty.call(TIME_CONTROLS, key)) ? key : tcPref();
+  const tc = TIME_CONTROLS[k];
+  clock.key = tc ? k : 'none';
+  clock.inc = tc ? tc[1] * 1000 : 0;
+  clock.white = clock.black = tc ? tc[0] * 60000 : 0;
+  clock.running = null; clock.flagged = null; clock.last = 0;
+  paintClocks();
+}
+function clockLeft(side) {
+  return clock.running === side ? clock[side] - (performance.now() - clock.last) : clock[side];
+}
+function clockOnMove(mover) {
+  if (!clockActive() || clock.flagged || !mover) return;
+  const now = performance.now();
+  if (clock.running === mover) clock[mover] = Math.max(0, clock[mover] - (now - clock.last)) + clock.inc;
+  clock.running = gameOver() ? null : game.turn;
+  clock.last = now;
+  paintClocks();
+}
+function clockSync(c) {
+  if (!clockActive() || !c) return;
+  if (typeof c.white === 'number') clock.white = c.white;
+  if (typeof c.black === 'number') clock.black = c.black;
+  clock.running = gameOver() ? null : game.turn;
+  clock.last = performance.now();
+  paintClocks();
+}
+function clockFlag(side, fromWire) {
+  if (clock.flagged || gameOver()) return;
+  clock.flagged = side; clock[side] = 0; clock.running = null;
+  if (onlineActive && !fromWire) { try { WCNET.send({ t: 'flag', side: side }); } catch (e) {} }
+  endGame(side === 'white' ? 'black' : 'white', 'time');
+  paintClocks();
+}
+function fmtClock(ms) {
+  ms = Math.max(0, ms);
+  if (ms < 20000) return (ms / 1000).toFixed(1);
+  const t = Math.ceil(ms / 1000);
+  return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+}
+function clockLabel(side) {
+  if (onlineActive) return side === myColor ? 'You' : (oppLabel || 'Opponent');
+  if (botEnabled()) return side === botSide() ? (activeBot ? activeBot.name : 'Bot') : 'You';
+  return side === 'white' ? 'White' : 'Black';
+}
+function paintClocks() {
+  const on = clockActive();
+  document.body.classList.toggle('has-clock', on);
+  if (!on) return;
+  const bottom = flipped ? 'black' : 'white', top = bottom === 'white' ? 'black' : 'white';
+  [['clockTop', top], ['clockBottom', bottom]].forEach(function (pair) {
+    const el = document.getElementById(pair[0]), side = pair[1];
+    if (!el) return;
+    const left = clockLeft(side);
+    el.className = 'clock-bar' + (clock.running === side ? ' running' : '') +
+      (left < 20000 ? ' low' : '') + (clock.flagged === side ? ' flagged' : '');
+    el.innerHTML = '<span class="clk-who"><i class="clk-dot ' + side + '"></i>' + esc(clockLabel(side)) +
+      '</span><span class="clk-time">' + fmtClock(left) + '</span>';
+  });
+}
+setInterval(function () {
+  if (!clockActive() || !clock.running) return;
+  if (gameOver()) { clock.running = null; paintClocks(); return; }
+  const side = clock.running;
+  const remote = onlineActive && side !== myColor;
+  if (clockLeft(side) <= (remote ? -1500 : 0)) clockFlag(side);
+  else paintClocks();
+}, 100);
+
 function done(gm) {
   // In puzzle mode the action has landed on the board but is not yet accepted:
   // the puzzle grades it, and a miss rewinds the position. Nothing else in the
@@ -360,6 +584,8 @@ function actionFX() {
 }
 
 function afterMove() {
+  const lastH = game.history[game.history.length - 1];
+  clockOnMove(lastH ? lastH.color : null);            // before broadcasting: the move carries the clocks
   browsePly = null; browseGame = null; paintBrowse();   // a move snaps back to live
   selected = null; legal = []; hintMove = null;
   setMode('normal');
@@ -867,14 +1093,15 @@ function startOnlineGame(isHost, label, forcedColor) {
   const myP = WCLADDER.getProfile();
   WCNET.send({ t: 'hello', name: myName(), elo: myP.elo, w: myP.wins, l: myP.losses, d: myP.draws });
   if (isHost) {
-    WCNET.send({ t: 'start', state: WCSHARE.encode(game), youAre: myColor === 'white' ? 'black' : 'white' });
+    WCNET.send({ t: 'start', state: WCSHARE.encode(game), youAre: myColor === 'white' ? 'black' : 'white', tc: clock.key });
   }
 }
 
 // Push the move we just played to the other side.
 function netBroadcast(gm) {
   if (!netOnline() || !gm) return;
-  WCNET.send({ t: 'act', gm: gm, state: WCSHARE.encode(game) });
+  WCNET.send({ t: 'act', gm: gm, state: WCSHARE.encode(game),
+    clock: clockActive() ? { white: clock.white, black: clock.black } : null });
 }
 
 // Apply what the opponent sent. Trust their action, but verify against the
@@ -912,6 +1139,7 @@ function netApply(msg) {
   if (msg.t === 'start') {
     try { WCSHARE.decode(msg.state, game); } catch (e) {}
     if (msg.youAre === 'white' || msg.youAre === 'black') myColor = msg.youAre;
+    clockReset(msg.tc || 'none');            // the host's time control rules both sides
     quality.length = 0; anaKey = null;
     orientFor(myColor);
     runAnalysis(); sync(); render(); paintNetCard();
@@ -928,8 +1156,13 @@ function netApply(msg) {
     }
     selected = null; legal = []; hintMove = null;
     setMode('normal');
+    clockSync(msg.clock);
     actionFX();
     runAnalysis(); sync(); render(); paintNetCard();
+    return;
+  }
+  if (msg.t === 'flag') {
+    if (msg.side === 'white' || msg.side === 'black') clockFlag(msg.side, true);
     return;
   }
   if (msg.t === 'resign') {
@@ -1822,6 +2055,8 @@ function resetGameState() {
   history.replaceState(null, '', location.pathname + location.search);
   ui.banner.classList.remove('show');
   setMode('normal');
+  closePromo();
+  clockReset();
 }
 
 // Score a finished rated game exactly once and return the rating change.
@@ -2668,6 +2903,7 @@ function wildOnset(on) {
 }
 
 function sync() {
+  paintClocks();
   const over = gameOver();
   const side = game.turn === 'white' ? 'White' : 'Black';
   ui.turn.textContent = over ? 'Game over' : `${side} to move`;
@@ -2727,7 +2963,9 @@ function sync() {
     const r = puzzleMode ? null : settleResult();
     const reason = game.endReason;
     let text;
-    if (reason === 'resignation') {
+    if (reason === 'time') {
+      text = (game.winner === 'white' ? 'White' : 'Black') + ' wins on time';
+    } else if (reason === 'resignation') {
       text = (game.winner === 'white' ? 'White' : 'Black') + ' wins by resignation';
     } else if (reason === 'agreement') {
       text = 'Draw agreed';
@@ -2782,3 +3020,19 @@ if (bootRoom) {
 }
 if (bootedFromLink && shareMsgEl) shareMsgEl.textContent = "Your friend's move is loaded. Your turn.";
 if (!bootedFromLink) maybeAI();
+
+// ---- clock picker ------------------------------------------------------------
+// The choice is remembered. It applies at once if the current game has not
+// started, otherwise from the next one, and online the host's choice wins.
+(function () {
+  const sel = document.getElementById('timeCtl');
+  if (sel) {
+    sel.value = tcPref();
+    sel.addEventListener('change', function () {
+      try { localStorage.setItem(TC_KEY, sel.value); } catch (e) {}
+      if (!gameActs.length && !onlineActive) clockReset(sel.value);
+      else ui.hint.textContent = 'New clock setting starts with your next game.';
+    });
+  }
+  if (!gameActs.length) clockReset();
+})();

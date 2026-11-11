@@ -847,7 +847,7 @@
 
   function applyToGame(game, gm) {
     if (!gm) return false;
-    if (gm.kind === 'm') return game.makeMove(gm.from.c, gm.from.r, gm.to.c, gm.to.r);
+    if (gm.kind === 'm') return game.makeMove(gm.from.c, gm.from.r, gm.to.c, gm.to.r, gm.promo);
     if (gm.kind === 'ac') return game.wildcardAddCell(gm.cell.c, gm.cell.r);
     if (gm.kind === 'rc') return game.wildcardRemoveCell(gm.cell.c, gm.cell.r);
     if (gm.kind === 'mc') return game.wildcardMoveCell(gm.from.c, gm.from.r, gm.to.c, gm.to.r);
