@@ -1074,3 +1074,159 @@ body.light #board .pc.w { color: #f6f1e6; --pc-line: #574e42; }
 .seo-content strong { color: var(--ink); }
 .seo-content ul { padding-left: 20px; margin: 0; }
 .seo-content li { margin-bottom: 6px; }
+
+/* =====================================================================
+   VISUAL REFRESH (v67)
+   One material for everything: a soft top-lit surface, a hairline edge, a
+   long shadow. Components below are built only from these tokens, so light
+   mode redefines the tokens and gets the whole refresh for free.
+   ===================================================================== */
+:root {
+  --hairline: rgba(255,255,255,.075);
+  --hairline-strong: rgba(255,255,255,.13);
+  --surface-hi: #1d2128;            /* top of a card */
+  --surface-lo: #161920;            /* bottom of a card */
+  --btn-bg: rgba(255,255,255,.045);
+  --btn-bg-h: rgba(255,255,255,.085);
+  --gold-1: #f2d067; --gold-2: #d6a92c;
+  --frame: linear-gradient(155deg, #2b303a 0%, #1a1d24 48%, #101217 100%);
+  --card-shadow: 0 24px 60px -28px rgba(0,0,0,.75), 0 1px 0 rgba(255,255,255,.03) inset;
+}
+body.light {
+  --hairline: rgba(20,28,45,.09);
+  --hairline-strong: rgba(20,28,45,.16);
+  --surface-hi: #ffffff;
+  --surface-lo: #f7f8fa;
+  --btn-bg: rgba(20,28,45,.035);
+  --btn-bg-h: rgba(20,28,45,.07);
+  --frame: linear-gradient(155deg, #f4f5f8 0%, #dfe3ea 55%, #cfd5df 100%);
+  --card-shadow: 0 22px 50px -28px rgba(30,40,60,.35);
+}
+
+/* ---- page ---- */
+body {
+  background:
+    radial-gradient(800px 480px at 18% -8%, rgba(231,193,74,.075), transparent 70%),
+    radial-gradient(900px 600px at 95% 110%, rgba(90,120,170,.08), transparent 70%),
+    radial-gradient(1200px 700px at 50% -12%, #1d2129, var(--bg));
+  background-attachment: fixed;
+}
+body.light {
+  background:
+    radial-gradient(800px 480px at 18% -8%, rgba(231,193,74,.12), transparent 70%),
+    radial-gradient(1200px 800px at 50% -10%, #ffffff, var(--bg));
+  background-attachment: fixed;
+}
+
+/* ---- header ---- */
+header { padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--hairline); }
+header h1 { margin: 0; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark { width: 36px; height: 36px; flex: none; filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+.head-right { margin-bottom: 0; gap: 8px; }
+.ico { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8;
+       stroke-linecap: round; stroke-linejoin: round; }
+.ico.fill { fill: currentColor; stroke: none; }
+.lobby-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px;
+  border-radius: 10px; font-weight: 650; letter-spacing: .1px; transition: background .15s, border-color .15s, transform .15s, box-shadow .15s; }
+.lobby-btn.ghosty { background: var(--btn-bg); border-color: var(--hairline); color: var(--ink); }
+.lobby-btn.ghosty:hover { background: var(--btn-bg-h); border-color: var(--hairline-strong); color: var(--ink); }
+.lobby-btn.icon-only { width: 36px; padding: 0; justify-content: center; }
+.lobby-btn.primary, .find-btn, .analyze-btn.again {
+  background: linear-gradient(180deg, var(--gold-1), var(--gold-2));
+  border-color: rgba(0,0,0,.18); color: #1a1607;
+  box-shadow: 0 1px 0 rgba(255,255,255,.45) inset, 0 8px 22px -10px rgba(231,193,74,.7);
+}
+.lobby-btn.primary:hover, .find-btn:hover, .analyze-btn.again:hover {
+  filter: none; transform: translateY(-1px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 12px 26px -10px rgba(231,193,74,.85);
+}
+.elo-chip { height: 36px; display: inline-flex; align-items: center; padding: 0 13px;
+  background: var(--btn-bg); border: 1px solid var(--hairline); }
+
+/* ---- the board as an object ---- */
+#board {
+  background: var(--frame);
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,.45);
+  box-shadow:
+    inset 0 0 0 1px rgba(231,193,74,.16),     /* gold hairline just inside the rim */
+    inset 0 1px 0 rgba(255,255,255,.07),      /* top bevel catching the light */
+    0 2px 0 rgba(0,0,0,.35),
+    0 40px 70px -30px rgba(0,0,0,.8);
+}
+body.light #board { border-color: rgba(20,28,45,.18);
+  box-shadow: inset 0 0 0 1px rgba(160,120,10,.18), inset 0 1px 0 #fff, 0 30px 60px -30px rgba(30,40,60,.45); }
+.grain { opacity: .07; mix-blend-mode: overlay; }
+.sq { stroke: rgba(0,0,0,.06); }
+.movedot { fill: rgba(16,18,24,.28); }
+.capdot { stroke: rgba(224,72,60,.75); stroke-width: .06; }
+.sel { fill: rgba(231,193,74,.44); }
+.evalbar { border-radius: 12px; border: 1px solid var(--hairline-strong);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.35); }
+.board-row { gap: 12px; }
+
+/* ---- cards: panel, lobby, modals ---- */
+.panel, .lobby-inner {
+  background: linear-gradient(180deg, var(--surface-hi), var(--surface-lo));
+  border: 1px solid var(--hairline);
+  box-shadow: var(--card-shadow);
+}
+.panel { border-radius: 18px; padding: 18px; }
+.lobby-inner { border-radius: 22px; }
+.wild-label, .lobby-label { font-size: 10.5px; font-weight: 650; letter-spacing: 1.3px; }
+
+/* ---- controls: one button language ---- */
+.act-btn, .new-game, .wild-btn, .hint-btn, .opp-row select, .mode-card, .share-btn,
+.ghost-btn, .welcome-guest, .tutor-row select {
+  background: var(--btn-bg); border: 1px solid var(--hairline); border-radius: 10px;
+  transition: background .15s, border-color .15s, transform .15s, box-shadow .15s;
+}
+.act-btn:hover:not(:disabled), .new-game:hover, .wild-btn:hover:not(:disabled), .hint-btn:hover,
+.opp-row select:hover:not(:disabled), .share-btn:hover, .ghost-btn:hover, .welcome-guest:hover {
+  background: var(--btn-bg-h); border-color: var(--hairline-strong);
+}
+.new-game { height: 42px; font-weight: 650; }
+.mode-card { border-radius: 14px; padding: 15px 16px; }
+.mode-card:hover { background: var(--btn-bg-h); border-color: rgba(231,193,74,.5);
+  box-shadow: 0 10px 30px -18px rgba(231,193,74,.55); }
+.find-btn { border-radius: 14px; }
+
+/* ---- status chips ---- */
+.turn { border-radius: 10px; font-weight: 650; padding: 6px 12px; }
+.turn.white { background: linear-gradient(180deg, #fbf8f0, #e8e1d1); color: #1c1a14; border-color: rgba(0,0,0,.12);
+  box-shadow: 0 1px 0 #fff inset, 0 4px 12px -6px rgba(0,0,0,.4); }
+.turn.black { background: linear-gradient(180deg, #2c3038, #15171c); color: #ecebe6; border-color: rgba(255,255,255,.1);
+  box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 4px 12px -6px rgba(0,0,0,.6); }
+.badge { background: linear-gradient(180deg, var(--gold-1), var(--gold-2)); color: #1a1607;
+  box-shadow: 0 1px 0 rgba(255,255,255,.45) inset; }
+
+/* ---- wells ---- */
+.log, .you-card { background: var(--sunken); border-color: var(--hairline); border-radius: 12px; }
+
+/* ---- end-of-game banner: glass over the board ---- */
+.banner { border-radius: 18px; border: 1px solid rgba(231,193,74,.4);
+  background: rgba(16,18,24,.78); backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,.8); }
+body.light .banner { background: rgba(255,255,255,.82); }
+
+/* ---- the copy below the game ---- */
+.seo-content h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 21px; letter-spacing: -.2px; }
+.seo-content { line-height: 1.7; }
+
+@media (max-width: 880px) {
+  header { padding-bottom: 10px; margin-bottom: 12px; }
+  .brand-mark { width: 28px; height: 28px; }
+  .lobby-btn span { display: none; }               /* icons alone on a phone */
+  .lobby-btn { padding: 0 11px; }
+  #board { border-radius: 14px; }
+}
+
+/* the live board-turn button: an alpha gold tint, so it sits right on either
+   theme (the older rule mixed gold into a fixed dark panel colour) */
+body.wild-turn .wild-btn:not(:disabled):not(.active) {
+  background: linear-gradient(180deg, rgba(231,193,74,.22), rgba(231,193,74,.10));
+  border-color: rgba(231,193,74,.6); color: var(--accent-text);
+}
+.mode-ico .ico { width: 20px; height: 20px; color: var(--accent-text); }

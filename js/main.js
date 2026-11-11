@@ -41,6 +41,22 @@ let browsePly = null;               // null = live; otherwise plies replayed
 let browseGame = null;
 const shown = () => browseGame || game;
 
+// Monochrome noise, made once. Tiled under a low-opacity overlay blend it gives
+// the squares a grain without an image file or a per-frame SVG filter.
+const GRAIN = (function () {
+  try {
+    const N = 112, cv = document.createElement('canvas');
+    cv.width = cv.height = N;
+    const cx = cv.getContext('2d'), img = cx.createImageData(N, N);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const g = 96 + (Math.random() * 64) | 0;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = g; img.data[i + 3] = 255;
+    }
+    cx.putImageData(img, 0, 0);
+    return cv.toDataURL('image/png');
+  } catch (e) { return null; }
+})();
+
 function view() {
   const b = shown().bounds();
   let pad = 0;
@@ -53,7 +69,7 @@ function view() {
 function render() {
   const B = shown();
   const v = view();
-  const M = 0.09;                       // thin frame inside the rounded container
+  const M = 0.16;                       // the frame: wide enough to read as a bezel
   boardEl.setAttribute('viewBox', `${-M} ${-M} ${v.cols + 2 * M} ${v.rows + 2 * M}`);
   // Flipping swaps both axes so the side you play always sits at the bottom.
   const X = flipped ? (c) => v.maxC - c : (c) => c - v.minC;
@@ -90,6 +106,10 @@ function render() {
     `<stop offset=".62" stop-color="#fff" stop-opacity="0"/>` +
     `<stop offset="1" stop-color="#000" stop-opacity=".17"/></radialGradient></defs>` +
     `<rect x="0" y="0" width="${v.cols}" height="${v.rows}" fill="url(#bdVig)" pointer-events="none"/>`;
+  // Fine grain over the squares so they read as a material, not flat fills.
+  if (GRAIN) svg += `<defs><pattern id="bdGrain" patternUnits="userSpaceOnUse" width="1.6" height="1.6">` +
+    `<image href="${GRAIN}" width="1.6" height="1.6" preserveAspectRatio="none"/></pattern></defs>` +
+    `<rect x="0" y="0" width="${v.cols}" height="${v.rows}" fill="url(#bdGrain)" class="grain" pointer-events="none"/>`;
 
   if (B.lastAction) for (const s of [B.lastAction.from, B.lastAction.to]) {
     // gold over slate-blue mixes to olive, so the dark squares get a stronger,
@@ -587,7 +607,10 @@ if (flipBtn) flipBtn.addEventListener('click', function () { flipped = !flipped;
 const soundBtn = document.getElementById('soundBtn');
 function paintSound() {
   if (!soundBtn) return;
-  soundBtn.textContent = WCSOUND.isMuted() ? '🔇' : '🔊';
+  // line icons, not emoji: emoji render differently on every OS and read as clip-art
+  soundBtn.innerHTML = '<svg class="ico" viewBox="0 0 24 24"><path d="M11 5.5 6.5 9H3.5v6h3l4.5 3.5z"/>' +
+    (WCSOUND.isMuted() ? '<path d="m15.5 9.5 5 5m0-5-5 5"/>'
+                       : '<path d="M15.2 9a4.2 4.2 0 0 1 0 6M18 6.4a8 8 0 0 1 0 11.2"/>') + '</svg>';
   soundBtn.title = WCSOUND.isMuted() ? 'Sound is off' : 'Sound is on';
 }
 if (soundBtn) soundBtn.addEventListener('click', function () {

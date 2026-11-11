@@ -13,7 +13,7 @@
     slate: {
       name: 'Slate',
       desc: 'The house style. Cool stone and cream.',
-      light: '#e9e3d6', dark: '#6f7d92',
+      light: '#ebe3d2', dark: '#6b7b93',     // a touch warmer cream, a touch deeper slate
       void: '#101218', label: '#8a90a0',
       grid: 'rgba(20,22,28,0.16)',
       holeLight: '#2c3342',            // darker than the dark square, not between the two

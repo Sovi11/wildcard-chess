@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800&display=swap" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=66" />
+  <link rel="stylesheet" href="styles.css?v=67" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -117,17 +117,17 @@
       <div class="lobby-label">Or play a friend directly</div>
       <div class="lobby-modes">
         <button class="mode-card" data-lobbymode="online">
-          <span class="mode-ico">🌐</span>
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 3.8 5.4 3.8 8.5s-1.2 5.9-3.8 8.5c-2.6-2.6-3.8-5.4-3.8-8.5S9.4 6.1 12 3.5z"/></svg></span>
           <span class="mode-name">Online, live</span>
           <span class="mode-desc">Send one link. You both play in real time.</span>
         </button>
         <button class="mode-card" data-lobbymode="hotseat">
-          <span class="mode-ico">👥</span>
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.5a6.2 6.2 0 0 1 12.4 0"/><circle cx="16.5" cy="9" r="2.7"/><path d="M15.8 13.6a5.2 5.2 0 0 1 5.4 5.9"/></svg></span>
           <span class="mode-name">2 players, one screen</span>
           <span class="mode-desc">Offline hotseat. Pass the mouse.</span>
         </button>
         <button class="mode-card mode-wide" data-lobbymode="puzzles">
-          <span class="mode-ico">✦</span>
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.2"/><rect x="13" y="13" width="7" height="7" rx="1.2"/><path d="M15 4.5h4.5V9M9 19.5H4.5V15" /></svg></span>
           <span class="mode-name">Puzzles <span id="puzzleCountTag" class="lb-tag">new</span></span>
           <span class="mode-desc">Forced mates where the terrain is the answer. One solution, proved.</span>
         </button>
@@ -356,13 +356,28 @@
 
   <div class="app">
     <header>
-      <h1>Hollow&nbsp;Chess <span class="sub">the board itself is fair game</span></h1>
+      <div class="brand">
+        <!-- the mark: a corner of board with one square lifted out of it -->
+        <svg class="brand-mark" viewBox="0 0 36 36" aria-hidden="true">
+          <rect x="1" y="1" width="34" height="34" rx="8" fill="#151820"/>
+          <rect x="5" y="5" width="9" height="9" rx="1.2" fill="#ebe3d2"/>
+          <rect x="14" y="5" width="9" height="9" rx="1.2" fill="#6b7b93"/>
+          <rect x="5" y="14" width="9" height="9" rx="1.2" fill="#6b7b93"/>
+          <rect x="14" y="14" width="9" height="9" rx="1.2" fill="#0c0e12" stroke="rgba(231,193,74,.55)" stroke-width="1"/>
+          <rect x="5" y="23" width="9" height="8" rx="1.2" fill="#ebe3d2"/>
+          <rect x="14" y="23" width="9" height="8" rx="1.2" fill="#ebe3d2"/>
+          <rect x="23" y="14" width="8" height="9" rx="1.2" fill="#ebe3d2"/>
+          <rect x="23" y="23" width="8" height="8" rx="1.2" fill="#6b7b93"/>
+          <rect x="24.5" y="2.5" width="9" height="9" rx="1.6" fill="#e7c14a" transform="rotate(-10 29 7)"/>
+        </svg>
+        <h1>Hollow&nbsp;Chess <span class="sub">the board itself is fair game</span></h1>
+      </div>
       <div class="head-right">
         <span class="elo-chip" id="eloChip" title="Your rating">★ 500</span>
-        <button id="soundBtn" class="lobby-btn ghosty sound-btn" title="Sound">🔊</button>
-        <button id="feedbackBtn" class="lobby-btn ghosty" title="Send feedback">💬 Feedback</button>
-        <button id="openProfileTop" class="lobby-btn ghosty">☰ Profile</button>
-        <button id="openLobby" class="lobby-btn">⚔ New match</button>
+        <button id="soundBtn" class="lobby-btn ghosty sound-btn icon-only" title="Sound" aria-label="Sound"></button>
+        <button id="feedbackBtn" class="lobby-btn ghosty" title="Send feedback"><svg class="ico" viewBox="0 0 24 24"><path d="M20.5 11.5a8 8 0 0 1-11.7 7.1L4 19.8l1.2-4.4A8 8 0 1 1 20.5 11.5z"/></svg><span>Feedback</span></button>
+        <button id="openProfileTop" class="lobby-btn ghosty"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg><span>Profile</span></button>
+        <button id="openLobby" class="lobby-btn primary"><svg class="ico fill" viewBox="0 0 24 24"><path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.6-6.8a.8.8 0 0 0 0-1.4L9.2 4.5A.8.8 0 0 0 8 5.2z"/></svg><span>New match</span></button>
       </div>
     </header>
 
@@ -561,25 +576,25 @@
   </div>
 
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=66"></script>
-  <script defer src="js/stats.js?v=66"></script>
-  <script defer src="js/cloud.js?v=66"></script>
-  <script defer src="js/postgame-feedback.js?v=66"></script>
-  <script defer src="js/engine.js?v=66"></script>
-  <script defer src="js/pieces.js?v=66"></script>
-  <script defer src="js/themes.js?v=66"></script>
-  <script defer src="js/sound.js?v=66"></script>
-  <script defer src="js/tutorial.js?v=66"></script>
-  <script defer src="js/ai.js?v=66"></script>
-  <script defer src="js/ladder.js?v=66"></script>
+  <script defer src="js/config.js?v=67"></script>
+  <script defer src="js/stats.js?v=67"></script>
+  <script defer src="js/cloud.js?v=67"></script>
+  <script defer src="js/postgame-feedback.js?v=67"></script>
+  <script defer src="js/engine.js?v=67"></script>
+  <script defer src="js/pieces.js?v=67"></script>
+  <script defer src="js/themes.js?v=67"></script>
+  <script defer src="js/sound.js?v=67"></script>
+  <script defer src="js/tutorial.js?v=67"></script>
+  <script defer src="js/ai.js?v=67"></script>
+  <script defer src="js/ladder.js?v=67"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=66"></script>
-  <script defer src="js/net.js?v=66"></script>
-  <script defer src="js/share.js?v=66"></script>
-  <script defer src="js/analysis.js?v=66"></script>
-  <script defer src="js/solver.js?v=66"></script>
-  <script defer src="js/puzzles.js?v=66"></script>
-  <script defer src="js/main.js?v=66"></script>
+  <script defer src="js/matchmaking.js?v=67"></script>
+  <script defer src="js/net.js?v=67"></script>
+  <script defer src="js/share.js?v=67"></script>
+  <script defer src="js/analysis.js?v=67"></script>
+  <script defer src="js/solver.js?v=67"></script>
+  <script defer src="js/puzzles.js?v=67"></script>
+  <script defer src="js/main.js?v=67"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
