@@ -275,9 +275,12 @@ boardEl.addEventListener('click', (e) => {
   if (dragSuppressClick) { dragSuppressClick = false; return; }   // a drag already handled it
   if (promoOpen()) { closePromo(); return; }
   if (browsePly !== null) { browseTo(null); return; }   // looking at history: first click returns
-  if (!canActNow()) return;
+  if (!canActNow()) { if (gt && !gameOver()) gt.waitTaps++; return; }
   const sq = squareFromPoint(e.clientX, e.clientY);
+  const before = game.history.length, hadSel = !!selected, hadMode = mode;
   onSquare(sq.c, sq.r);
+  // a tap that changed nothing (no move, no selection, no lift) = confusion
+  if (gt && game.history.length === before && !selected && !hadSel && mode === hadMode) gt.deadTaps++;
 });
 
 // Everything a click (or a drop) on a square means.
@@ -583,9 +586,95 @@ function actionFX() {
   if (!gameOver() && game.status === 'check') setTimeout(function () { WCSOUND.play('check'); }, 130);
 }
 
+// ---- where do games die? -------------------------------------------------
+// 87% of games started on a phone never finish, and until now nothing was
+// logged between "game_start" and silence. This answers it: when someone
+// leaves a live game (tab hidden, page closed, restarted, went to puzzles) we
+// log how far in they were, what was on screen and whose turn it was.
+// Anonymous, like the rest of WCSTATS.
+let gt = null;            // the live game's tracker, or null
+let puzzleStarting = false;
+function gameMode() {
+  if (onlineActive) return 'online';
+  if (activeBot) return 'ranked';
+  if (botEnabled()) return 'bot';
+  if (linkMode()) return 'link';
+  return 'hotseat';
+}
+function gameStarted(props) {
+  if (gt && !gt.fresh) gtLeave('restart');
+  WCSTATS.track('game_start', props);
+  gt = { mode: props.mode, t0: Date.now(), fresh: true, firstMove: false,
+         hiddenSent: false, mine: 0, deadTaps: 0, waitTaps: 0 };
+}
+function gtScreen() {
+  const vis = function (id) { const el = document.getElementById(id); return !!(el && el.classList.contains('show')); };
+  if (vis('lobby')) return 'lobby';
+  if (vis('profile')) return 'profile';
+  if (promoOpen()) return 'promo';
+  if (document.querySelector('.tut.show, #tutorial.show')) return 'tutorial';
+  if (window.scrollY > (boardEl.getBoundingClientRect().height * 0.6)) return 'scrolled';
+  return 'board';
+}
+function gtSnapshot(how) {
+  const me = localColor();
+  return {
+    how: how, mode: gt.mode,
+    plies: game.history.length, mine: gt.mine,
+    boardMoves: gameActs.filter(function (a) { return a && a.kind !== 'm'; }).length,
+    secs: Math.round((Date.now() - gt.t0) / 1000),
+    myTurn: game.turn === me && !aiThinking,
+    botThinking: !!aiThinking,
+    boardTurn: !!(game.canWildcard && game.canWildcard()),
+    check: game.status === 'check',
+    selected: !!selected,
+    deadTaps: gt.deadTaps, waitTaps: gt.waitTaps,
+    clock: clock.key,
+    myClock: clockActive() ? Math.round(clockLeft(me) / 1000) : null,
+    screen: gtScreen(),
+    mobile: window.innerWidth < 760,
+    w: window.innerWidth, h: window.innerHeight,
+  };
+}
+// how: 'hidden' (tab/app switched away — may come back), 'close', 'restart', 'puzzle'
+function gtLeave(how) {
+  if (!gt) return;
+  if (gameOver() || puzzleMode) { gt = null; return; }
+  if (how === 'hidden') {
+    if (gt.hiddenSent) return;
+    gt.hiddenSent = true; gt.hiddenAt = Date.now();
+    WCSTATS.track('game_leave', gtSnapshot(how));
+    return;
+  }
+  if (how === 'close' && gt.hiddenSent) return;      // already told on the way out
+  WCSTATS.track('game_leave', gtSnapshot(how));
+  gt = null;
+}
+document.addEventListener('visibilitychange', function () {
+  if (!gt) return;
+  if (document.visibilityState === 'hidden') gtLeave('hidden');
+  else if (gt.hiddenSent && !gt.returned && !gameOver()) {
+    gt.returned = true;
+    WCSTATS.track('game_return', { mode: gt.mode, plies: game.history.length,
+      away: Math.round((Date.now() - (gt.hiddenAt || Date.now())) / 1000) });
+  }
+});
+window.addEventListener('pagehide', function () { gtLeave('close'); });
+function gtOnMove(color) {
+  if (!gt || color !== localColor()) return;
+  gt.mine++;
+  if (!gt.firstMove) {
+    gt.firstMove = true;
+    WCSTATS.track('first_move', { mode: gt.mode, secs: Math.round((Date.now() - gt.t0) / 1000),
+      deadTaps: gt.deadTaps, mobile: window.innerWidth < 760 });
+  }
+}
+function gtFinished() { gt = null; }
+
 function afterMove() {
   const lastH = game.history[game.history.length - 1];
   clockOnMove(lastH ? lastH.color : null);            // before broadcasting: the move carries the clocks
+  gtOnMove(lastH ? lastH.color : null);
   browsePly = null; browseGame = null; paintBrowse();   // a move snaps back to live
   selected = null; legal = []; hintMove = null;
   setMode('normal');
@@ -1070,7 +1159,7 @@ function hideRoomBox() { if (roomBoxEl) roomBoxEl.classList.remove('show'); }
 function startOnlineGame(isHost, label, forcedColor) {
   if (netSession && netSession.cancel && netSession.settled !== true) netSession.settled = true;
   onlineActive = true;
-  WCSTATS.track('game_start', {
+  gameStarted({
     mode: 'online', opponent: 'human',
     signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()),
   });
@@ -1983,7 +2072,7 @@ function closeLobby() { if (cancelSearch) { cancelSearch(); cancelSearch = null;
 // Start a fresh rated game against a ladder bot. You are White, the bot is Black.
 function startMatch(botId) {
   matchmadeEloGate = null;
-  WCSTATS.track('game_start', {
+  gameStarted({
     mode: 'ranked', opponent: botId,
     signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()),
   });
@@ -2007,7 +2096,7 @@ function startMatch(botId) {
 
 // Start an unrated mode: 'hotseat' (same screen) or 'link' (send a link).
 function startCasual(kind) {
-  WCSTATS.track('game_start', {
+  gameStarted({
     mode: kind, opponent: 'human',
     signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()),
   });
@@ -2039,6 +2128,7 @@ function leavePuzzleMode() {
 }
 
 function resetGameState() {
+  if (gt) { if (gt.fresh) gt.fresh = false; else gtLeave(puzzleStarting ? 'puzzle' : 'restart'); }
   if (window.WCPOSTGAME) WCPOSTGAME.hide();
   leavePuzzleMode();
   aiGen++;                   // invalidate any bot move still sitting on a timer
@@ -2559,6 +2649,7 @@ document.querySelectorAll('.wild-btn').forEach(b => b.addEventListener('click', 
 function playAgain() {
   ui.banner.classList.remove('show');
   browsePly = null; browseGame = null; paintBrowse();
+  gameStarted({ mode: gameMode(), again: true, signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()) });
   resetGameState();
   runAnalysis(); sync(); render();
   refreshBotUI(); refreshShareUI(); maybeAI();
@@ -2569,6 +2660,7 @@ document.getElementById('newGame').addEventListener('click', () => {
   // the full reset: bot timers, end reason, replay log and the scoring flag
   // included — a partial one left the next rated game unscored and let a bot
   // move queued for the old game land on the new board
+  gameStarted({ mode: gameMode(), again: true, signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()) });
   resetGameState();
   runAnalysis(); sync(); render();
   refreshBotUI(); refreshShareUI(); maybeAI();
@@ -2759,7 +2851,9 @@ async function startPuzzles() {
   WCNET.destroy(); onlineActive = false; myColor = null;
   activeBot = null; ratedGame = false;
   if (oppModeEl) oppModeEl.value = 'human';    // no bot may ever move in a puzzle
+  puzzleStarting = true;
   resetGameState();                            // no stale end reason / replay log / scoring flag
+  puzzleStarting = false;
   puzzleMode = true;
   document.body.classList.add('puzzle-mode');
   closeLobby();
@@ -2938,6 +3032,7 @@ function sync() {
       // One game_end per game (endSounded is the existing once-only guard).
       // boardMoves answers the design question: do people use the mechanic?
       const me = localColor();
+      gtFinished();
       WCSTATS.track('game_end', {
         result: game.winner ? (game.winner === me ? 'win' : 'loss') : 'draw',
         reason: game.endReason || game.status,
