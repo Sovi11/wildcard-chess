@@ -1615,3 +1615,11 @@ body.fixed-opp .opp-cfg, body.fixed-opp #botBlurb { display: none; }
   body.deco .banner { min-width: 220px; }
   .bn-head { font-size: 28px; }
 }
+
+/* v72: a hidden banner must not catch a single click. Its buttons set
+   pointer-events:auto, which beats the banner's own "none", so since v63 an
+   invisible "Play again" sat over the middle of the board and reset the game
+   when you tapped d4/e4. Hidden now means gone: no hits, not focusable. */
+.banner:not(.show) { visibility: hidden; transition: opacity .25s, transform .25s, visibility 0s linear .25s; }
+.banner.show { visibility: visible; transition: opacity .25s, transform .25s, visibility 0s; }
+.banner:not(.show) .analyze-btn { pointer-events: none; }

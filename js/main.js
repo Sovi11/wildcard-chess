@@ -23,6 +23,19 @@ let legal = [];
 let hintMove = null;        // best-action overlay, cleared on the next move
 let flipped = false;        // true when the board is drawn from Black's side
 let gameActs = [];          // every action this game, so it can be replayed later
+// A reload must not cost you your game. Phones reload a backgrounded tab all
+// the time; until v72 that silently dropped you on a fresh board. The live game
+// (its actions, opponent and clocks) is saved after every move and restored on
+// load. Read once, here, before anything can overwrite it.
+const LIVEKEY = 'hollowchess.live.v1';
+const liveAtBoot = (function () {
+  try {
+    const s = JSON.parse(localStorage.getItem(LIVEKEY) || 'null');
+    if (s && s.v === 1 && Array.isArray(s.acts) && s.acts.length && Date.now() - s.at < 3 * 864e5) return s;
+  } catch (e) {}
+  return null;
+})();
+let resumedGame = false;
 
 // Piece symbols are namespaced by the active set: pc-classic-pawn, pc-gnome-rook…
 WCTHEME.load();
@@ -644,6 +657,59 @@ function gtOnMove(color) {
 }
 function gtFinished() { gt = null; }
 
+// ---- resume after reload ------------------------------------------------------
+function liveSave() {
+  try {
+    if (puzzleMode || onlineActive || linkMode() || gameOver() || !gameActs.length) {
+      localStorage.removeItem(LIVEKEY); return;
+    }
+    localStorage.setItem(LIVEKEY, JSON.stringify({
+      v: 1, at: Date.now(), acts: gameActs,
+      mode: gameMode(), bot: activeBot ? activeBot.id : null, rated: !!ratedGame,
+      opp: oppModeEl ? oppModeEl.value : 'bot', side: botSideEl ? botSideEl.value : 'black',
+      level: botLevelEl ? botLevelEl.value : '3', flipped: flipped,
+      clock: { key: clock.key, white: Math.round(clockLeft('white')), black: Math.round(clockLeft('black')) },
+    }));
+  } catch (e) {}
+}
+function liveRestore(s) {
+  try {
+    activeBot = s.bot ? WCLADDER.liveBot(s.bot) : null;
+    if (s.bot && !activeBot) return false;
+    ratedGame = !!(s.rated && activeBot);
+    resultRecorded = false;
+    if (oppModeEl) oppModeEl.value = s.opp || 'bot';
+    if (botSideEl) botSideEl.value = s.side || 'black';
+    if (botLevelEl && s.level) botLevelEl.value = s.level;
+    resetGameState();
+    for (const a of s.acts) {
+      if (!WCAI.applyToGame(game, a)) throw new Error('replay failed');
+      gameActs.push(a);
+    }
+    if (gameOver()) throw new Error('already over');
+    // Clocks come back as they were; the side to move resumes from now, so a
+    // reload never costs you time you were not actually there for.
+    clockReset(s.clock && s.clock.key ? s.clock.key : 'none');
+    if (clock.key !== 'none') {
+      clock.white = s.clock.white; clock.black = s.clock.black;
+      clock.running = game.turn; clock.last = performance.now();
+    }
+    gt = { mode: s.mode, t0: Date.now(), fresh: false, firstMove: true, hiddenSent: false, mine: 0, deadTaps: 0, waitTaps: 0 };
+    WCSTATS.track('game_resume', { mode: s.mode, plies: game.history.length, away: Math.round((Date.now() - s.at) / 1000) });
+    if (activeBot) orientFor(botSide() === 'white' ? 'black' : 'white'); else flipped = !!s.flipped;
+    paintOppCard(); applyTutorVisibility(); refreshBotUI(); refreshShareUI();
+    runAnalysis(); sync(); render(); liveSave();
+    return true;
+  } catch (e) {
+    console.warn('[resume] could not restore the saved game:', e && e.message);
+    try { localStorage.removeItem(LIVEKEY); } catch (e2) {}
+    resetGameState();
+    return false;
+  }
+}
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') liveSave(); });
+window.addEventListener('pagehide', liveSave);
+
 function afterMove() {
   const lastH = game.history[game.history.length - 1];
   clockOnMove(lastH ? lastH.color : null);            // before broadcasting: the move carries the clocks
@@ -654,6 +720,7 @@ function afterMove() {
   actionFX();
   runAnalysis();
   sync(); render();
+  liveSave();
 }
 
 // ---- bot opponent ---------------------------------------------------------
@@ -1869,7 +1936,7 @@ if (!bootOnInvite && welcomeEl && !hasCachedSession()) { welcomeEl.classList.add
     // already signed in: skip the welcome, but first-timers still get the tour
     closeWelcome();
     if (!tutSeen()) { markTutSeen(); WCTUT.open(openLobby); }
-  } else if (welcomeEl) {
+  } else if (welcomeEl && !resumedGame) {
     const sb = document.getElementById('welcomeSignin');
     if (sb) sb.style.display = cloudReady ? '' : 'none';   // cloud down: guest only
     welcomeEl.classList.add('show');                       // cached-session guess was wrong
@@ -2120,6 +2187,7 @@ function resetGameState() {
   setMode('normal');
   closePromo();
   clockReset();
+  liveSave();                // no actions yet: this clears any saved game
 }
 
 // Score a finished rated game exactly once and return the rating change.
@@ -2379,7 +2447,7 @@ function openReview(acts, title, expectedPlies) {
 
 // Analyze the game that JUST ended, straight from the game-over banner.
 function analyzeCurrentGame() {
-  if (!gameActs.length) return;
+  if (!gameActs.length || !gameOver()) return;
   const opp = onlineActive ? (oppLabel || 'Online player')
     : (activeBot ? activeBot.name : 'Friendly game');
   const me = onlineActive ? myColor : (botEnabled() ? (botSide() === 'white' ? 'black' : 'white') : 'white');
@@ -2620,6 +2688,7 @@ document.querySelectorAll('.wild-btn').forEach(b => b.addEventListener('click', 
 // The banner's second action. Same opponent, same settings, straight back in —
 // the point is not having to go via the lobby to play another one.
 function playAgain() {
+  if (!gameOver()) return;           // only ever from a finished game: never wipe a live one
   ui.banner.classList.remove('show');
   browsePly = null; browseGame = null; paintBrowse();
   gameStarted({ mode: gameMode(), again: true, signedIn: !!(WCCLOUD.currentUser && WCCLOUD.currentUser()) });
@@ -3002,6 +3071,7 @@ function sync() {
   // exposed on a fresh live board.
   applyTutorVisibility();
   if (over) {
+    liveSave();                          // a finished game is never resumed (resign/flag skip afterMove)
     if (!endSounded && !puzzleMode) {          // a solved puzzle is not a game result
       endSounded = true;
       // One game_end per game (endSounded is the existing once-only guard).
@@ -3084,7 +3154,11 @@ render();
 refreshBotUI();
 refreshShareUI();
 const bootRoom = (typeof WCNET !== 'undefined' && WCNET.roomFromLocation) ? WCNET.roomFromLocation() : null;
-if (bootRoom) {
+if (!bootRoom && !bootedFromLink && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
+if (resumedGame) {
+  closeWelcome();            // straight back to the board you were on
+  updateAmbient();
+} else if (bootRoom) {
   openLobby();
   joinRoom(bootRoom);
 } else if (!bootedFromLink) {
