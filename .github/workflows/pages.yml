@@ -1,0 +1,49 @@
+# Publish hollowchess.com from just the files the site serves.
+#
+# The repo is ~800MB, almost all of it rendered shorts. Building Pages from the
+# whole branch got slower with every batch of videos and once sat "building"
+# for over a day; GitHub Pages also stops publishing past 1GB. This deploy
+# never touches shorts/ at all: a sparse, blobless checkout of the root files
+# plus js/ and icons/, copied into a small artifact. The videos stay in the
+# repo and stay in your working copy — they just stop being part of the site.
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            js
+            icons
+      - name: Assemble the site
+        run: |
+          mkdir _site
+          cp index.html 404.html styles.css sw.js manifest.webmanifest robots.txt sitemap.xml CNAME _site/
+          cp -r js icons _site/
+          du -sh _site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
