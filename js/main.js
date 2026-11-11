@@ -1885,20 +1885,83 @@ function closeProfile() { revToken++; profileEl.classList.remove('show'); update
 function showMatchList() { revToken++; profListEl.style.display = ''; profReviewEl.classList.remove('show'); }
 function showReview() { profListEl.style.display = 'none'; profReviewEl.classList.add('show'); }
 
+// Rating over time: one point per rated game, the line in ink and the area
+// under it faint, peak marked. Fewer than two points is not a chart, so it
+// says so instead of drawing a lonely dot.
+function drawRatingChart(rated, current) {
+  const el = document.getElementById('profChart'), note = document.getElementById('profChartNote');
+  if (!el) return;
+  const pts = rated.length ? [rated[0].before].concat(rated.map(function (e) { return e.after; })) : [];
+  if (pts.length < 2) {
+    el.innerHTML = '<text x="300" y="74" text-anchor="middle" class="pc-empty">Play a rated game and your rating history starts here</text>';
+    note.textContent = '';
+    return;
+  }
+  const W = 600, H = 140, pad = 10;
+  let lo = Math.min.apply(null, pts), hi = Math.max.apply(null, pts);
+  if (hi - lo < 40) { const m = (hi + lo) / 2; lo = m - 20; hi = m + 20; }
+  const x = function (i) { return pad + (i / (pts.length - 1)) * (W - 2 * pad); };
+  const y = function (v) { return pad + (1 - (v - lo) / (hi - lo)) * (H - 2 * pad); };
+  let line = '';
+  pts.forEach(function (v, i) { line += (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1); });
+  const area = line + 'L' + x(pts.length - 1).toFixed(1) + ',' + H + 'L' + x(0).toFixed(1) + ',' + H + 'Z';
+  const pi = pts.indexOf(Math.max.apply(null, pts));
+  el.innerHTML =
+    '<defs><linearGradient id="pcArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".18"/>' +
+    '<stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>' +
+    '<path d="' + area + '" fill="url(#pcArea)"/>' +
+    '<path d="' + line + '" class="pc-line"/>' +
+    '<circle cx="' + x(pi).toFixed(1) + '" cy="' + y(pts[pi]).toFixed(1) + '" r="4" class="pc-peak"/>' +
+    '<circle cx="' + x(pts.length - 1).toFixed(1) + '" cy="' + y(pts[pts.length - 1]).toFixed(1) + '" r="4.5" class="pc-now"/>';
+  const d = current - pts[0];
+  note.textContent = (d >= 0 ? '+' : '') + d + ' over ' + rated.length + ' rated game' + (rated.length === 1 ? '' : 's');
+}
+
 function renderProfile() {
   const p = WCLADDER.getProfile();
-  document.getElementById('profName').textContent = (p.name && p.name !== 'You') ? p.name : 'Your profile';
-  document.getElementById('profElo').textContent = p.elo;
+  const named = p.name && p.name !== 'You';
+  document.getElementById('profName').textContent = named ? p.name : 'Your profile';
+  document.getElementById('profAvatar').textContent = (named ? p.name : 'You').trim().charAt(0).toUpperCase();
   const total = p.wins + p.losses + p.draws;
   const pct = total ? Math.round((p.wins / total) * 100) : 0;
-  document.getElementById('profSummary').textContent =
-    total ? (total + ' games \u00b7 ' + p.wins + 'W ' + p.losses + 'L ' + p.draws + 'D \u00b7 ' + pct + '% won')
-          : 'No games yet \u2014 play one and it will show up here.';
-  const peak = (p.log || []).reduce(function (m, e) { return Math.max(m, e.after || 0); }, p.elo);
-  document.getElementById('profPeak').textContent = 'peak ' + peak;
+  const signedIn = !!(WCCLOUD.currentUser && WCCLOUD.currentUser());
+  document.getElementById('profSummary').textContent = signedIn
+    ? 'Signed in \u00b7 your rating and games follow you to any device'
+    : 'Playing as a guest \u00b7 rating saved on this device';
+
+  const log = p.log || [];
+  const rated = log.filter(function (e) { return e.rated !== false && typeof e.after === 'number'; })
+                   .sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+  const peak = rated.reduce(function (m, e) { return Math.max(m, e.after); }, p.elo);
+  const pz = (window.WCPUZZLE && WCPUZZLE.progress) ? WCPUZZLE.progress() : null;
+  const solved = pz ? Object.keys(pz.solved || {}).length : 0;
+
+  // the numbers worth knowing at a glance, in one row
+  const tile = function (label, value, sub) {
+    return '<div class="prof-tile"><div class="prof-tile-v">' + value + '</div>' +
+      '<div class="prof-tile-l">' + label + '</div>' + (sub ? '<div class="prof-tile-s">' + sub + '</div>' : '') + '</div>';
+  };
+  document.getElementById('profStats').innerHTML =
+    tile('Rating', p.elo, 'peak ' + peak) +
+    tile('Games', total, total ? pct + '% won' : 'none yet') +
+    tile('Puzzle rating', pz ? pz.rating : 1000, solved + ' solved') +
+    tile('Best streak', pz ? (pz.best || 0) : 0, 'puzzles in a row');
+
+  drawRatingChart(rated, p.elo);
+
+  // win / draw / loss as one proportional bar — the shape of your record
+  const wld = document.getElementById('profWld');
+  if (!total) wld.innerHTML = '';
+  else {
+    const seg = function (n, cls, lbl) {
+      return n ? '<span class="wld-seg ' + cls + '" style="flex:' + n + '" title="' + n + ' ' + lbl + '"></span>' : '';
+    };
+    wld.innerHTML = '<div class="wld-bar">' + seg(p.wins, 'w', 'wins') + seg(p.draws, 'd', 'draws') + seg(p.losses, 'l', 'losses') + '</div>' +
+      '<div class="wld-legend"><span><i class="w"></i>' + p.wins + ' won</span><span><i class="d"></i>' + p.draws +
+      ' drawn</span><span><i class="l"></i>' + p.losses + ' lost</span></div>';
+  }
 
   if (!matchListEl) return;
-  const log = p.log || [];
   if (!log.length) {
     matchListEl.innerHTML = '<div class="match-empty">Nothing here yet.</div>';
     return;

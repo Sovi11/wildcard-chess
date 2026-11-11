@@ -1230,3 +1230,99 @@ body.wild-turn .wild-btn:not(:disabled):not(.active) {
   border-color: rgba(231,193,74,.6); color: var(--accent-text);
 }
 .mode-ico .ico { width: 20px; height: 20px; color: var(--accent-text); }
+
+/* =====================================================================
+   v68: GOLD MEANS SOMETHING, and a real profile
+   Gold had become the colour of everything: the board ring, the badge, the
+   button, the hint text, every rating number, every bot's rating, the page
+   glow. When everything is gold nothing is, and it reads as a yellow theme.
+   It is now reserved for two jobs: the primary action, and the board-turn
+   signal. Ratings and labels go back to ink and grey.
+   ===================================================================== */
+body {
+  background:
+    radial-gradient(900px 600px at 95% 110%, rgba(90,120,170,.07), transparent 70%),
+    radial-gradient(1200px 700px at 50% -12%, #1c2028, var(--bg));
+  background-attachment: fixed;
+}
+body.light { background: radial-gradient(1200px 800px at 50% -10%, #ffffff, var(--bg)); background-attachment: fixed; }
+
+/* ratings and names are information, not decoration */
+.elo-chip, .you-elo, .oc-elo, .mr-oelo, .lb-row.you .lb-name { color: var(--ink); }
+.oc-elo, .mr-oelo { background: var(--btn-bg); font-weight: 650; color: var(--muted); }
+.oc-style, .br-style, .mf-meta { color: var(--muted); opacity: 1; }
+.mode-ico .ico { color: var(--ink); opacity: .85; }
+body.light .elo-chip, body.light .oc-elo { background: var(--btn-bg); }
+
+/* the board-turn ring: a clear thin edge, not a glowing band */
+body.wild-turn #board, body.light.wild-turn #board {
+  animation: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(231,193,74,.16), inset 0 1px 0 rgba(255,255,255,.07),
+    0 0 0 2px rgba(231,193,74,.75), 0 0 22px -6px rgba(231,193,74,.45),
+    0 40px 70px -30px rgba(0,0,0,.8);
+}
+body.light.wild-turn #board {
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 2px rgba(196,148,24,.8), 0 0 20px -6px rgba(196,148,24,.4),
+    0 30px 60px -30px rgba(30,40,60,.45);
+}
+body.wild-turn .badge { animation: none; }
+body.wild-turn .wild-btn:not(:disabled):not(.active),
+body.light.wild-turn .wild-btn:not(:disabled):not(.active) {
+  background: rgba(231,193,74,.08); border-color: rgba(231,193,74,.45); color: var(--ink);
+  animation: none;
+}
+.hint { color: var(--muted); }
+
+/* last move: a quieter honey, not a highlighter */
+.last.lt { fill: rgba(214,178,92,.34); }
+.last.dk { fill: rgba(220,186,104,.50); }
+
+/* ---- profile ---- */
+.prof-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.prof-avatar {
+  width: 52px; height: 52px; flex: none; border-radius: 16px; display: grid; place-items: center;
+  font: 600 24px "Fraunces", Georgia, serif; color: var(--ink);
+  background: linear-gradient(145deg, #3a4150, #1b1f27); border: 1px solid var(--hairline-strong);
+  box-shadow: 0 10px 24px -12px rgba(0,0,0,.7);
+}
+body.light .prof-avatar { background: linear-gradient(145deg, #ffffff, #e3e7ee); }
+.prof-id .lobby-title { margin: 0 0 3px; font-size: 24px; }
+.prof-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+.prof-tile { background: var(--btn-bg); border: 1px solid var(--hairline); border-radius: 14px; padding: 13px 14px; }
+.prof-tile-v { font-size: 25px; font-weight: 700; letter-spacing: -.5px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.prof-tile-l { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-top: 4px; }
+.prof-tile-s { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.prof-chartcard { background: var(--btn-bg); border: 1px solid var(--hairline); border-radius: 14px; padding: 13px 14px 14px; margin-bottom: 18px; }
+.prof-chart-head { display: flex; justify-content: space-between; align-items: baseline; }
+.prof-chart-head .lobby-label { margin-bottom: 6px; }
+.prof-chart-note { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.prof-chart { width: 100%; height: 120px; display: block; color: var(--ink); overflow: visible; }
+.pc-line { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pc-now { fill: var(--ink); stroke: var(--surface-lo); stroke-width: 2; }
+.pc-peak { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.pc-empty { fill: var(--muted); font-size: 14px; }
+.prof-wld { margin-top: 12px; }
+.prof-wld:empty { display: none; }
+.wld-bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; gap: 2px; }
+.wld-seg.w, .wld-legend i.w { background: #5fb87a; }
+.wld-seg.d, .wld-legend i.d { background: #8a90a0; }
+.wld-seg.l, .wld-legend i.l { background: #d9675d; }
+.wld-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.wld-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 3px; margin-right: 6px; }
+
+/* game rows: a result pill instead of a coloured stripe */
+.match-row { border-left-width: 1px; border-radius: 12px; background: var(--btn-bg); border-color: var(--hairline); padding: 10px 12px; }
+.match-row:hover:not(:disabled) { background: var(--btn-bg-h); border-color: var(--hairline-strong); transform: none; }
+.mr-res { width: auto; min-width: 44px; text-align: center; padding: 3px 0; border-radius: 7px; font-size: 10px; }
+.mr-res.win { background: rgba(95,184,122,.14); }
+.mr-res.loss { background: rgba(217,103,93,.14); }
+.mr-res.draw { background: rgba(138,144,160,.16); }
+.match-list { gap: 6px; max-height: 340px; }
+
+@media (max-width: 640px) {
+  .prof-stats { grid-template-columns: repeat(2, 1fr); }
+  .prof-tile-v { font-size: 21px; }
+}
+/* the profile's <header> must not inherit the page header's spread + divider */
+.prof-head { justify-content: flex-start; border-bottom: 0; padding-bottom: 0; }

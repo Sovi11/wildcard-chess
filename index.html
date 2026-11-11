@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800&display=swap" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=67" />
+  <link rel="stylesheet" href="styles.css?v=68" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -182,17 +182,11 @@
 
   <div id="profile" class="lobby">
     <div class="lobby-inner profile-inner">
-      <header class="lobby-head">
-        <div>
+      <header class="prof-head">
+        <div class="prof-avatar" id="profAvatar" aria-hidden="true">Y</div>
+        <div class="prof-id">
           <h2 class="lobby-title" id="profName">Your profile</h2>
           <p class="lobby-sub" id="profSummary">&nbsp;</p>
-        </div>
-        <div class="you-card">
-          <div class="you-elo" id="profElo">500</div>
-          <div class="you-meta">
-            <div class="you-name">Rating</div>
-            <div class="you-rec" id="profPeak"></div>
-          </div>
         </div>
       </header>
 
@@ -226,6 +220,12 @@
       </div>
 
       <div id="profList">
+        <div class="prof-stats" id="profStats"></div>
+        <div class="prof-chartcard">
+          <div class="prof-chart-head"><span class="lobby-label">Rating</span><span class="prof-chart-note" id="profChartNote"></span></div>
+          <svg id="profChart" class="prof-chart" viewBox="0 0 600 140" preserveAspectRatio="none" role="img" aria-label="Rating over time"></svg>
+          <div class="prof-wld" id="profWld"></div>
+        </div>
         <div class="lobby-label">Past games <span class="lobby-hint">click one to review it move by move</span></div>
         <div id="matchList" class="match-list"></div>
       </div>
@@ -576,25 +576,25 @@
   </div>
 
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=67"></script>
-  <script defer src="js/stats.js?v=67"></script>
-  <script defer src="js/cloud.js?v=67"></script>
-  <script defer src="js/postgame-feedback.js?v=67"></script>
-  <script defer src="js/engine.js?v=67"></script>
-  <script defer src="js/pieces.js?v=67"></script>
-  <script defer src="js/themes.js?v=67"></script>
-  <script defer src="js/sound.js?v=67"></script>
-  <script defer src="js/tutorial.js?v=67"></script>
-  <script defer src="js/ai.js?v=67"></script>
-  <script defer src="js/ladder.js?v=67"></script>
+  <script defer src="js/config.js?v=68"></script>
+  <script defer src="js/stats.js?v=68"></script>
+  <script defer src="js/cloud.js?v=68"></script>
+  <script defer src="js/postgame-feedback.js?v=68"></script>
+  <script defer src="js/engine.js?v=68"></script>
+  <script defer src="js/pieces.js?v=68"></script>
+  <script defer src="js/themes.js?v=68"></script>
+  <script defer src="js/sound.js?v=68"></script>
+  <script defer src="js/tutorial.js?v=68"></script>
+  <script defer src="js/ai.js?v=68"></script>
+  <script defer src="js/ladder.js?v=68"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=67"></script>
-  <script defer src="js/net.js?v=67"></script>
-  <script defer src="js/share.js?v=67"></script>
-  <script defer src="js/analysis.js?v=67"></script>
-  <script defer src="js/solver.js?v=67"></script>
-  <script defer src="js/puzzles.js?v=67"></script>
-  <script defer src="js/main.js?v=67"></script>
+  <script defer src="js/matchmaking.js?v=68"></script>
+  <script defer src="js/net.js?v=68"></script>
+  <script defer src="js/share.js?v=68"></script>
+  <script defer src="js/analysis.js?v=68"></script>
+  <script defer src="js/solver.js?v=68"></script>
+  <script defer src="js/puzzles.js?v=68"></script>
+  <script defer src="js/main.js?v=68"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
