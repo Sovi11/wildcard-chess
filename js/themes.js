@@ -10,9 +10,18 @@
   const KEY = 'wildcardchess.appearance.v1';
 
   const BOARD_THEMES = {
+    bombay: {
+      name: 'Bombay',
+      desc: 'The house style. Mint tile and cream, like an old Bandra floor.',
+      light: '#f3e8d2', dark: '#5c9f8b',
+      void: '#13201f', voidLight: '#e6dac2', label: '#7c8a84',
+      grid: 'rgba(23,40,38,0.10)',
+      holeLight: '#1b2a2b',            // deep ink: nothing on this board is that dark
+      holeRim: 'rgba(236,106,61,.55)', // a thin sunset edge says "this is a hole"
+    },
     slate: {
       name: 'Slate',
-      desc: 'The house style. Cool stone and cream.',
+      desc: 'Cool stone and cream.',
       light: '#ebe3d2', dark: '#6b7b93',     // a touch warmer cream, a touch deeper slate
       void: '#101218', label: '#8a90a0',
       grid: 'rgba(20,22,28,0.16)',
@@ -49,14 +58,18 @@
     },
   };
 
-  let current = { board: 'slate', pieces: 'staunton' };
+  let current = { board: 'bombay', pieces: 'staunton' };
 
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const p = JSON.parse(raw);
+        // Slate was the default, not a choice: move those boards to the new one.
+        if (p.board === 'slate' && !p.boardPicked) p.board = 'bombay';
         if (BOARD_THEMES[p.board]) current.board = p.board;
+        if (p.boardPicked) current.boardPicked = true;
+        if (p.picked) current.picked = true;
         // Everyone who has 'classic' saved got it as the old default, not by
         // choosing it, so they move to the new set once. Anyone who picks a set
         // from Appearance after this is marked and left alone.
@@ -75,8 +88,11 @@
   }
 
   function apply(boardId, piecesId) {
-    if (boardId && BOARD_THEMES[boardId]) current.board = boardId;
-    if (piecesId) { current.pieces = piecesId; current.picked = true; }   // a real choice
+    if (boardId && BOARD_THEMES[boardId]) {
+      if (boardId !== current.board) current.boardPicked = true;   // a real choice
+      current.board = boardId;
+    }
+    if (piecesId) { if (piecesId !== current.pieces) current.picked = true; current.pieces = piecesId; }
     const t = BOARD_THEMES[current.board];
     const r = document.documentElement.style;
     r.setProperty('--sq-light', t.light);
@@ -108,7 +124,9 @@
   // Separate from the BOARD theme: the board keeps its own square colours in
   // either mode. Defaults to the OS preference on first visit, then whatever
   // the player last chose.
-  const MODEKEY = 'wildcardchess.mode.v1';
+  // v2: the site became a daylight design, so everyone starts on paper once;
+  // the old key stored the OS preference for everybody, not a choice.
+  const MODEKEY = 'wildcardchess.mode.v2';
   function prefersLight() {
     try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches; }
     catch (e) { return false; }
@@ -118,13 +136,13 @@
       const v = localStorage.getItem(MODEKEY);
       if (v === 'light' || v === 'dark') return v;
     } catch (e) {}
-    return prefersLight() ? 'light' : 'dark';
+    return 'light';
   }
   function applyMode(mode) {
     const m = mode || getMode();
     document.body.classList.toggle('light', m === 'light');
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', m === 'light' ? '#eef0f4' : '#14161b');
+    if (meta) meta.setAttribute('content', m === 'light' ? '#f6efe2' : '#0f1d1c');
     try { localStorage.setItem(MODEKEY, m); } catch (e) {}
     apply();                       // re-pick the void for the new mode
     return m;

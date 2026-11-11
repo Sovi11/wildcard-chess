@@ -41,22 +41,6 @@ let browsePly = null;               // null = live; otherwise plies replayed
 let browseGame = null;
 const shown = () => browseGame || game;
 
-// Monochrome noise, made once. Tiled under a low-opacity overlay blend it gives
-// the squares a grain without an image file or a per-frame SVG filter.
-const GRAIN = (function () {
-  try {
-    const N = 112, cv = document.createElement('canvas');
-    cv.width = cv.height = N;
-    const cx = cv.getContext('2d'), img = cx.createImageData(N, N);
-    for (let i = 0; i < img.data.length; i += 4) {
-      const g = 96 + (Math.random() * 64) | 0;
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = g; img.data[i + 3] = 255;
-    }
-    cx.putImageData(img, 0, 0);
-    return cv.toDataURL('image/png');
-  } catch (e) { return null; }
-})();
-
 // The frame margin, in squares. Drawing and click-reading MUST share it: v67
 // widened the frame in render() but left the click handler on the old 0.09,
 // so clicks at the edge of a square landed on its neighbour.
@@ -104,18 +88,7 @@ function render() {
     const light = mod2(c + r) === 1;
     svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" class="sq ${light ? 'lt' : 'dk'}" data-k="${c},${r}"/>`;
   }
-  // One soft light across the whole board — brighter in the middle, falling
-  // off to the rim — so it reads as a surface rather than a flat grid.
-  svg += `<defs><radialGradient id="bdVig" cx=".5" cy=".42" r=".78">` +
-    `<stop offset="0" stop-color="#fff" stop-opacity=".07"/>` +
-    `<stop offset=".62" stop-color="#fff" stop-opacity="0"/>` +
-    `<stop offset="1" stop-color="#000" stop-opacity=".17"/></radialGradient></defs>` +
-    `<rect x="0" y="0" width="${v.cols}" height="${v.rows}" fill="url(#bdVig)" pointer-events="none"/>`;
-  // Fine grain over the squares so they read as a material, not flat fills.
-  if (GRAIN) svg += `<defs><pattern id="bdGrain" patternUnits="userSpaceOnUse" width="1.6" height="1.6">` +
-    `<image href="${GRAIN}" width="1.6" height="1.6" preserveAspectRatio="none"/></pattern></defs>` +
-    `<rect x="0" y="0" width="${v.cols}" height="${v.rows}" fill="url(#bdGrain)" class="grain" pointer-events="none"/>`;
-
+  // Flat, printed squares: no vignette, no grain. The tile is the material.
   if (B.lastAction) for (const s of [B.lastAction.from, B.lastAction.to]) {
     // gold over slate-blue mixes to olive, so the dark squares get a stronger,
     // warmer tint than the light ones to land on the same gold
@@ -2997,6 +2970,8 @@ function wildOnset(on) {
 }
 
 function sync() {
+  // A ranked or online game has its opponent fixed: hide the free-play setup.
+  document.body.classList.toggle('fixed-opp', !!((activeBot && ratedGame) || onlineActive));
   paintClocks();
   const over = gameOver();
   const side = game.turn === 'white' ? 'White' : 'Black';
@@ -3057,24 +3032,28 @@ function sync() {
     }
     const r = puzzleMode ? null : settleResult();
     const reason = game.endReason;
-    let text;
-    if (reason === 'time') {
-      text = (game.winner === 'white' ? 'White' : 'Black') + ' wins on time';
-    } else if (reason === 'resignation') {
-      text = (game.winner === 'white' ? 'White' : 'Black') + ' wins by resignation';
-    } else if (reason === 'agreement') {
-      text = 'Draw agreed';
-    } else {
-      text = game.status === 'checkmate'
-        ? ('Checkmate \u2014 ' + (game.winner === 'white' ? 'White' : 'Black') + ' wins')
-        : (game.status === 'repetition' ? 'Draw by repetition'
-          : game.status === 'fifty' ? 'Draw \u2014 50-move rule' : 'Stalemate \u2014 draw');
-    }
+    // Headline says what happened to YOU; the line under it says how.
+    const side = (c) => (c === 'white' ? 'White' : 'Black');
+    const personal = !!(activeBot || onlineActive || botEnabled());
+    const me = localColor();
+    let head, how;
+    if (!game.winner) head = 'Draw';
+    else if (personal) head = game.winner === me ? 'You won' : 'You lost';
+    else head = side(game.winner) + ' wins';
+    if (reason === 'time') how = 'on time';
+    else if (reason === 'resignation') how = 'by resignation';
+    else if (reason === 'agreement') how = 'by agreement';
+    else how = game.status === 'checkmate' ? 'by checkmate'
+      : game.status === 'repetition' ? 'by repetition'
+      : game.status === 'fifty' ? '50-move rule' : 'stalemate';
     if (r) {
       const sign = r.delta >= 0 ? '+' : '';
-      text += '  \u00b7  ' + r.before + ' \u2192 ' + r.after + ' (' + sign + r.delta + ')';
+      how += '  \u00b7  ' + r.before + ' \u2192 ' + r.after + ' (' + sign + r.delta + ')';
     }
-    ui.bannerText.textContent = text;
+    ui.bannerText.textContent = '';
+    const hEl = document.createElement('span'); hEl.className = 'bn-head'; hEl.textContent = head;
+    const sEl = document.createElement('span'); sEl.className = 'bn-sub'; sEl.textContent = how;
+    ui.bannerText.append(hEl, sEl);
     const ab = document.getElementById('analyzeBtn');
     if (ab) ab.style.display = gameActs.length ? '' : 'none';
     ui.banner.classList.add('show');

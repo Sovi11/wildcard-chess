@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#14161b" />
+  <meta name="theme-color" content="#f6efe2" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -27,13 +27,13 @@
   <meta name="twitter:title" content="Hollow Chess — chess where the board itself is fair game" />
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236f7d92'/%3E%3Crect x='4' y='4' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='16' width='12' height='12' fill='%23e9e3d6'/%3E%3Crect x='16' y='4' width='12' height='12' fill='%23101218'/%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M2 31V15a14 14 0 0 1 28 0v16z' fill='%230f6a5b'/%3E%3Crect x='8' y='16' width='8' height='7' fill='%23f3e8d2'/%3E%3Crect x='8' y='23' width='8' height='7' fill='%238fd0b6'/%3E%3Crect x='16' y='23' width='8' height='7' fill='%23f3e8d2'/%3E%3Crect x='18' y='7' width='8' height='7' fill='%23e5603a' transform='rotate(-12 22 10)'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Jost:wght@400;500;600;700&family=Inter:wght@500;600;700&display=swap" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=70" />
+  <link rel="stylesheet" href="styles.css?v=71" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -67,7 +67,7 @@
   }
   </script>
 </head>
-<body>
+<body class="deco light">
   <div id="lobby" class="lobby">
     <div class="lobby-inner">
       <header class="lobby-head">
@@ -240,14 +240,21 @@
   <div id="welcome" class="lobby welcome">
     <div class="lobby-inner welcome-inner">
       <div class="welcome-mark">
-        <svg viewBox="0 0 4 3" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect x="0" y="0" width="1" height="1" class="wm-a"/><rect x="1" y="0" width="1" height="1" class="wm-b"/>
-          <rect x="2" y="0" width="1" height="1" class="wm-a"/><rect x="3" y="0" width="1" height="1" class="wm-b"/>
-          <rect x="0" y="1" width="1" height="1" class="wm-b"/><rect x="2" y="1" width="1" height="1" class="wm-b"/>
-          <rect x="3" y="1" width="1" height="1" class="wm-a"/>
-          <rect x="0" y="2" width="1" height="1" class="wm-a"/><rect x="1" y="2" width="1" height="1" class="wm-b"/>
-          <rect x="2" y="2" width="1" height="1" class="wm-a"/>
-          <text x="3.5" y="1.82" class="wm-k" text-anchor="middle">♞</text>
+        <!-- a Bombay deco arch; inside it a tiled floor with one tile lifted out -->
+        <svg viewBox="0 0 120 104" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M8 104V52a52 52 0 0 1 104 0v52z" fill="#0f6a5b"/>
+          <g stroke="#8fd0b6" stroke-width="1.6" opacity=".55">
+            <line x1="60" y1="58" x2="60" y2="10"/><line x1="60" y1="58" x2="26" y2="22"/><line x1="60" y1="58" x2="94" y2="22"/>
+            <line x1="60" y1="58" x2="14" y2="44"/><line x1="60" y1="58" x2="106" y2="44"/>
+          </g>
+          <path d="M44 58a16 16 0 0 1 32 0z" fill="#f0b23a"/>
+          <g>
+            <rect x="20" y="62" width="20" height="21" fill="#f3e8d2"/><rect x="40" y="62" width="20" height="21" fill="#5c9f8b"/>
+            <rect x="60" y="62" width="20" height="21" fill="#f3e8d2"/><rect x="80" y="62" width="20" height="21" fill="#5c9f8b"/>
+            <rect x="20" y="83" width="20" height="21" fill="#5c9f8b"/><rect x="40" y="83" width="20" height="21" fill="#f3e8d2"/>
+            <rect x="60" y="83" width="20" height="21" fill="#0b3f37"/><rect x="80" y="83" width="20" height="21" fill="#f3e8d2"/>
+          </g>
+          <rect x="64" y="34" width="20" height="21" fill="#e5603a" transform="rotate(-14 74 44)"/>
         </svg>
       </div>
       <h2 class="welcome-title">Hollow Chess</h2>
@@ -359,16 +366,12 @@
       <div class="brand">
         <!-- the mark: a corner of board with one square lifted out of it -->
         <svg class="brand-mark" viewBox="0 0 36 36" aria-hidden="true">
-          <rect x="1" y="1" width="34" height="34" rx="8" fill="#151820"/>
-          <rect x="5" y="5" width="9" height="9" rx="1.2" fill="#ebe3d2"/>
-          <rect x="14" y="5" width="9" height="9" rx="1.2" fill="#6b7b93"/>
-          <rect x="5" y="14" width="9" height="9" rx="1.2" fill="#6b7b93"/>
-          <rect x="14" y="14" width="9" height="9" rx="1.2" fill="#0c0e12" stroke="rgba(231,193,74,.55)" stroke-width="1"/>
-          <rect x="5" y="23" width="9" height="8" rx="1.2" fill="#ebe3d2"/>
-          <rect x="14" y="23" width="9" height="8" rx="1.2" fill="#ebe3d2"/>
-          <rect x="23" y="14" width="8" height="9" rx="1.2" fill="#ebe3d2"/>
-          <rect x="23" y="23" width="8" height="8" rx="1.2" fill="#6b7b93"/>
-          <rect x="24.5" y="2.5" width="9" height="9" rx="1.6" fill="#e7c14a" transform="rotate(-10 29 7)"/>
+          <path d="M2 35V17a16 16 0 0 1 32 0v18z" fill="#0f6a5b"/>
+          <rect x="9" y="18" width="9" height="8" fill="#f3e8d2"/>
+          <rect x="9" y="26" width="9" height="8" fill="#8fd0b6"/>
+          <rect x="18" y="26" width="9" height="8" fill="#f3e8d2"/>
+          <rect x="18.5" y="18.5" width="8" height="7" fill="#0b4a40"/>
+          <rect x="20" y="6" width="9" height="8" fill="#e5603a" transform="rotate(-12 24.5 10)"/>
         </svg>
         <h1>Hollow&nbsp;Chess <span class="sub">the board itself is fair game</span></h1>
       </div>
@@ -472,7 +475,7 @@
 
         <div class="opp-group">
           <div class="wild-label">Opponent</div>
-          <div class="opp-row">
+          <div class="opp-row opp-cfg">
             <select id="oppMode" aria-label="Opponent type">
               <option value="bot" selected>Bot</option>
               <option value="human">Friend — same screen</option>
@@ -483,7 +486,7 @@
               <option value="white">Bot: White</option>
             </select>
           </div>
-          <div class="opp-row">
+          <div class="opp-row opp-cfg">
             <select id="botLevel" aria-label="Bot difficulty">
               <option value="1">1 · Beginner</option>
               <option value="2">2 · Casual</option>
@@ -589,25 +592,25 @@
   </div>
 
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=70"></script>
-  <script defer src="js/stats.js?v=70"></script>
-  <script defer src="js/cloud.js?v=70"></script>
-  <script defer src="js/postgame-feedback.js?v=70"></script>
-  <script defer src="js/engine.js?v=70"></script>
-  <script defer src="js/pieces.js?v=70"></script>
-  <script defer src="js/themes.js?v=70"></script>
-  <script defer src="js/sound.js?v=70"></script>
-  <script defer src="js/tutorial.js?v=70"></script>
-  <script defer src="js/ai.js?v=70"></script>
-  <script defer src="js/ladder.js?v=70"></script>
+  <script defer src="js/config.js?v=71"></script>
+  <script defer src="js/stats.js?v=71"></script>
+  <script defer src="js/cloud.js?v=71"></script>
+  <script defer src="js/postgame-feedback.js?v=71"></script>
+  <script defer src="js/engine.js?v=71"></script>
+  <script defer src="js/pieces.js?v=71"></script>
+  <script defer src="js/themes.js?v=71"></script>
+  <script defer src="js/sound.js?v=71"></script>
+  <script defer src="js/tutorial.js?v=71"></script>
+  <script defer src="js/ai.js?v=71"></script>
+  <script defer src="js/ladder.js?v=71"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=70"></script>
-  <script defer src="js/net.js?v=70"></script>
-  <script defer src="js/share.js?v=70"></script>
-  <script defer src="js/analysis.js?v=70"></script>
-  <script defer src="js/solver.js?v=70"></script>
-  <script defer src="js/puzzles.js?v=70"></script>
-  <script defer src="js/main.js?v=70"></script>
+  <script defer src="js/matchmaking.js?v=71"></script>
+  <script defer src="js/net.js?v=71"></script>
+  <script defer src="js/share.js?v=71"></script>
+  <script defer src="js/analysis.js?v=71"></script>
+  <script defer src="js/solver.js?v=71"></script>
+  <script defer src="js/puzzles.js?v=71"></script>
+  <script defer src="js/main.js?v=71"></script>
   <script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

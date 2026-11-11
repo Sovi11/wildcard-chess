@@ -1364,3 +1364,254 @@ body.puzzle-mode .clock-bar { display: none; }
 
 /* ---- drag ---- */
 #board.dragging, #board.dragging * { cursor: grabbing; }
+
+/* =====================================================================
+   v71: BOMBAY DECO
+   The reference is Bombay Sweet Shop and Veronica's: cream paper, a few
+   confident flat colours, deco geometry, one characterful serif, lots of
+   room. So: no gradients, no glows, no glass, no grain, no drop shadows.
+   Colour does the work and each colour has one job:
+     peacock  — the thing you should press
+     sunset   — the board turn (the mechanic the game is about)
+     turmeric — what just happened on the board (last move, selection)
+     mint     — good news (wins, solved)
+   Everything here hangs off body.deco so it outranks the older layers
+   (body.light .x) on order, not on !important.
+   ===================================================================== */
+body.deco {
+  --paper: #f6efe2; --paper-2: #ece2cf; --card: #fffaf0; --well: #f3ead9;
+  --ink: #1d2b2c; --muted: #5f6b67; --rule: #ddd0b8; --rule-strong: #c9b998;
+  --peacock: #0f6a5b; --peacock-h: #0b5a4d; --on-peacock: #fffaf0;
+  --sunset: #e5603a; --sunset-soft: rgba(229,96,58,.12);
+  --turmeric: #f0b23a; --mint: #8fd0b6; --mint-ink: #1f6e52; --rani: #c8336a;
+  --bg: var(--paper); --panel: var(--card); --panel2: var(--well); --sunken: var(--well);
+  --line: var(--rule); --accent: var(--sunset); --accent-text: #b8431f; --on-accent: #fffaf0;
+  --hairline: var(--rule); --hairline-strong: var(--rule-strong);
+  --btn-bg: var(--card); --btn-bg-h: var(--well);
+  --surface-hi: var(--card); --surface-lo: var(--card);
+  --scrim: rgba(246,239,226,.9); --banner-bg: var(--card);
+  --serif: "DM Serif Display", Georgia, serif;
+  --sans: "Jost", "Inter", system-ui, sans-serif;
+  background: var(--paper); color: var(--ink);
+  font-family: var(--sans); font-feature-settings: normal;
+}
+body.deco:not(.light) {           /* night: the same shop after closing */
+  --paper: #0f1d1c; --paper-2: #142624; --card: #152826; --well: #11211f;
+  --ink: #f3e8d2; --muted: #9fb0aa; --rule: #26403c; --rule-strong: #345650;
+  --peacock: #8fd0b6; --peacock-h: #a6dcc6; --on-peacock: #0f1d1c;
+  --accent-text: #f08a63; --mint-ink: #8fd0b6;
+  --scrim: rgba(10,20,19,.88);
+}
+body.deco, body.deco.light { background: var(--paper); background-attachment: scroll; }
+
+/* ---- type ---- */
+body.deco header h1, body.deco .welcome-title, body.deco .lobby-title,
+body.deco .seo-content h2, body.deco .prof-avatar, body.deco .postgame-feedback h2 {
+  font-family: var(--serif); font-weight: 400; letter-spacing: 0;
+}
+body.deco header h1 { font-size: 32px; line-height: 1; }
+body.deco header h1 .sub { font-family: var(--sans); font-size: 12px; font-weight: 500;
+  letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); }
+body.deco .wild-label, body.deco .lobby-label, body.deco .prof-tile-l, body.deco .pz-sess-label,
+body.deco .auth-label, body.deco .you-name {
+  font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 1.8px;
+  text-transform: uppercase; color: var(--muted);
+}
+body.deco .clk-time, body.deco .elo-chip, body.deco .you-elo, body.deco .prof-tile-v,
+body.deco .lb-elo, body.deco .br-elo, body.deco .mf-elo, body.deco .mr-delta, body.deco .evalbar-num {
+  font-family: "Inter", system-ui, sans-serif; font-variant-numeric: tabular-nums;
+}
+
+/* ---- header: a shop sign over a tiled rule ---- */
+body.deco .app > header { border-bottom: 0; padding-bottom: 16px; margin-bottom: 20px; position: relative; }
+body.deco .app > header::after {           /* a strip of deco tile: cream / mint / peacock */
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; border-radius: 3px;
+  background: repeating-linear-gradient(90deg, var(--peacock) 0 18px, var(--mint) 18px 36px,
+    var(--paper-2) 36px 54px, var(--sunset) 54px 60px, var(--paper-2) 60px 78px, var(--mint) 78px 96px);
+  opacity: .9;
+}
+body.deco .brand-mark { filter: none; }
+
+/* ---- one button language: flat fills, ink outlines ---- */
+body.deco .lobby-btn, body.deco .act-btn, body.deco .new-game, body.deco .wild-btn, body.deco .hint-btn,
+body.deco .opp-row select, body.deco .appear-row select, body.deco .tutor-row select, body.deco #anaDepth,
+body.deco .ghost-btn, body.deco .welcome-guest, body.deco .auth-btn, body.deco .share-btn,
+body.deco .mode-card, body.deco .elo-chip, body.deco .pz-sess-row, body.deco #roomSide {
+  background: var(--card); color: var(--ink); border: 1.5px solid var(--rule-strong);
+  box-shadow: none; filter: none; font-family: var(--sans);
+}
+body.deco .lobby-btn:hover, body.deco .act-btn:hover:not(:disabled), body.deco .new-game:hover,
+body.deco .wild-btn:hover:not(:disabled), body.deco .hint-btn:hover, body.deco .ghost-btn:hover,
+body.deco .welcome-guest:hover, body.deco .auth-btn:hover:not(:disabled), body.deco .share-btn:hover,
+body.deco .opp-row select:hover:not(:disabled), body.deco .pz-sess-row:hover {
+  background: var(--card); border-color: var(--ink); color: var(--ink); transform: none; filter: none;
+}
+body.deco .lobby-btn { border-radius: 999px; font-weight: 500; }
+body.deco .elo-chip { border-radius: 999px; font-weight: 700; color: var(--ink); }
+
+/* primary: peacock, the only filled button on any screen */
+body.deco .lobby-btn.primary, body.deco .find-btn, body.deco .analyze-btn.again,
+body.deco .share-btn.primary, body.deco .postgame-send, body.deco #playBotNow, body.deco .bb-live {
+  background: var(--peacock); color: var(--on-peacock); border: 1.5px solid var(--peacock);
+  box-shadow: none; filter: none;
+}
+body.deco .lobby-btn.primary:hover, body.deco .find-btn:hover, body.deco .analyze-btn.again:hover,
+body.deco #playBotNow:hover, body.deco .postgame-send:hover:not(:disabled), body.deco .bb-live:hover {
+  background: var(--peacock-h); border-color: var(--peacock-h); color: var(--on-peacock);
+  box-shadow: none; transform: none; filter: none;
+}
+body.deco .find-btn { border-radius: 16px; padding: 18px; }
+body.deco .find-title { font-family: var(--serif); font-weight: 400; font-size: 24px; letter-spacing: .2px; }
+body.deco .find-sub { font-weight: 500; opacity: .8; letter-spacing: .3px; }
+body.deco .act-btn.danger:hover:not(:disabled) { border-color: var(--sunset); color: var(--accent-text); }
+
+/* ---- cards ---- */
+body.deco .panel, body.deco .lobby-inner {
+  background: var(--card); border: 1.5px solid var(--rule); box-shadow: none; border-radius: 20px;
+}
+body.deco .lobby, body.deco .welcome, body.deco .tut,
+body.deco.light .welcome, body.deco.light .tut { background: var(--scrim); backdrop-filter: none; }
+body.deco .log, body.deco .you-card, body.deco .leaderboard, body.deco .ana-line, body.deco .rev-moveinfo,
+body.deco .prof-tile, body.deco .prof-chartcard, body.deco .match-row, body.deco .opp-card,
+body.deco .net-card, body.deco .share-panel, body.deco .search-state, body.deco .room-box,
+body.deco .clock-bar, body.deco .browse-bar, body.deco .rev-graph {
+  background: var(--well); border: 1px solid var(--rule); box-shadow: none;
+}
+body.deco .mode-card { border-radius: 16px; background: var(--card); }
+body.deco .mode-card:hover { border-color: var(--ink); background: var(--card); box-shadow: none; transform: none; }
+body.deco .mode-ico .ico { color: var(--peacock); opacity: 1; }
+body.deco .match-row:hover:not(:disabled) { background: var(--card); border-color: var(--ink); }
+body.deco .lb-row.you, body.deco.light .lb-row.you { background: var(--card); border: 1.5px solid var(--peacock); }
+body.deco .lb-row.you .lb-name { color: var(--ink); }
+body.deco .lb-tag, body.deco.light .lb-tag, body.deco .pz-tag.terrain {
+  background: var(--rani); border-color: var(--rani); color: #fffaf0; letter-spacing: 1px;
+}
+body.deco .postgame-feedback { background: var(--well); border: 1.5px solid var(--rule); }
+body.deco .postgame-reactions button { background: var(--card); border: 1.5px solid var(--rule-strong); }
+body.deco .postgame-reactions button[aria-pressed="true"] { background: var(--peacock); border-color: var(--peacock); color: var(--on-peacock); }
+
+/* matchmaking: the waiting row was squeezing its own text to one word a line */
+body.deco .search-state { flex-wrap: wrap; border-radius: 16px; }
+body.deco .search-text { flex: 1 1 160px; }
+body.deco #playBotNow, body.deco #cancelSearch { width: auto; flex: none; padding: 9px 16px; border-radius: 999px; }
+body.deco .search-spin { border-color: var(--rule); border-top-color: var(--peacock); }
+body.deco .match-found { background: var(--card); border: 1.5px solid var(--peacock); }
+
+/* ---- status chips ---- */
+body.deco .turn { border-radius: 999px; font-weight: 600; box-shadow: none; padding: 6px 14px; }
+body.deco .turn.white, body.deco.light .turn.white { background: #fffaf0; color: #1d2b2c; border: 1.5px solid #1d2b2c; }
+body.deco .turn.black, body.deco.light .turn.black { background: #1d2b2c; color: #f6efe2; border: 1.5px solid #1d2b2c; }
+body.deco .badge { background: var(--sunset); color: #fffaf0; box-shadow: none; border-radius: 999px; font-weight: 600; }
+body.deco .state, body.deco.light .state { background: var(--rani); }
+
+/* ---- the board: a printed tile in a thin double frame ---- */
+body.deco #board, body.deco.light #board {
+  background: var(--board-void); border-radius: 6px; border: 1.5px solid var(--ink);
+  box-shadow: 0 0 0 4px var(--paper), 0 0 0 5.5px var(--ink);
+  margin: 6px;
+}
+body.deco .board-row #board { margin: 6px; }
+body.deco .sq { stroke: none; }
+body.deco #board .pc.w, body.deco #revBoard .pc.w, body.deco.light #board .pc.w { color: #fffaf0; --pc-line: #3b3328; }
+body.deco #board .pc.b, body.deco #revBoard .pc.b { color: #1d2b2c; --pc-line: #0a1312; }
+/* solid tints: yellow laid over mint at any opacity turns olive */
+body.deco .last.lt { fill: #f7dc9e; }
+body.deco .last.dk { fill: #e9bd55; }
+body.deco .sel { fill: #f2c65e; }
+body.deco .movedot { fill: rgba(29,43,44,.3); }
+body.deco .capdot { stroke: rgba(29,43,44,.38); stroke-width: .07; }
+body.deco .lbl.edge { fill: var(--muted); }
+body.deco .selcell, body.deco.light .selcell { fill: rgba(229,96,58,.55); stroke: var(--sunset); filter: none; }
+body.deco .guide { fill: rgba(229,96,58,.1); stroke: rgba(229,96,58,.75); }
+body.deco .target.movecell { stroke: var(--sunset); }
+
+/* the board turn: a sunset frame, no glow */
+body.deco.wild-turn #board, body.deco.light.wild-turn #board, body.deco.wild-turn.wild-onset #board {
+  animation: none; border-color: var(--sunset);
+  box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--sunset);
+}
+body.deco.wild-turn.wild-onset #board { animation: decoOnset .7s cubic-bezier(.2,1,.3,1); }
+@keyframes decoOnset { 0% { box-shadow: 0 0 0 4px var(--paper), 0 0 0 16px rgba(229,96,58,0); }
+                       100% { box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--sunset); } }
+body.deco.wild-turn .wild-btn:not(:disabled):not(.active),
+body.deco.light.wild-turn .wild-btn:not(:disabled):not(.active) {
+  background: var(--sunset-soft); border-color: var(--sunset); color: var(--ink); animation: none;
+}
+body.deco .wild-btn.active { background: var(--sunset); border-color: var(--sunset); color: #fffaf0; }
+body.deco.puzzle-solved #board, body.deco.light.puzzle-solved #board {
+  border-color: var(--mint-ink); box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--mint);
+}
+body.deco.browsing #board { outline: none; box-shadow: 0 0 0 4px var(--paper), 0 0 0 6px var(--turmeric); }
+
+/* eval bar: cream for White, ink for Black — the colours of the pieces */
+body.deco .evalbar, body.deco.light .evalbar { background: #1d2b2c; border: 1.5px solid var(--ink); box-shadow: none; border-radius: 6px; margin: 6px 0; }
+body.deco .evalbar-fill, body.deco.light .evalbar-fill { background: #fffaf0; }
+body.deco .evalbar-num.pos, body.deco.light .evalbar-num.pos { color: #1d2b2c; }
+body.deco .evalbar-num.neg, body.deco.light .evalbar-num.neg { color: #f6efe2; }
+body.deco .rg-line { stroke: var(--peacock); }
+body.deco .rg-fill-w { fill: rgba(143,208,182,.35); }
+
+/* clocks */
+body.deco .clock-bar { border-radius: 999px; padding: 6px 8px 6px 16px; }
+body.deco .clock-bar.running { background: var(--card); border: 1.5px solid var(--ink); }
+body.deco .clock-bar.running .clk-time { color: var(--ink); }
+body.deco .clock-bar .clk-time { background: transparent; padding: 0 8px; }
+body.deco .clock-bar.low .clk-time { color: var(--sunset); }
+body.deco .clk-dot.white { background: #fffaf0; border-color: #1d2b2c; }
+body.deco .clk-dot.black { background: #1d2b2c; }
+
+/* game over: a solid card, not frosted glass */
+body.deco .banner, body.deco.light .banner {
+  background: var(--card); color: var(--ink); border: 1.5px solid var(--ink); border-radius: 18px;
+  backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 0 0 6px rgba(246,239,226,.7);
+  font-family: var(--serif); font-weight: 400; font-size: 24px;
+}
+body.deco .banner { text-align: center; white-space: normal; padding: 18px 26px; }
+.bn-head { display: block; font-family: var(--serif, Georgia, serif); font-size: 32px; line-height: 1.1; }
+.bn-sub { display: block; margin-top: 6px; font-family: var(--sans, sans-serif); font-size: 13.5px; font-weight: 500;
+  letter-spacing: .3px; color: var(--muted); font-variant-numeric: tabular-nums; }
+body.deco .banner .analyze-btn { display: inline-block; margin: 14px 4px 0; padding: 10px 18px; white-space: nowrap;
+  font-family: var(--sans); font-weight: 600; font-size: 15px; border-radius: 999px;
+  background: var(--card); color: var(--ink); border: 1.5px solid var(--ink); }
+body.deco .banner .analyze-btn.again { background: var(--peacock); color: var(--on-peacock); border-color: var(--peacock); }
+
+/* results read in mint and sunset, not traffic-light green and red */
+body.deco .wld-seg.w, body.deco .wld-legend i.w { background: var(--mint); }
+body.deco .wld-seg.l, body.deco .wld-legend i.l { background: var(--sunset); }
+body.deco .mr-res.win { background: rgba(143,208,182,.35); color: var(--mint-ink); }
+body.deco .mr-res.loss { background: var(--sunset-soft); color: var(--accent-text); }
+body.deco .prof-avatar, body.deco.light .prof-avatar { background: var(--peacock); color: var(--on-peacock); border: 0; box-shadow: none; border-radius: 50%; }
+body.deco .pc-line { stroke: var(--peacock); }
+body.deco .prof-chart { color: var(--peacock); }
+body.deco .pc-now { fill: var(--peacock); }
+
+/* welcome: the sign over the door */
+body.deco .welcome-inner { padding: 30px 26px 24px; border-radius: 24px; }
+body.deco .welcome-mark { width: 150px; margin-bottom: 18px; }
+body.deco .welcome-title { font-size: 42px; margin-bottom: 10px; }
+body.deco .welcome-tag { font-size: 15.5px; color: var(--muted); }
+body.deco .welcome-how { border: 0; background: none; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+body.deco .welcome-how:hover { border: 0; color: var(--peacock); }
+body.deco .tut-sq.lt { fill: #f3e8d2; } body.deco .tut-sq.dk { fill: #5c9f8b; }
+body.deco .tut-dot.on { background: var(--sunset); }
+body.deco .tut-body b { color: var(--accent-text); }
+body.deco .tut-seq i.s, body.deco.light .tut-seq i.s { background: var(--sunset-soft); border-color: var(--sunset); color: var(--accent-text); }
+
+body.deco .seo-content { border-top: 0; }
+body.deco .seo-content h2 { font-size: 26px; }
+
+body.fixed-opp .opp-cfg, body.fixed-opp #botBlurb { display: none; }
+
+/* the whole board has to fit on a laptop screen, clocks included */
+@media (min-width: 881px) {
+  body.deco .board-wrap { max-width: calc(100vh - 150px); margin: 0 auto; width: 100%; }
+  body.deco.has-clock .board-wrap { max-width: calc(100vh - 235px); }
+}
+
+@media (max-width: 880px) {
+  body.deco header h1 { font-size: 24px; }
+  body.deco header h1 .sub { font-size: 10px; letter-spacing: 1.2px; }
+  body.deco #board, body.deco .board-row #board { margin: 5px; }
+  body.deco .banner { min-width: 220px; }
+  .bn-head { font-size: 28px; }
+}
