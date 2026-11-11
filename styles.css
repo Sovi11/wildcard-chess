@@ -1629,3 +1629,18 @@ body.no-bot #botSide, body.no-bot #botLevel { display: none; }
 /* "+M1" broke over two lines in the narrow phone eval bar */
 .evalbar-num { white-space: nowrap; letter-spacing: -.4px; }
 @media (max-width: 880px) { .evalbar-num { font-size: 9.5px; } }
+
+/* store-required, deliberately quiet: the last thing in the profile footer */
+.delete-account { color: var(--muted); font-size: 12.5px; }
+.delete-account:hover { color: var(--accent-text, #b8431f); }
+
+/* ---- inside the phone app (html.native, set by js/platform.js) ----
+   The app draws edge to edge, so keep content clear of the status bar and the
+   gesture bar. env() is 0 on the website, so these are no-ops there. */
+html.native .app { padding-top: calc(env(safe-area-inset-top, 0px) + 8px); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); }
+html.native .lobby { padding-top: calc(env(safe-area-inset-top, 0px) + 12px); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); }
+html.native .seo-content { display: none; }          /* search-engine copy has no place in an app */
+html.native body { -webkit-user-select: none; user-select: none; }
+html.native input, html.native textarea { -webkit-user-select: text; user-select: text; }
+.prof-legal { display: inline-flex; gap: 14px; align-items: center; }
+.prof-legal a.linky { font-size: 12.5px; }

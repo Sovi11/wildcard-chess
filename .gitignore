@@ -7,3 +7,14 @@ steam_appid.txt
 
 # mixer working files: regenerate with 'node harness/mix-audio.js SCENE --stems'
 shorts/out/stems/
+
+# phone app: generated web bundle and build output (the android/ project itself is committed)
+app/node_modules/
+app/www/
+app/android/app/build/
+app/android/build/
+app/android/.gradle/
+app/android/local.properties
+app/android/app/release/
+*.keystore
+*.jks

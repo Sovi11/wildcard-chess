@@ -1493,6 +1493,8 @@ function paintAuth() {
   }
   authBtn.style.display = '';
   const u = WCCLOUD.currentUser();
+  const delBtn = document.getElementById('deleteAccount');
+  if (delBtn) delBtn.style.display = u ? '' : 'none';
   if (!u && !WCCLOUD.hasGoogle()) authBtn.textContent = 'Sign in with email';
   if (u) {
     authBtn.textContent = 'Sign out';
@@ -1701,6 +1703,25 @@ if (authBtn) authBtn.addEventListener('click', async function () {
     return;
   }
   openAuthModal();
+});
+
+// Delete account: required by the app stores, and the right thing anyway.
+// Everything tied to the account (profile, games, puzzle history) goes with it.
+bindClick('deleteAccount', async function () {
+  const u = WCCLOUD.currentUser();
+  if (!u) return;
+  if (!confirm('Delete your Hollow Chess account (' + (u.email || 'this account') + ')?\n\n' +
+               'Your rating, game history and puzzle progress are erased for good. This cannot be undone.')) return;
+  const btn = document.getElementById('deleteAccount');
+  if (btn) { btn.disabled = true; btn.textContent = 'Deleting\u2026'; }
+  const r = await WCCLOUD.deleteAccount();
+  if (btn) { btn.disabled = false; btn.textContent = 'Delete account'; }
+  if (!r.ok) { alert('Could not delete the account: ' + r.error + '\nTry again, or email hollowchess11@gmail.com.'); return; }
+  resetDeviceProfile();
+  setLastUid('');
+  paintProfile(); renderLeaderboard(); paintAuth();
+  if (profileEl) profileEl.classList.remove('show');
+  alert('Your account has been deleted.');
 });
 
 if (googleBtn) googleBtn.addEventListener('click', async function () {

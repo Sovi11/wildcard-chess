@@ -17,7 +17,7 @@
   const cfg = window.WCCONFIG || {};
   const ON = !!(cfg.supabaseUrl && cfg.supabaseKey);
   // Local development must never pollute the real numbers.
-  const DEV = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  const DEV = !(window.HC && HC.native) && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);  // the app also lives at localhost, and must count
 
   // Anonymous visit id: one per tab-session, not a user identifier.
   let session = '';
@@ -66,6 +66,7 @@
     ref: refDomain(),
     w: window.innerWidth,
     mobile: window.innerWidth < 760,
+    platform: window.HC ? HC.platform : 'web',
     pwa: window.matchMedia && window.matchMedia('(display-mode: standalone)').matches,
   });
 })();

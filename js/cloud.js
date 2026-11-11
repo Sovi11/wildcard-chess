@@ -67,7 +67,7 @@
   // are usable before Google OAuth has been wired up.
   async function signInWithEmail(email) {
     if (!client) return { ok: false, error: 'cloud off' };
-    const redirectTo = location.origin + location.pathname;
+    const redirectTo = (window.HC ? HC.publicBase : location.origin + location.pathname);
     const { error } = await client.auth.signInWithOtp({
       email: String(email || '').trim(),
       options: { emailRedirectTo: redirectTo },
@@ -91,7 +91,7 @@
     if (!client) return { ok: false, error: 'cloud off' };
     const { data, error } = await client.auth.signUp({
       email: String(email || '').trim(), password: String(password || ''),
-      options: { emailRedirectTo: location.origin + location.pathname },
+      options: { emailRedirectTo: (window.HC ? HC.publicBase : location.origin + location.pathname) },
     });
     if (error) return { ok: false, error: error.message };
     // With "confirm email" on, a session is null until they click the link.
@@ -101,7 +101,7 @@
   async function resetPassword(email) {
     if (!client) return { ok: false, error: 'cloud off' };
     const { error } = await client.auth.resetPasswordForEmail(String(email || '').trim(), {
-      redirectTo: location.origin + location.pathname,
+      redirectTo: (window.HC ? HC.publicBase : location.origin + location.pathname),
     });
     if (error) return { ok: false, error: error.message };
     return { ok: true };
@@ -110,13 +110,27 @@
   async function signIn() {
     if (!client) return false;
     // Land back on this exact page; Supabase recovers the session from the URL.
-    const redirectTo = location.origin + location.pathname;
+    const redirectTo = (window.HC ? HC.publicBase : location.origin + location.pathname);
     const { error } = await client.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: redirectTo },
     });
     if (error) { console.warn('[cloud] sign-in failed:', error.message); return false; }
     return true;
+  }
+
+  // Permanently delete the signed-in account (server function: the browser is
+  // not allowed to delete users). Returns { ok, error }.
+  async function deleteAccount() {
+    if (!client || !user) return { ok: false, error: 'not signed in' };
+    try {
+      const { error } = await client.functions.invoke('delete-account', { method: 'POST' });
+      if (error) return { ok: false, error: error.message || String(error) };
+    } catch (e) { return { ok: false, error: e && e.message ? e.message : String(e) }; }
+    try { await client.auth.signOut({ scope: 'local' }); } catch (e) {}
+    user = null;
+    fire();
+    return { ok: true };
   }
 
   async function signOut() {
@@ -308,7 +322,7 @@
     sendFeedback,
     configured, enabled, init, signIn, signInWithEmail, hasGoogle, providerList,
     signInWithPassword, signUpWithPassword, resetPassword,
-    signOut, currentUser, onChange,
+    signOut, deleteAccount, currentUser, onChange,
     loadProfile, saveProfile, leaderboard,
     joinQueue, leaveQueue, findWaiting,
     puzzleRatings, recordPuzzleAttempt,

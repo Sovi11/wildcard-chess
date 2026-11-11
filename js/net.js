@@ -118,7 +118,7 @@
   function host(h) {
     handlers = h || {};
     const code = makeCode();
-    const link = location.origin + location.pathname + '#room=' + code;
+    const link = (window.HC ? HC.publicBase : location.origin + location.pathname) + '#room=' + code;
     let cancelled = false;
 
     destroy();

@@ -106,7 +106,7 @@
   }
 
   function linkFor(game) {
-    const base = location.origin + location.pathname;
+    const base = (window.HC ? HC.publicBase : location.origin + location.pathname);
     return base + '#g=' + encode(game);
   }
 

@@ -38,7 +38,7 @@ jobs:
       - name: Assemble the site
         run: |
           mkdir _site
-          cp index.html 404.html styles.css sw.js manifest.webmanifest robots.txt sitemap.xml CNAME _site/
+          cp index.html 404.html privacy.html delete-account.html styles.css sw.js manifest.webmanifest robots.txt sitemap.xml CNAME _site/
           cp -r js icons _site/
           du -sh _site
       - uses: actions/configure-pages@v5
