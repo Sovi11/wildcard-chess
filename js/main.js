@@ -83,9 +83,18 @@ function render() {
     const light = mod2(c + r) === 1;
     svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" class="sq ${light ? 'lt' : 'dk'}"/>`;
   }
+  // One soft light across the whole board — brighter in the middle, falling
+  // off to the rim — so it reads as a surface rather than a flat grid.
+  svg += `<defs><radialGradient id="bdVig" cx=".5" cy=".42" r=".78">` +
+    `<stop offset="0" stop-color="#fff" stop-opacity=".07"/>` +
+    `<stop offset=".62" stop-color="#fff" stop-opacity="0"/>` +
+    `<stop offset="1" stop-color="#000" stop-opacity=".17"/></radialGradient></defs>` +
+    `<rect x="0" y="0" width="${v.cols}" height="${v.rows}" fill="url(#bdVig)" pointer-events="none"/>`;
 
   if (B.lastAction) for (const s of [B.lastAction.from, B.lastAction.to]) {
-    if (s && B.hasCell(s.c, s.r)) svg += `<rect x="${X(s.c)}" y="${Y(s.r)}" width="1" height="1" class="last"/>`;
+    // gold over slate-blue mixes to olive, so the dark squares get a stronger,
+    // warmer tint than the light ones to land on the same gold
+    if (s && B.hasCell(s.c, s.r)) svg += `<rect x="${X(s.c)}" y="${Y(s.r)}" width="1" height="1" class="last ${mod2(s.c + s.r) === 1 ? 'lt' : 'dk'}"/>`;
   }
 
   if (mode === 'addcell' || (mode === 'movecell' && selected)) {

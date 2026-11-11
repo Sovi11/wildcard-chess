@@ -49,7 +49,7 @@
     },
   };
 
-  let current = { board: 'slate', pieces: 'classic' };
+  let current = { board: 'slate', pieces: 'staunton' };
 
   function load() {
     try {
@@ -57,6 +57,10 @@
       if (raw) {
         const p = JSON.parse(raw);
         if (BOARD_THEMES[p.board]) current.board = p.board;
+        // Everyone who has 'classic' saved got it as the old default, not by
+        // choosing it, so they move to the new set once. Anyone who picks a set
+        // from Appearance after this is marked and left alone.
+        if (p.pieces === 'classic' && !p.picked) p.pieces = 'staunton';
         if (window.PIECE_SETS && window.PIECE_SETS[p.pieces]) current.pieces = p.pieces;
         else if (typeof PIECE_SETS !== 'undefined' && PIECE_SETS[p.pieces]) current.pieces = p.pieces;
       }
@@ -72,7 +76,7 @@
 
   function apply(boardId, piecesId) {
     if (boardId && BOARD_THEMES[boardId]) current.board = boardId;
-    if (piecesId) current.pieces = piecesId;
+    if (piecesId) { current.pieces = piecesId; current.picked = true; }   // a real choice
     const t = BOARD_THEMES[current.board];
     const r = document.documentElement.style;
     r.setProperty('--sq-light', t.light);

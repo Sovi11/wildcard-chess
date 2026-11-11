@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "wildcard-chess",
-      "runtimeExecutable": "python",
+      "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "5180"],
       "port": 5180
     }

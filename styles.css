@@ -36,12 +36,22 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
-  background: radial-gradient(1200px 600px at 50% -12%, #1f232c, var(--bg));
+  background:
+    radial-gradient(900px 520px at 30% -10%, rgba(231,193,74,.07), transparent 70%),
+    radial-gradient(1200px 700px at 50% -12%, #1f232c, var(--bg));
+  background-attachment: fixed;
   color: var(--ink);
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+/* The wordmark gets a display serif: it is the one place a bit of character
+   pays, and it sets the game apart from every sans-serif chess site. */
+header h1, .welcome-title, .lobby-title {
+  font-family: "Fraunces", Georgia, serif; font-weight: 600; letter-spacing: -.3px;
 }
 .app { max-width: 1180px; margin: 0 auto; padding: 18px 22px 40px; }
-header h1 { font-size: 26px; font-weight: 800; letter-spacing: .3px; margin: 6px 0 18px; }
+header h1 { font-size: 30px; margin: 4px 0 18px; }
 header .sub { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 10px; }
 
 main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; align-items: start; }
@@ -68,7 +78,10 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; al
 .hole { fill: var(--hole); }
 .hole-rim { fill: none; stroke: var(--hole-rim); stroke-width: .045; }
 
-.last { fill: rgba(231,193,74,0.20); }
+/* last move: a real gold tint — the old 20% read as grey on slate */
+.last.lt { fill: rgba(226,176,40,.42); }
+.last.dk { fill: rgba(236,190,72,.66); }
+header h1 .sub { font-family: "Inter", system-ui, sans-serif; letter-spacing: 0; }
 .sel { fill: rgba(231,193,74,0.40); }
 
 /* placement guide — mild outlined cell showing where a piece may be placed */
@@ -91,9 +104,10 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; al
 
 /* ---- pieces (themed via inherited color + stroke) ---- */
 /* applies to the live board and the review board alike */
-#board .pc, #revBoard .pc { stroke-linejoin: round; stroke-linecap: round; stroke: var(--pc-line); stroke-width: 1.0; vector-effect: non-scaling-stroke; }
-#board .pc.w, #revBoard .pc.w { color: #f4f2ea; --pc-line: #3a3f49; --pc-hat: var(--pc-hat-w); }
-#board .pc.b, #revBoard .pc.b { color: #2b3038; --pc-line: #0c0e13; --pc-hat: var(--pc-hat-b); }
+#board .pc, #revBoard .pc { stroke-linejoin: round; stroke-linecap: round; stroke: var(--pc-line); stroke-width: 1.1; vector-effect: non-scaling-stroke; }
+/* ivory and ebony: warm white with a brown line, near-black with a cool cast */
+#board .pc.w, #revBoard .pc.w { color: #f3eee2; --pc-line: #4a4339; --pc-hat: var(--pc-hat-w); }
+#board .pc.b, #revBoard .pc.b { color: #2a2e35; --pc-line: #0b0c0f; --pc-hat: var(--pc-hat-b); }
 
 /* ---- panel ---- */
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
@@ -1034,7 +1048,7 @@ body.light.puzzle-solved #board {
   animation: none;
 }
 body.light .tut-sq.lift { filter: drop-shadow(0 .1px .1px rgba(40,50,70,.3)); }
-body.light #board .pc.w { color: #fbfaf6; --pc-line: #5a6070; }
+body.light #board .pc.w { color: #f6f1e6; --pc-line: #574e42; }
 
 .support-link { text-decoration: none; display: inline-flex; align-items: center; }
 

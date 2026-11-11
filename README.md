@@ -167,7 +167,10 @@ Board themes and piece sets mix freely and persist (panel → Appearance):
 
 - **Boards:** Slate (default), **Garden & stone** (moss and paving, holes show bare soil,
   squares rounded like stones), Parchment, **Neon void** (black pieces trace in cyan).
-- **Pieces:** Classic, or **Garden gnomes** — pawns are small gnomes, rooks are mushroom
+- **Pieces:** **Staunton** (default) — an original Staunton-pattern set drawn for
+  this game, lit from the top-left: every piece is a silhouette plus an alpha-only
+  sheen, so one gradient shades ivory and ebony alike. Also **Flat** (the original
+  set) and **Garden gnomes** — pawns are small gnomes, rooks are mushroom
   houses, knights ride snails, bishops carry lanterns, queens wear flower crowns, and the
   king has the tallest hat. White wears red hats, black wears blue.
 

@@ -4,9 +4,76 @@
 // fill="var(--pc-hat, currentColor)" — themes colour these per side (gnome hats,
 // mushroom caps, snail shells); without a theme they fall back to the body colour.
 
+// ---- Staunton (the default) -------------------------------------------------
+// An original Staunton-pattern set, drawn for this game (no third-party art, so
+// it ships to Steam clean). Each piece is a SILHOUETTE plus a few detail lines;
+// shaded() turns that into the final symbol: a soft contact shadow, the body in
+// the side colour, the same body again under a neutral light-to-shade sheen
+// (alpha only, so one gradient lights ivory and ebony alike), then the details.
+// Lighting comes from the top-left, everywhere, from this one function.
+const BASE = 'M9.6 40.2 h25.8 q1.9 0 1.3 -1.8 l-1 -2.6 H9.3 l-1 2.6 q-.6 1.8 1.3 1.8 z' +
+             'M11.4 35.9 h22.2 q.6 -2.3 -1 -2.9 H12.4 q-1.6 .6 -1 2.9 z';
+const BASE_LINES = 'M9.3 35.8 h26.4 M12 33 h21';
+function shaded(body, lines) {
+  return `<ellipse cx="22.5" cy="40.4" rx="14.5" ry="2.1" fill="#000" fill-opacity=".28" stroke="none"/>` +
+    `<path fill="currentColor" d="${body}"/>` +
+    `<path fill="url(#pcSheen)" stroke="none" d="${body}"/>` +
+    (lines ? `<path fill="none" stroke-opacity=".55" d="${lines}"/>` : '');
+}
+const STAUNTON = {
+  pawn: shaded(
+    BASE +
+    'M14.2 33 C16.8 30 18.6 27.2 18.9 24.4 H26.1 C26.4 27.2 28.2 30 30.8 33 z' +
+    'M15.8 24.6 q0 -2.9 6.7 -2.9 q6.7 0 6.7 2.9 z' +
+    'M22.5 9.4 a6.2 6.2 0 1 1 0 12.4 a6.2 6.2 0 1 1 0 -12.4 z',
+    BASE_LINES + ' M16 24.4 h13'),
+  rook: shaded(
+    BASE +
+    'M13.6 33 l1.7 -15.4 h14.4 l1.7 15.4 z' +
+    'M12.4 17.9 v-3.4 h20.2 v3.4 z' +
+    'M11.6 14.7 V7.8 h4.6 v2.9 h3.1 V7.8 h6.4 v2.9 h3.1 V7.8 h4.6 v6.9 z',
+    BASE_LINES + ' M15.3 17.7 h14.4 M12.4 14.6 h20.2'),
+  knight: shaded(
+    BASE +
+    'M12.6 33 C12.2 28.8 14.9 25.8 19.2 23.2' +
+    ' C16.7 23.6 13.6 24.3 11.2 23.9 C9.2 23.6 8.2 22 8.9 20.3' +
+    ' L10.3 17.9 C12.2 14.9 14.1 12.8 16.5 11 L18.4 5.8 L21 9.2 L23.4 6 L24.8 9.6' +
+    ' C30.7 10.9 34.6 16.4 34.8 23.6 C34.9 27.1 34.3 30.4 33.6 33 z',
+    BASE_LINES + ' M25.6 10.6 C30 12.6 32.6 17.4 32.7 24.4 M9.5 21.4 q1.6 .7 3.2 .2' +
+    ' M16.4 14.9 q1.2 -.9 2.2 .1'),
+  bishop: shaded(
+    BASE +
+    'M14.6 33 C17.2 30.2 18.8 27.6 19.1 25.4 H25.9 C26.2 27.6 27.8 30.2 30.4 33 z' +
+    'M15.6 25.6 q0 -2.6 6.9 -2.6 q6.9 0 6.9 2.6 z' +
+    'M22.5 9.9 C27.2 12.5 29.6 17 28.1 21.4 Q27.6 22.9 26.4 23.3 H18.6 Q17.4 22.9 16.9 21.4' +
+    ' C15.4 17 17.8 12.5 22.5 9.9 z' +
+    'M22.5 5.1 a2.35 2.35 0 1 1 0 4.7 a2.35 2.35 0 1 1 0 -4.7 z',
+    BASE_LINES + ' M16 25.4 h13 M21.2 14.6 l3.8 4.6 M18.4 23.1 h8.2'),
+  queen: shaded(
+    BASE +
+    'M13.2 33 C15.6 28.6 17.3 24.4 17.8 19.6 H27.2 C27.7 24.4 29.4 28.6 31.8 33 z' +
+    'M15.4 20.1 q0 -2.5 7.1 -2.5 q7.1 0 7.1 2.5 z' +
+    // five points fanned out evenly, a ball on each tip, the centre highest
+    'M16.6 17.8 L12.4 9.6 L16.6 13.8 L17.2 7.4 L20.4 13.2 L22.5 5.9 L24.6 13.2 L27.8 7.4 L28.4 13.8 L32.6 9.6 L28.4 17.8 z' +
+    'M12.4 7.9 a1.6 1.6 0 1 1 0 3.2 a1.6 1.6 0 1 1 0 -3.2 z' +
+    'M17.2 5.7 a1.6 1.6 0 1 1 0 3.2 a1.6 1.6 0 1 1 0 -3.2 z' +
+    'M22.5 3.9 a1.75 1.75 0 1 1 0 3.5 a1.75 1.75 0 1 1 0 -3.5 z' +
+    'M27.8 5.7 a1.6 1.6 0 1 1 0 3.2 a1.6 1.6 0 1 1 0 -3.2 z' +
+    'M32.6 7.9 a1.6 1.6 0 1 1 0 3.2 a1.6 1.6 0 1 1 0 -3.2 z',
+    BASE_LINES + ' M15.6 19.9 h13.8 M16.6 17.6 h11.8'),
+  king: shaded(
+    BASE +
+    'M13.6 33 C15.9 28.4 17.5 24.2 17.9 19.8 H27.1 C27.5 24.2 29.1 28.4 31.4 33 z' +
+    'M15.3 20.3 q0 -2.6 7.2 -2.6 q7.2 0 7.2 2.6 z' +
+    'M16.6 17.8 C15.6 14.6 17.4 12 22.5 11.9 C27.6 12 29.4 14.6 28.4 17.8 z' +
+    'M21.3 2.6 h2.4 v2.5 h2.5 v2.4 h-2.5 v4.5 h-2.4 V7.5 h-2.5 V5.1 h2.5 z',
+    BASE_LINES + ' M15.5 20.1 h14 M16.6 17.6 h11.8'),
+};
+
 const PIECE_SETS = {
+  staunton: { name: 'Staunton', shaded: true, pieces: STAUNTON },
   classic: {
-    name: 'Classic',
+    name: 'Flat',
     pieces: {
       pawn: `
         <circle cx="22.5" cy="13" r="5.7" fill="currentColor"/>
@@ -128,9 +195,15 @@ const PIECE_SETS = {
 
 // Symbol defs for one set: ids look like pc-classic-pawn, pc-gnome-rook, ...
 function pieceDefs(setId) {
-  const set = PIECE_SETS[setId] || PIECE_SETS.classic;
-  const key = PIECE_SETS[setId] ? setId : 'classic';
-  let defs = '<defs>';
+  const set = PIECE_SETS[setId] || PIECE_SETS.staunton;
+  const key = PIECE_SETS[setId] ? setId : 'staunton';
+  // The sheen is alpha-only, so the one gradient lights both sides: it lifts
+  // ebony and gives ivory a shaded flank. objectBoundingBox = per-shape.
+  let defs = '<defs><linearGradient id="pcSheen" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="#fff" stop-opacity=".46"/>' +
+    '<stop offset=".42" stop-color="#fff" stop-opacity=".06"/>' +
+    '<stop offset=".58" stop-color="#000" stop-opacity="0"/>' +
+    '<stop offset="1" stop-color="#000" stop-opacity=".34"/></linearGradient>';
   for (const [name, body] of Object.entries(set.pieces)) {
     defs += `<symbol id="pc-${key}-${name}" viewBox="0 0 45 45" overflow="visible">${body}</symbol>`;
   }
