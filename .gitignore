@@ -18,3 +18,4 @@ app/android/local.properties
 app/android/app/release/
 *.keystore
 *.jks
+app/*.apk
