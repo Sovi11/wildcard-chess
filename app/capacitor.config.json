@@ -8,9 +8,10 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchAutoHide": false,
+      "launchAutoHide": true,
       "backgroundColor": "#f6efe2",
-      "showSpinner": false
+      "showSpinner": false,
+      "launchShowDuration": 700
     },
     "SystemBars": {
       "insetsHandling": "css"

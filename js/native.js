@@ -7,12 +7,18 @@
   'use strict';
   if (!(window.HC && HC.native)) return;
   const cap = window.Capacitor;
-  const plug = (name) => { try { return cap.registerPlugin(name); } catch (e) { return null; } };
+  const plug = (name) => {
+    try {
+      if (typeof cap.registerPlugin === 'function') return cap.registerPlugin(name);
+      return (cap.Plugins && cap.Plugins[name]) || null;
+    } catch (e) { return null; }
+  };
   const Haptics = plug('Haptics');
   const App = plug('App');
   const Share = plug('Share');
   const StatusBar = plug('StatusBar');
   const SplashScreen = plug('SplashScreen');
+  const SystemBars = plug('SystemBars');   // Capacitor 8: edge-to-edge bars
 
   // ---- touch feedback -------------------------------------------------------
   // Hooked onto the sound cues, so every move, capture and board turn already
@@ -72,11 +78,15 @@
 
   // ---- chrome -------------------------------------------------------------
   function paintStatusBar() {
-    if (!StatusBar) return;
     const light = document.body.classList.contains('light');
+    // LIGHT = dark clock/battery icons, for our light cream page; DARK = light icons.
+    const style = light ? 'LIGHT' : 'DARK';
+    try { if (SystemBars) SystemBars.setStyle({ style: style }).catch(function () {}); } catch (e) {}
     try {
-      StatusBar.setStyle({ style: light ? 'LIGHT' : 'DARK' });   // LIGHT = dark icons on a light bar
-      StatusBar.setBackgroundColor({ color: light ? '#f6efe2' : '#0f1d1c' });
+      if (StatusBar) {
+        StatusBar.setStyle({ style: style }).catch(function () {});
+        StatusBar.setBackgroundColor({ color: light ? '#f6efe2' : '#0f1d1c' }).catch(function () {});
+      }
     } catch (e) {}
   }
   paintStatusBar();

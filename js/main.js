@@ -3216,7 +3216,8 @@ function sync() {
       : game.status === 'fifty' ? '50-move rule' : 'stalemate';
     if (r) {
       const sign = r.delta >= 0 ? '+' : '';
-      how += '  \u00b7  ' + r.before + ' \u2192 ' + r.after + ' (' + sign + r.delta + ')';
+      // non-breaking spaces: the rating change never splits across lines
+      how += '  \u00b7  ' + r.before + '\u00a0\u2192\u00a0' + r.after + '\u00a0(' + sign + r.delta + ')';
     }
     ui.bannerText.textContent = '';
     const hEl = document.createElement('span'); hEl.className = 'bn-head'; hEl.textContent = head;
