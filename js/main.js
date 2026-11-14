@@ -750,6 +750,28 @@ const botBlurbEl = document.getElementById('botBlurb');
 let aiThinking = false;
 let aiGen = 0;              // bumped on every reset; stale bot timers see it and abort
 let endSounded = false;     // play the game-over jingle exactly once per game
+// Sign-up nudge: a guest who just won is the person most likely to want their
+// rating kept. Asked on wins only, a few times per device, never to the signed in.
+const NUDGEKEY = 'hollowchess.savenudge.v1';
+const NUDGE_MAX = 4;
+let nudgeThisGame = false;
+// Where the sign-in was started from, for the signup event. Kept in
+// sessionStorage because Google sign-in leaves the page and comes back.
+const VIAKEY = 'hollowchess.authvia';
+function setAuthVia(v) { try { sessionStorage.setItem(VIAKEY, JSON.stringify({ v: v, t: Date.now() })); } catch (e) {} }
+function takeAuthVia() {
+  try {
+    const o = JSON.parse(sessionStorage.getItem(VIAKEY) || 'null');
+    sessionStorage.removeItem(VIAKEY);
+    return (o && Date.now() - o.t < 20 * 60000) ? o.v : '';
+  } catch (e) { return ''; }
+}
+function nudgeCount() { try { return +localStorage.getItem(NUDGEKEY) || 0; } catch (e) { return NUDGE_MAX; } }
+function wantsNudge(won) {
+  if (!won || puzzleMode) return false;
+  if (!(WCCLOUD.enabled && WCCLOUD.enabled()) || (WCCLOUD.currentUser && WCCLOUD.currentUser())) return false;
+  return nudgeCount() < NUDGE_MAX;
+}
 
 const linkMode = () => oppModeEl && oppModeEl.value === 'link';
 let linkPending = false;          // true after your move: waiting on your friend
@@ -1690,6 +1712,12 @@ function openAuthModal() {
   if (!WCCLOUD.hasGoogle() && emailInput) setTimeout(function () { emailInput.focus(); }, 60);
 }
 function closeAuthModal() { if (authModalEl) authModalEl.classList.remove('show'); }
+bindClick('saveRatingBtn', function () {
+  setAuthVia('win_prompt');
+  WCSTATS.track('signup_prompt_click', { shown: nudgeCount() });
+  try { localStorage.setItem(NUDGEKEY, String(NUDGE_MAX)); } catch (e) {}   // they saw it; stop asking
+  openAuthModal();
+});
 
 if (authBtn) authBtn.addEventListener('click', async function () {
   if (!WCCLOUD.enabled()) return;
@@ -1831,7 +1859,10 @@ WCCLOUD.onChange(function (u) {
     signedInTracked = true;
     const created = u.created_at ? (Date.now() - new Date(u.created_at).getTime()) : 1e9;
     freshSignup = created < 60000;
-    WCSTATS.track(freshSignup ? 'signup' : 'signin', {});
+    const via = takeAuthVia();
+    WCSTATS.track(freshSignup ? 'signup' : 'signin', via ? { via: via } : {});
+    const sb = document.getElementById('saveRatingBtn');
+    if (sb) sb.hidden = true;                  // signed in: the nudge has done its job
   }
   // A returning account already knows the game — never re-tutorial them.
   if (!freshSignup) markTutSeen();
@@ -2253,6 +2284,7 @@ function resetGameState() {
   aiGen++;                   // invalidate any bot move still sitting on a timer
   aiThinking = false;
   endSounded = false;
+  nudgeThisGame = false;
   resultRecorded = false;    // the next finished game must be scored
   WCSOUND.setAmbient(false); // a game is starting: the menu tune stops NOW
   game.reset();
@@ -3176,6 +3208,13 @@ function sync() {
       // boardMoves answers the design question: do people use the mechanic?
       const me = localColor();
       gtFinished();
+      const personalGame = !!(activeBot || onlineActive || botEnabled());
+      if (wantsNudge(personalGame && game.winner && game.winner === me)) {
+        nudgeThisGame = true;
+        const shown = nudgeCount() + 1;
+        try { localStorage.setItem(NUDGEKEY, String(shown)); } catch (e) {}
+        WCSTATS.track('signup_prompt', { shown: shown, rated: !!ratedGame });
+      }
       WCSTATS.track('game_end', {
         result: game.winner ? (game.winner === me ? 'win' : 'loss') : 'draw',
         reason: game.endReason || game.status,
@@ -3225,6 +3264,14 @@ function sync() {
     ui.bannerText.append(hEl, sEl);
     const ab = document.getElementById('analyzeBtn');
     if (ab) ab.style.display = gameActs.length ? '' : 'none';
+    const sb = document.getElementById('saveRatingBtn');
+    if (sb) {
+      const guest = !(WCCLOUD.currentUser && WCCLOUD.currentUser());
+      sb.hidden = !(nudgeThisGame && guest);
+      sb.textContent = (r && r.after)
+        ? 'Keep your ' + r.after + ' rating\u00a0\u2014 sign\u00a0in'
+        : 'Keep your rating and games\u00a0\u2014 sign\u00a0in';
+    }
     ui.banner.classList.add('show');
   }
   if ((!over || puzzleMode) && window.WCPOSTGAME) WCPOSTGAME.hide();

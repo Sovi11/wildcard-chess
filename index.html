@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Jost:wght@400;500;600;700&family=Inter:wght@500;600;700&display=swap" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=76" />
+  <link rel="stylesheet" href="styles.css?v=77" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -380,7 +380,7 @@
 
     <main>
       <section class="board-wrap">
-        <div id="banner" class="banner"><span id="bannerText"></span><button id="analyzeBtn" class="analyze-btn">✦ Analyze game</button><button id="playAgainBtn" class="analyze-btn again">↻ Play again</button></div>
+        <div id="banner" class="banner"><span id="bannerText"></span><button id="analyzeBtn" class="analyze-btn">✦ Analyze game</button><button id="playAgainBtn" class="analyze-btn again">↻ Play again</button><button id="saveRatingBtn" class="bn-save" type="button" hidden>Keep your rating — sign in</button></div>
         <div id="browseBar" class="browse-bar"></div>
         <div id="promoPick" class="promo-pick" role="dialog" aria-label="Choose a piece to promote to"></div>
         <div id="clockTop" class="clock-bar"></div>
@@ -586,28 +586,28 @@
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=76"></script>
+  <script defer src="js/platform.js?v=77"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=76"></script>
-  <script defer src="js/stats.js?v=76"></script>
-  <script defer src="js/cloud.js?v=76"></script>
-  <script defer src="js/postgame-feedback.js?v=76"></script>
-  <script defer src="js/engine.js?v=76"></script>
-  <script defer src="js/pieces.js?v=76"></script>
-  <script defer src="js/themes.js?v=76"></script>
-  <script defer src="js/sound.js?v=76"></script>
-  <script defer src="js/tutorial.js?v=76"></script>
-  <script defer src="js/ai.js?v=76"></script>
-  <script defer src="js/ladder.js?v=76"></script>
+  <script defer src="js/config.js?v=77"></script>
+  <script defer src="js/stats.js?v=77"></script>
+  <script defer src="js/cloud.js?v=77"></script>
+  <script defer src="js/postgame-feedback.js?v=77"></script>
+  <script defer src="js/engine.js?v=77"></script>
+  <script defer src="js/pieces.js?v=77"></script>
+  <script defer src="js/themes.js?v=77"></script>
+  <script defer src="js/sound.js?v=77"></script>
+  <script defer src="js/tutorial.js?v=77"></script>
+  <script defer src="js/ai.js?v=77"></script>
+  <script defer src="js/ladder.js?v=77"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=76"></script>
-  <script defer src="js/net.js?v=76"></script>
-  <script defer src="js/share.js?v=76"></script>
-  <script defer src="js/analysis.js?v=76"></script>
-  <script defer src="js/solver.js?v=76"></script>
-  <script defer src="js/puzzles.js?v=76"></script>
-  <script defer src="js/main.js?v=76"></script>
-  <script defer src="js/native.js?v=76"></script>
+  <script defer src="js/matchmaking.js?v=77"></script>
+  <script defer src="js/net.js?v=77"></script>
+  <script defer src="js/share.js?v=77"></script>
+  <script defer src="js/analysis.js?v=77"></script>
+  <script defer src="js/solver.js?v=77"></script>
+  <script defer src="js/puzzles.js?v=77"></script>
+  <script defer src="js/main.js?v=77"></script>
+  <script defer src="js/native.js?v=77"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());

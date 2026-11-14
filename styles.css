@@ -1623,6 +1623,13 @@ body.fixed-opp .opp-cfg, body.fixed-opp #botBlurb { display: none; }
 .banner:not(.show) { visibility: hidden; transition: opacity .25s, transform .25s, visibility 0s linear .25s; }
 .banner.show { visibility: visible; transition: opacity .25s, transform .25s, visibility 0s; }
 .banner:not(.show) .analyze-btn { pointer-events: none; }
+/* sign-up nudge on a guest's win: a quiet link, not a third big button */
+.banner .bn-save { pointer-events: auto; display: block; margin: 12px auto 0; padding: 6px 4px; cursor: pointer;
+  background: none; border: 0; font-family: var(--sans, sans-serif); font-size: 14px; font-weight: 600;
+  color: var(--accent-text, var(--accent)); text-decoration: underline; text-underline-offset: 3px; }
+.banner .bn-save[hidden] { display: none; }
+.banner .bn-save:hover { color: var(--peacock, var(--accent)); }
+.banner:not(.show) .bn-save { pointer-events: none; }
 
 /* bot-only settings disappear when there is no bot, instead of sitting greyed out */
 body.no-bot #botSide, body.no-bot #botLevel { display: none; }
