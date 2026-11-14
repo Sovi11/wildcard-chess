@@ -223,8 +223,9 @@
     const want = expected();
     if (!sameAction(action, want)) {
       failed = true;
+      const why = whyNot(p);              // read the board BEFORE it is rewound
       rewind();
-      return { ok: false, state: 'wrong', message: missMessage(action, want), rated: settle(0) };
+      return { ok: false, state: 'wrong', message: why || missMessage(action, want), rated: settle(0) };
     }
     step++;
     // Their reply is handed back rather than applied here, so the caller can
@@ -257,6 +258,33 @@
     if (want && got.kind !== 'm' && want.kind !== 'm') return 'Right idea, wrong square.';
     return 'Not the move.';
   }
+  // On the mating move, a plain "Not the move." reads as the puzzle being wrong
+  // when you have just given a check that looks like mate. Most of the time it
+  // isn't mate because of the board turn: the defender lifts the square between
+  // your piece and their king. Say so, with the actual escape. Only on the last
+  // move, where finding one legal reply is cheap (no search, just the list).
+  function whyNot(p) {
+    try {
+      if (!p || p.mateIn - step !== 1 || !window.WCSOLVE) return null;
+      const g = host.game;
+      const them = g.turn === 'white' ? 'White' : 'Black';
+      if (g.status === 'checkmate') return null;
+      if (g.status !== 'check') return 'Not the move \u2014 that is not even check, and this one has to be mate.';
+      const replies = WCSOLVE.allActions(g);
+      if (!replies.length) return null;
+      const board = replies.find(function (a) { return a.kind !== 'm'; });
+      if (board) {
+        const at = board.cell || board.from;
+        const what = board.kind === 'ac' ? 'adds a square at ' + sq(at.c, at.r)
+          : board.kind === 'rc' ? 'removes the ' + sq(at.c, at.r) + ' square'
+          : 'lifts the ' + sq(at.c, at.r) + ' square away';
+        return 'Check, but not mate. It is ' + them + '\u2019s board turn next: ' + them +
+               ' ' + what + ' and the check is gone. Find a check they cannot undo.';
+      }
+      return 'Check, but not mate: ' + them + ' escapes with ' + actionText(replies[0]) + '.';
+    } catch (e) { return null; }
+  }
+
   function replyMessage(a) {
     return a.kind === 'm' ? 'They reply.' : 'They reshape the board in reply.';
   }

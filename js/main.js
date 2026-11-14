@@ -173,13 +173,16 @@ function render() {
   const parity = (c, r) => (((c + r) % 2) + 2) % 2 === 1 ? 'on-lt' : 'on-dk';
   const fileRow = flipped ? b.maxR : b.minR;
   const rankCol = flipped ? b.maxC : b.minC;
+  // An edge square that is a hole still carries its label, in light ink on the
+  // dark pit; skipping it lost most of the letters whenever an edge row was dug
+  // out (common in puzzles), and the board had no coordinates at all.
+  const tone = (c, r) => (B.hasCell(c, r) ? parity(c, r) : 'on-hole');
   for (let c = b.minC; c <= b.maxC; c++) {
-    if (!B.hasCell(c, fileRow)) continue;
-    svg += `<text x="${X(c) + 0.92}" y="${Y(fileRow) + 0.94}" class="lbl insq ${parity(c, fileRow)}" text-anchor="end">${c < 0 ? '' : fileLabel(c)}</text>`;  // "(-1)" belongs in notation, not on a tile
+    if (c < 0) continue;                       // "(-1)" belongs in notation, not on a tile
+    svg += `<text x="${X(c) + 0.92}" y="${Y(fileRow) + 0.94}" class="lbl insq ${tone(c, fileRow)}" text-anchor="end">${fileLabel(c)}</text>`;
   }
   for (let r = b.minR; r <= b.maxR; r++) {
-    if (!B.hasCell(rankCol, r)) continue;
-    svg += `<text x="${X(rankCol) + 0.07}" y="${Y(r) + 0.27}" class="lbl insq ${parity(rankCol, r)}">${rankLabel(r)}</text>`;
+    svg += `<text x="${X(rankCol) + 0.07}" y="${Y(r) + 0.27}" class="lbl insq ${tone(rankCol, r)}">${rankLabel(r)}</text>`;
   }
 
   boardEl.innerHTML = svg;

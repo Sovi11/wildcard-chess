@@ -101,6 +101,7 @@ header h1 .sub { font-family: "Inter", system-ui, sans-serif; letter-spacing: 0;
 .lbl.insq { font-size: 0.21px; opacity: .85; pointer-events: none; }
 .lbl.insq.on-lt { fill: var(--sq-dark); }
 .lbl.insq.on-dk { fill: var(--sq-light); }
+.lbl.insq.on-hole { fill: #f6efe2; opacity: .78; }   /* holes are dark on every theme */
 
 /* ---- pieces (themed via inherited color + stroke) ---- */
 /* applies to the live board and the review board alike */
