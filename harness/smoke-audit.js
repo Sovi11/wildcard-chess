@@ -75,6 +75,16 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
 
   await page.close();
 
+  // --- v79: entering as a guest before cloud boot finishes must not bring the welcome screen back ---
+  const fast = await browser.newPage({ viewport: { width: 420, height: 860 } });
+  await fast.goto(BASE + '/?audit3=' + Date.now(), { waitUntil: 'domcontentloaded' });
+  await fast.waitForFunction(() => !!document.getElementById('welcomeGuest') && typeof enterSite === 'function');
+  await fast.evaluate(() => document.getElementById('welcomeGuest').click());      // well inside the boot window
+  await fast.waitForTimeout(3000);                                                  // let cloud boot land
+  const reshown = await fast.evaluate(() => document.getElementById('welcome').classList.contains('show'));
+  check('welcome screen stays dismissed when cloud boot finishes after guest entry', !reshown, { reshown });
+  await fast.close();
+
   // --- #8 inputs are 16px on touch devices (no iOS focus zoom) ---
   const ctx = await browser.newContext({ ...devices['iPhone 13'] });
   const mp = await ctx.newPage();

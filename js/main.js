@@ -1990,7 +1990,12 @@ const TUTKEY = 'wildcardchess.tut.v2';   // v2: re-show once after tutorial-flow
 const tutSeen = function () { try { return localStorage.getItem(TUTKEY) === '1'; } catch (e) { return true; } };
 const markTutSeen = function () { try { localStorage.setItem(TUTKEY, '1'); } catch (e) {} };
 
-function closeWelcome() { if (welcomeEl) welcomeEl.classList.remove('show'); }
+// Once the welcome screen has been dismissed — guest entry, sign-in, a resumed
+// game — it must never come back this page load. Cloud boot finishes an await
+// later and used to re-show it over the lobby or a live game for anyone who
+// tapped "Play now" before the connection was up (seconds, on a slow phone).
+let welcomeDismissed = false;
+function closeWelcome() { welcomeDismissed = true; if (welcomeEl) welcomeEl.classList.remove('show'); }
 // Entering the site — via guest or a completed sign-in — owes first-timers the
 // walkthrough, unskippably queued before anything else. The lobby follows it.
 function enterSite() {
@@ -2048,7 +2053,7 @@ if (!bootOnInvite && welcomeEl && !hasCachedSession()) { welcomeEl.classList.add
     // already signed in: skip the welcome, but first-timers still get the tour
     closeWelcome();
     if (!tutSeen()) { markTutSeen(); WCTUT.open(openLobby); }
-  } else if (welcomeEl && !resumedGame) {
+  } else if (welcomeEl && !resumedGame && !welcomeDismissed) {
     const sb = document.getElementById('welcomeSignin');
     if (sb) sb.style.display = cloudReady ? '' : 'none';   // cloud down: guest only
     welcomeEl.classList.add('show');                       // cached-session guess was wrong
