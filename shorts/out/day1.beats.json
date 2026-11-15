@@ -4,68 +4,68 @@
   "sync": true
  },
  {
-  "t": 0.658,
-  "sfx": "braam"
+  "t": 0.6632000000001863,
+  "sfx": "hit"
  },
  {
-  "t": 0.6581999999992549,
+  "t": 0.6634000000003726,
   "vo": "Day one of posting until Hikaru plays my chess game.",
   "voice": "pawn"
  },
  {
-  "t": 4.4181999999992545,
+  "t": 4.985299999999814,
   "vo": "It's chess. But every third turn, you move a square of the board.",
   "voice": "pawn"
  },
  {
-  "t": 6.724299999999814,
+  "t": 7.291900000000372,
   "sfx": "lift"
  },
  {
-  "t": 7.678199999999255,
+  "t": 8.247,
   "sfx": "hit"
  },
  {
-  "t": 8.984599999999627,
+  "t": 9.549,
   "vo": "So this rook... is stuck.",
   "voice": "pawn"
  },
  {
-  "t": 9.59,
+  "t": 10.160700000000187,
   "sfx": "whoosh"
  },
  {
-  "t": 10.493799999999814,
+  "t": 11.063100000000558,
   "sfx": "hit"
  },
  {
-  "t": 12.015699999999255,
+  "t": 12.57710000000056,
   "vo": "And this... isn't checkmate.",
   "voice": "pawn"
  },
  {
-  "t": 13.51739999999944,
+  "t": 14.0805,
   "sfx": "lift"
  },
  {
-  "t": 14.472899999999441,
+  "t": 15.035200000000186,
   "sfx": "hit"
  },
  {
-  "t": 14.474099999999627,
-  "sfx": "braam"
+  "t": 15.03660000000056,
+  "sfx": "boom"
  },
  {
-  "t": 16.275699999999254,
+  "t": 16.848200000000187,
   "sfx": "hit"
  },
  {
-  "t": 16.275699999999254,
-  "vo": "Free. In your browser. Hollow chess dot com. Day one.",
+  "t": 16.848200000000187,
+  "vo": "Free, in your browser. Day one. Play at hollow chess dot com.",
   "voice": "pawn"
  },
  {
-  "t": 16.275699999999254,
-  "sfx": "braam"
+  "t": 16.848200000000187,
+  "sfx": "boom"
  }
 ]

@@ -4,86 +4,95 @@
   "sync": true
  },
  {
-  "t": 0.316,
-  "sfx": "braam"
+  "t": 0.30470000000018627,
+  "sfx": "lift"
  },
  {
-  "t": 0.3162000000001863,
-  "vo": "Mate in two. White to play.",
+  "t": 0.3047999999998137,
+  "vo": "Hollow Chess is normal chess, with one extra rule. Every third turn, you can move an empty square of the board instead of moving a piece.",
   "voice": "pawn"
  },
  {
-  "t": 2.2149000000003727,
-  "vo": "You can move a square. Right now.",
+  "t": 9.308600000000558,
+  "sfx": "boom"
+ },
+ {
+  "t": 9.308700000000186,
+  "vo": "White to play, and mate in two.",
   "voice": "pawn"
  },
  {
-  "t": 4.043100000000559,
-  "vo": "Pause it. Find the mate.",
+  "t": 11.728400000000372,
+  "vo": "This is one of those turns. So White can pick up an empty square right now, on this move.",
   "voice": "pawn"
  },
  {
-  "t": 4.043200000000186,
+  "t": 16.8865,
+  "vo": "Pause it, and find the mate.",
+  "voice": "pawn"
+ },
+ {
+  "t": 16.886700000000186,
   "sfx": "lift"
  },
  {
-  "t": 5.051200000000186,
+  "t": 17.887200000000185,
   "sfx": "lift"
  },
  {
-  "t": 6.052,
+  "t": 18.8885,
   "sfx": "lift"
  },
  {
-  "t": 7.052299999999814,
+  "t": 19.899900000000372,
   "sfx": "lift"
  },
  {
-  "t": 8.054600000000558,
+  "t": 20.904,
   "sfx": "lift"
  },
  {
-  "t": 9.059,
+  "t": 21.905900000000372,
   "vo": "Here it is.",
   "voice": "pawn"
  },
  {
-  "t": 9.756200000000186,
+  "t": 22.740400000000374,
   "vo": "Move the floor.",
   "voice": "pawn"
  },
  {
-  "t": 10.366100000000559,
+  "t": 23.342200000000187,
   "sfx": "lift"
  },
  {
-  "t": 11.368900000000373,
+  "t": 24.350299999999812,
   "sfx": "hit"
  },
  {
-  "t": 15.112200000000186,
+  "t": 28.0865,
   "sfx": "hit"
  },
  {
-  "t": 15.418299999999814,
-  "sfx": "braam"
+  "t": 28.3955,
+  "sfx": "boom"
  },
  {
-  "t": 15.418400000000373,
-  "vo": "Mate.",
+  "t": 28.3955,
+  "vo": "And that is mate. The king has nowhere left to stand.",
   "voice": "pawn"
  },
  {
-  "t": 17.3855,
+  "t": 32.9715,
   "sfx": "hit"
  },
  {
-  "t": 17.3855,
-  "vo": "Play it yourself. Hollow chess dot com.",
+  "t": 32.9715,
+  "vo": "Play it at hollow chess dot com.",
   "voice": "pawn"
  },
  {
-  "t": 17.3855,
-  "sfx": "braam"
+  "t": 32.9715,
+  "sfx": "boom"
  }
 ]
