@@ -1652,3 +1652,9 @@ html.native body { -webkit-user-select: none; user-select: none; }
 html.native input, html.native textarea { -webkit-user-select: text; user-select: text; }
 .prof-legal { display: inline-flex; gap: 14px; align-items: center; }
 .prof-legal a.linky { font-size: 12.5px; }
+
+/* game-over card: the two ways out sit on their own row, quieter than the actions */
+.bn-exits { display: block; }
+.banner .analyze-btn.exit { display: inline-block; margin: 10px 4px 0; padding: 7px 14px; font-size: 13px; font-weight: 600;
+  background: transparent; color: var(--ink); border: 1px solid var(--line); }
+body.deco .banner .analyze-btn.exit { margin: 10px 4px 0; padding: 7px 14px; font-size: 13px; background: transparent; border: 1px solid var(--line); }

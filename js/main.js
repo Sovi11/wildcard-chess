@@ -1995,6 +1995,10 @@ const markTutSeen = function () { try { localStorage.setItem(TUTKEY, '1'); } cat
 // later and used to re-show it over the lobby or a live game for anyone who
 // tapped "Play now" before the connection was up (seconds, on a slow phone).
 let welcomeDismissed = false;
+// How long "Find a match" looks for a human before a bot takes the seat. It was
+// 30s; with a handful of players online that was 30s of nothing for almost
+// everyone. Humans who are already waiting are still found inside this window.
+const HUMAN_WAIT_MS = 6000;
 function closeWelcome() { welcomeDismissed = true; if (welcomeEl) welcomeEl.classList.remove('show'); }
 // Entering the site — via guest or a completed sign-in — owes first-timers the
 // walkthrough, unskippably queued before anything else. The lobby follows it.
@@ -2100,7 +2104,7 @@ function beginSearch() {
     if (searchLineEl) searchLineEl.textContent = 'Searching for a player\u2026';
     let handedOff = false;
     matchmadeEloGate = elo;
-    netSession = WCNET.findHuman(elo, 30000, {
+    netSession = WCNET.findHuman(elo, HUMAN_WAIT_MS, {
       onTick: function (st) {
         if (!searchBandEl) return;
         searchBandEl.textContent = st.phase === 'waiting'
@@ -2170,7 +2174,7 @@ async function cloudQueueSearch(elo) {
       netSession = null;
       if (searchLineEl) searchLineEl.textContent = 'No one in the queue \u2014 finding you an opponent\u2026';
       searchPool(elo);
-    }, 30000);
+    }, HUMAN_WAIT_MS);
   } catch (e) {
     console.warn('[cloud] queue search failed:', e && e.message);
     if (!stopped) searchPool(elo);
@@ -2827,6 +2831,9 @@ function playAgain() {
   refreshBotUI(); refreshShareUI(); maybeAI();
 }
 bind('playAgainBtn', playAgain);
+// The way out of a finished game: home (the lobby) or your profile, one tap each.
+bind('bannerHomeBtn', function () { if (!gameOver()) return; ui.banner.classList.remove('show'); openLobby(); });
+bind('bannerProfileBtn', function () { if (!gameOver()) return; ui.banner.classList.remove('show'); openProfile(); });
 
 document.getElementById('newGame').addEventListener('click', () => {
   if (!leaveLiveGame()) return;

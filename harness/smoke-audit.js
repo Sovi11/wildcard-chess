@@ -10,6 +10,7 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
   const page = await browser.newPage({ viewport: { width: 420, height: 860 } });
   const errors = [], warnings = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  page.on('dialog', (d) => d.accept());   // v73: leaving a live rated game asks first
   // a 404 on a Supabase table that has not been created yet is environment, not a bug
   page.on('console', (m) => { if (m.type() === 'error') (/Failed to load resource/.test(m.text()) ? warnings : errors).push('console: ' + m.text()); });
   await page.goto(BASE + '/?audit=' + Date.now());
@@ -72,6 +73,21 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
   // --- #10 timestamps survive the merge ---
   const merged = await page.evaluate(() => { const m = WCPUZZLE.mergeProgress({ solved: { p1: { at: 1757000000000, clean: true } } }); return m.solved.p1.at; });
   check('mergeProgress keeps ms timestamps intact', merged === 1757000000000, { merged });
+
+  // --- v80: leaderboard is folded away; a finished game offers Home and Profile ---
+  const v80 = await page.evaluate(() => {
+    const lb = document.getElementById('leaderboard');
+    const folded = !!lb.closest('details') && !lb.closest('details').open;
+    game.winner = 'white'; game.status = 'checkmate'; sync();
+    const shown = ui.banner.classList.contains('show');
+    document.getElementById('bannerHomeBtn').click();
+    const lobby = document.getElementById('lobby').classList.contains('show');
+    closeLobby(); ui.banner.classList.add('show');
+    document.getElementById('bannerProfileBtn').click();
+    const prof = document.getElementById('profile').classList.contains('show');
+    return { folded, shown, lobby, prof, wait: HUMAN_WAIT_MS };
+  });
+  check('leaderboard folded; game-over Home and Profile buttons work; human wait <= 8s', v80.folded && v80.shown && v80.lobby && v80.prof && v80.wait <= 8000, v80);
 
   await page.close();
 
