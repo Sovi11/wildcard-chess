@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Hollow Chess — traffic</title>
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Jost:wght@400;500;600;700&display=swap" />
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #f6efe2; --card: #fffaf0; --well: #f3ead9; --rule: #ddd0b8;
+    --ink: #1d2b2c; --ink-2: #4c5a57; --muted: #6b7672;
+    --peacock: #0f6a5b; --on-peacock: #fffaf0;
+    --series-1: #2a78d6;   /* visitors */
+    --series-2: #eb6834;   /* players  */
+    --bar: #2a78d6; --bar-soft: #cfe0f5;
+    --good: #1f6e52; --bad: #b8431f;
+    --serif: "DM Serif Display", Georgia, serif; --sans: "Jost", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --paper: #151817; --card: #1d2120; --well: #252a28; --rule: #353c39;
+      --ink: #f0efe8; --ink-2: #c5c9c2; --muted: #9aa39d;
+      --peacock: #3fae98; --on-peacock: #0c1513;
+      --series-1: #3987e5; --series-2: #d95926;
+      --bar: #3987e5; --bar-soft: #24364d;
+      --good: #6fcfa8; --bad: #f08a66;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.45; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 22px 18px 60px; }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; margin-bottom: 18px; }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: 34px; line-height: 1; margin: 0; }
+  .sub { color: var(--muted); font-size: 13.5px; margin-top: 6px; }
+  .grow { flex: 1; }
+  .pills { display: inline-flex; border: 1.5px solid var(--ink); border-radius: 999px; overflow: hidden; }
+  .pills button { font: inherit; font-weight: 600; font-size: 13.5px; padding: 7px 14px; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+  .pills button[aria-pressed="true"] { background: var(--peacock); color: var(--on-peacock); }
+  .ghost { font: inherit; font-size: 13.5px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--rule); background: var(--card); color: var(--ink); cursor: pointer; }
+  .ghost:hover { border-color: var(--ink); }
+
+  .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 14px; }
+  .tile, .panel { background: var(--card); border: 1px solid var(--rule); border-radius: 16px; }
+  .tile { padding: 14px 16px 13px; min-width: 0; }
+  .tile .k { font-size: 12.5px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); }
+  .tile .v { font-family: var(--serif); font-size: 34px; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .tile .d { font-size: 12.5px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .d .up { color: var(--good); font-weight: 600; } .d .down { color: var(--bad); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; }
+  .panel { padding: 16px 18px 16px; min-width: 0; }
+  .panel.wide { grid-column: 1 / -1; }
+  .panel h2 { font-family: var(--serif); font-weight: 400; font-size: 21px; margin: 0; }
+  .panel .note { color: var(--muted); font-size: 13px; margin: 2px 0 10px; }
+  .phead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .legend { display: inline-flex; gap: 14px; font-size: 13px; color: var(--ink-2); }
+  .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+  .chart { position: relative; }
+  .tip { left: 50%; top: 0; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis text { fill: var(--muted); font-size: 11.5px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+  .gridline { stroke: var(--rule); stroke-width: 1; }
+  .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .endlabel { font-size: 12px; font-weight: 600; fill: var(--ink-2); font-family: var(--sans); }
+  .cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+  .tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--paper); border-radius: 10px; padding: 8px 11px; font-size: 12.5px; line-height: 1.5; white-space: nowrap; transform: translate(-50%, -100%); opacity: 0; transition: opacity .08s; z-index: 3; font-variant-numeric: tabular-nums; }
+  .tip b { font-weight: 600; } .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+  .hbar { display: grid; grid-template-columns: minmax(96px, 34%) 1fr auto; align-items: center; gap: 10px; padding: 5px 0; font-size: 13.5px; }
+  .hbar .lab { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hbar .track { height: 14px; background: var(--well); border-radius: 4px; overflow: hidden; }
+  .hbar .fill { height: 100%; background: var(--bar); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .hbar .num { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 84px; text-align: right; }
+  .hbar .num small { color: var(--muted); font-weight: 500; margin-left: 6px; }
+  .hbar:hover .track { outline: 1px solid var(--rule); }
+
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 18px; }
+  .fact .k { font-size: 12.5px; color: var(--muted); }
+  .fact .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .fact .s { font-size: 12.5px; color: var(--muted); }
+
+  details { margin-top: 10px; } summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; font-weight: 600; }
+  .tablewrap { overflow-x: auto; margin-top: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 5px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; } th { color: var(--muted); font-weight: 600; }
+
+  #gate { max-width: 380px; margin: 14vh auto 0; text-align: center; }
+  #gate input { font: inherit; font-size: 16px; width: 100%; padding: 11px 14px; border-radius: 12px; border: 1.5px solid var(--rule); background: var(--card); color: var(--ink); margin: 14px 0 10px; }
+  #gate button { font: inherit; font-weight: 600; width: 100%; padding: 11px; border-radius: 999px; border: 0; background: var(--peacock); color: var(--on-peacock); cursor: pointer; }
+  #gateMsg { color: var(--bad); font-size: 13.5px; min-height: 20px; margin-top: 8px; }
+  [hidden] { display: none !important; }
+
+  @media (max-width: 860px) { .tiles { grid-template-columns: repeat(3, 1fr); } .grid { grid-template-columns: 1fr; } .facts { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .tiles { grid-template-columns: repeat(2, 1fr); } h1 { font-size: 28px; } .tile .v { font-size: 28px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="gate" hidden>
+    <h1>Hollow Chess traffic</h1>
+    <p class="sub">Enter the stats passphrase. It is kept on this device only.</p>
+    <form id="gateForm">
+      <input id="pass" type="password" autocomplete="current-password" placeholder="passphrase" aria-label="Stats passphrase" />
+      <button type="submit">Open dashboard</button>
+    </form>
+    <div id="gateMsg" role="alert"></div>
+  </div>
+
+  <div id="dash" hidden>
+    <header>
+      <div>
+        <h1>Hollow Chess traffic</h1>
+        <div class="sub" id="rangeNote">&nbsp;</div>
+      </div>
+      <span class="grow"></span>
+      <div class="pills" role="group" aria-label="Date range">
+        <button data-days="7" aria-pressed="false">7 days</button>
+        <button data-days="30" aria-pressed="true">30 days</button>
+        <button data-days="90" aria-pressed="false">90 days</button>
+      </div>
+      <button class="ghost" id="refresh">Refresh</button>
+      <button class="ghost" id="lock" title="Forget the passphrase on this device">Lock</button>
+    </header>
+
+    <section class="tiles" id="tiles" aria-label="Headline numbers"></section>
+
+    <div class="grid">
+      <section class="panel wide">
+        <div class="phead">
+          <h2>Visitors and players per day</h2>
+          <span class="grow"></span>
+          <span class="legend"><span><i style="background:var(--series-1)"></i>Visitors</span><span><i style="background:var(--series-2)"></i>Players (started a game)</span></span>
+        </div>
+        <div class="note" id="dailyNote">&nbsp;</div>
+        <div class="chart" id="dailyChart"></div>
+        <details><summary>Daily table</summary><div class="tablewrap" id="dailyTable"></div></details>
+      </section>
+
+      <section class="panel">
+        <h2>From visit to finished game</h2>
+        <div class="note">Share of visitors who reached each step.</div>
+        <div id="funnel"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Where visitors come from</h2>
+        <div class="note">Top sources by visitors. "direct" includes app and untagged links.</div>
+        <div id="refs"></div>
+      </section>
+
+      <section class="panel wide">
+        <h2>Stickiness</h2>
+        <div class="note">Whether people come back, which decides if an app is worth it.</div>
+        <div class="facts" id="facts"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const API = 'https://ykmenwvniegyhxzxsvod.supabase.co/rest/v1/rpc/hc_dashboard';
+  const KEY = 'sb_publishable_9NxzkNF1Yw4PApU78NKWbg_s_WX0aXk';     // public key; the passphrase is the gate
+  const PASSKEY = 'hc.dash.pass', DAYSKEY = 'hc.dash.days';
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
+  const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
+  const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                  set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} },
+                  del: (k) => { try { localStorage.removeItem(k); } catch (e) {} } };
+  let days = +(store.get(DAYSKEY) || 30), pass = store.get(PASSKEY) || '', lastData = null;
+
+  async function fetchData() {
+    const r = await fetch(API, { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ pass: pass, days: days }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j && j.message === 'denied' ? 'denied' : (j && j.message) || ('HTTP ' + r.status));
+    return j;
+  }
+
+  function showGate(msg) { $('dash').hidden = true; $('gate').hidden = false; $('gateMsg').textContent = msg || ''; $('pass').focus(); }
+
+  async function load() {
+    if (!pass) { showGate(''); return; }
+    $('refresh').textContent = 'Loading…';
+    try {
+      const d = await fetchData();
+      $('gate').hidden = true; $('dash').hidden = false;
+      lastData = d; render(d);
+    } catch (e) {
+      if (e.message === 'denied') { store.del(PASSKEY); pass = ''; showGate('That passphrase was not accepted.'); }
+      else { $('gate').hidden = true; $('dash').hidden = false; $('rangeNote').textContent = 'Could not load: ' + e.message; }
+    }
+    $('refresh').textContent = 'Refresh';
+  }
+
+  // ---- headline tiles ------------------------------------------------------
+  function delta(cur, prev) {
+    if (!prev) return cur ? '<span class="up">new</span> vs previous period' : 'no change';
+    const ch = Math.round((cur - prev) / prev * 100);
+    const cls = ch > 0 ? 'up' : ch < 0 ? 'down' : '';
+    return '<span class="' + cls + '">' + (ch > 0 ? '▲ +' : ch < 0 ? '▼ ' : '') + ch + '%</span> vs previous ' + days + ' days';
+  }
+  function tiles(d) {
+    const t = d.totals, p = d.previous;
+    const rows = [
+      ['Visitors', fmt(t.visitors), delta(t.visitors, p.visitors)],
+      ['Players', fmt(t.players), delta(t.players, p.players)],
+      ['Play rate', pct(t.players, t.visitors) + '%', 'was ' + pct(p.players, p.visitors) + '% before'],
+      ['Games finished', fmt(t.games_finished), delta(t.games_finished, p.games_finished)],
+      ['Finish rate', pct(t.games_finished, t.games_started) + '%', fmt(t.games_started) + ' games started'],
+      ['Signups', fmt(t.signups), fmt(d.accounts) + ' accounts in total'],
+    ];
+    $('tiles').innerHTML = rows.map((r) => '<div class="tile"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div><div class="d">' + r[2] + '</div></div>').join('');
+  }
+
+  // ---- daily line chart ----------------------------------------------------
+  const dayLabel = (iso, long) => new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', long ? { weekday: 'short', day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short' });
+  function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(Math.max(1, v)))); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
+  function dailyChart(d) {
+    const el = $('dailyChart'), rows = d.daily || [];
+    // drawn at the container's real pixel width, so text stays its true size on a phone
+    const W = Math.max(300, Math.round(el.clientWidth || 1000)), narrow = W < 560;
+    const H = narrow ? 230 : 300, L = narrow ? 34 : 44, R = narrow ? 58 : 84, T = 14, B = 30;
+    const max = niceMax(Math.max(4, ...rows.map((r) => r.visitors)));
+    const x = (i) => L + (rows.length <= 1 ? 0 : i * (W - L - R) / (rows.length - 1));
+    const y = (v) => T + (H - T - B) * (1 - v / max);
+    const path = (key) => rows.map((r, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(r[key]).toFixed(1)).join(' ');
+    let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Daily visitors and players"><g class="axis">';
+    for (let k = 0; k <= 4; k++) {
+      const v = max * k / 4;
+      s += '<line class="gridline" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text x="' + (L - 8) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + fmt(v) + '</text>';
+    }
+    const step = Math.max(1, Math.ceil(rows.length / (narrow ? 4 : 8)));
+    rows.forEach((r, i) => { if (i % step === 0 || i === rows.length - 1) { if (i !== rows.length - 1 && rows.length - 1 - i < step) return; s += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + dayLabel(r.day) + '</text>'; } });
+    s += '</g>';
+    s += '<path class="line" d="' + path('visitors') + '" stroke="var(--series-1)"/><path class="line" d="' + path('players') + '" stroke="var(--series-2)"/>';
+    const last = rows[rows.length - 1] || { visitors: 0, players: 0 };
+    let yv = y(last.visitors), yp = y(last.players); if (Math.abs(yv - yp) < 14) { yp = yv + 14; }
+    s += '<text class="endlabel" x="' + (W - R + 8) + '" y="' + (yv + 4) + '">Visitors</text><text class="endlabel" x="' + (W - R + 8) + '" y="' + (yp + 4) + '">Players</text>';
+    s += '<g id="hov" opacity="0"><line class="cross" id="hx" y1="' + T + '" y2="' + (H - B) + '"/><circle id="h1" r="5" fill="var(--series-1)" stroke="var(--card)" stroke-width="2"/><circle id="h2" r="5" fill="var(--series-2)" stroke="var(--card)" stroke-width="2"/></g>';
+    s += '<rect id="hit" x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - T - B) + '" fill="transparent"/></svg><div class="tip" id="tip"></div>';
+    el.innerHTML = s;
+    const svg = el.querySelector('svg'), tip = $('tip'), hov = svg.querySelector('#hov');
+    function move(ev) {
+      const box = svg.getBoundingClientRect(), px = (ev.touches ? ev.touches[0].clientX : ev.clientX) - box.left;
+      const vx = px / box.width * W;
+      const i = Math.max(0, Math.min(rows.length - 1, Math.round((vx - L) / ((W - L - R) / Math.max(1, rows.length - 1)))));
+      const r = rows[i]; if (!r) return;
+      hov.setAttribute('opacity', 1);
+      svg.querySelector('#hx').setAttribute('x1', x(i)); svg.querySelector('#hx').setAttribute('x2', x(i));
+      svg.querySelector('#h1').setAttribute('cx', x(i)); svg.querySelector('#h1').setAttribute('cy', y(r.visitors));
+      svg.querySelector('#h2').setAttribute('cx', x(i)); svg.querySelector('#h2').setAttribute('cy', y(r.players));
+      tip.innerHTML = '<b>' + dayLabel(r.day, true) + '</b><br><i style="background:var(--series-1)"></i>' + fmt(r.visitors) + ' visitors<br><i style="background:var(--series-2)"></i>' + fmt(r.players) + ' players<br>' + fmt(r.games_started) + ' games started, ' + fmt(r.games_finished) + ' finished';
+      const tx = Math.max(90, Math.min(box.width - 90, x(i) / W * box.width));
+      tip.style.left = tx + 'px'; tip.style.top = (Math.min(y(r.visitors), y(r.players)) / H * box.height - 10) + 'px'; tip.style.opacity = 1;
+    }
+    function leave() { hov.setAttribute('opacity', 0); tip.style.opacity = 0; tip.style.left = '50%'; }
+    const hit = svg.querySelector('#hit');
+    hit.addEventListener('mousemove', move); hit.addEventListener('mouseleave', leave);
+    hit.addEventListener('touchstart', move, { passive: true }); hit.addEventListener('touchmove', move, { passive: true }); hit.addEventListener('touchend', leave);
+
+    const best = rows.reduce((a, r) => (r.visitors > a.visitors ? r : a), { visitors: -1 });
+    const avg = rows.length ? Math.round(rows.reduce((a, r) => a + r.visitors, 0) / rows.length) : 0;
+    $('dailyNote').textContent = rows.length ? 'Average ' + fmt(avg) + ' visitors a day. Busiest day: ' + dayLabel(best.day, true) + ' with ' + fmt(best.visitors) + '. Today so far: ' + fmt(last.visitors) + '.' : 'No data in this range.';
+    $('dailyTable').innerHTML = '<table><thead><tr><th>Day</th><th>Visitors</th><th>Players</th><th>Games started</th><th>Games finished</th><th>Signups</th></tr></thead><tbody>' +
+      rows.slice().reverse().map((r) => '<tr><td>' + dayLabel(r.day, true) + '</td><td>' + fmt(r.visitors) + '</td><td>' + fmt(r.players) + '</td><td>' + fmt(r.games_started) + '</td><td>' + fmt(r.games_finished) + '</td><td>' + fmt(r.signups) + '</td></tr>').join('') + '</tbody></table>';
+  }
+
+  // ---- horizontal bars -----------------------------------------------------
+  function hbars(el, rows, total) {
+    const max = Math.max(1, ...rows.map((r) => r[1]));
+    el.innerHTML = rows.map((r) => '<div class="hbar" title="' + esc(r[0]) + ': ' + fmt(r[1]) + '"><span class="lab">' + esc(r[0]) + '</span><span class="track"><span class="fill" style="width:' + (r[1] / max * 100).toFixed(1) + '%;display:block"></span></span><span class="num">' + fmt(r[1]) + (total ? '<small>' + pct(r[1], total) + '%</small>' : '') + '</span></div>').join('') || '<div class="note">Nothing yet.</div>';
+  }
+  const SOURCE = { 'com.google.android.googlequicksearchbox': 'Google app (Android)', 'com.reddit.frontpage': 'Reddit app', 'l.instagram.com': 'Instagram', 'direct': 'direct' };
+
+  function facts(d) {
+    const t = d.totals, sg = d.second_game, dv = d.devices;
+    const plats = (d.platforms || []).map((p) => p.platform + ' ' + fmt(p.visitors)).join(' · ') || 'none';
+    const rows = [
+      ['Second-game rate', pct(sg.sessions_2plus, sg.sessions_any) + '%', fmt(sg.sessions_2plus) + ' of ' + fmt(sg.sessions_any) + ' playing sessions started another game'],
+      ['Returning devices', dv.devices ? pct(dv.returning, dv.devices) + '%' : 'n/a', dv.devices ? fmt(dv.returning) + ' of ' + fmt(dv.devices) + ' devices came back on a later day (tracked since 14 Nov)' : 'no device data in this range'],
+      ['Puzzles', fmt(t.puzzles_solved) + ' solved', fmt(t.puzzle_sessions) + ' sessions opened puzzle mode'],
+      ['Android app', fmt(((d.platforms || []).find((p) => p.platform === 'android') || {}).visitors) + ' visits', 'by platform: ' + plats],
+    ];
+    $('facts').innerHTML = rows.map((r) => '<div class="fact"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div><div class="s">' + r[2] + '</div></div>').join('');
+  }
+
+  function render(d) {
+    const t = d.totals;
+    $('rangeNote').textContent = dayLabel(d.from) + ' to ' + dayLabel(d.to) + ' (India time) · updated ' + new Date(d.generated_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    tiles(d); dailyChart(d);
+    hbars($('funnel'), [['Visited', t.visitors], ['Entered the site', t.entered], ['Finished the tutorial', t.tutorial_done], ['Started a game', t.players], ['Finished a game', t.finishers]], t.visitors);
+    hbars($('refs'), (d.referrers || []).map((r) => [SOURCE[r.source] || r.source, r.visitors]), t.visitors);
+    facts(d);
+  }
+
+  document.querySelectorAll('.pills button').forEach((b) => {
+    b.setAttribute('aria-pressed', String(+b.dataset.days === days));
+    b.addEventListener('click', () => {
+      days = +b.dataset.days; store.set(DAYSKEY, String(days));
+      document.querySelectorAll('.pills button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+      load();
+    });
+  });
+  let rz = null;
+  window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (lastData && !$('dash').hidden) dailyChart(lastData); }, 150); });
+  $('refresh').addEventListener('click', load);
+  $('lock').addEventListener('click', () => { store.del(PASSKEY); pass = ''; showGate(''); });
+  $('gateForm').addEventListener('submit', (e) => { e.preventDefault(); pass = $('pass').value.trim(); if (!pass) return; store.set(PASSKEY, pass); $('pass').value = ''; load(); });
+  load();
+})();
+</script>
+</body>
+</html>
