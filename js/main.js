@@ -2412,6 +2412,40 @@ function drawRatingChart(rated, current) {
   note.textContent = (d >= 0 ? '+' : '') + d + ' over ' + rated.length + ' rated game' + (rated.length === 1 ? '' : 's');
 }
 
+let profFilter = 'all';
+(function () {
+  const filt = document.getElementById('profFilter');
+  if (filt) filt.addEventListener('click', function (ev) {
+    const b = ev.target.closest('button[data-f]'); if (!b) return;
+    profFilter = b.dataset.f;
+    filt.querySelectorAll('button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+    renderProfile();
+  });
+  // rename in place: the public handle, same rules as the lobby field
+  const nameEl = document.getElementById('profName'), inp = document.getElementById('profNameInput'), edit = document.getElementById('profEdit');
+  if (!nameEl || !inp || !edit) return;
+  const commit = function () {
+    if (inp.hidden) return;
+    const p = WCLADDER.getProfile();
+    const typed = (inp.value || '').trim().slice(0, 16);
+    p.name = typed || 'You'; p.nameChosen = !!typed;
+    WCLADDER.saveProfile(p);
+    inp.hidden = true; nameEl.hidden = false; edit.hidden = false;
+    paintProfile(); renderLeaderboard(); syncProfileUp(); renderProfile();
+  };
+  edit.addEventListener('click', function () {
+    const p = WCLADDER.getProfile();
+    inp.value = p.name === 'You' ? '' : p.name; inp.placeholder = 'public name';
+    nameEl.hidden = true; edit.hidden = true; inp.hidden = false; inp.focus(); inp.select();
+  });
+  inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { inp.hidden = true; nameEl.hidden = false; edit.hidden = false; } });
+  inp.addEventListener('blur', commit);
+  const authB = document.getElementById('profAuth');
+  if (authB) authB.addEventListener('click', function () {
+    if (WCCLOUD.currentUser && WCCLOUD.currentUser()) { if (authBtn) authBtn.click(); closeProfile(); }
+    else { closeProfile(); openAuthModal(); }
+  });
+})();
 function renderProfile() {
   const p = WCLADDER.getProfile();
   const named = p.name && p.name !== 'You';
@@ -2420,9 +2454,18 @@ function renderProfile() {
   const total = p.wins + p.losses + p.draws;
   const pct = total ? Math.round((p.wins / total) * 100) : 0;
   const signedIn = !!(WCCLOUD.currentUser && WCCLOUD.currentUser());
-  document.getElementById('profSummary').textContent = signedIn
-    ? 'Signed in \u00b7 your rating and games follow you to any device'
-    : 'Playing as a guest \u00b7 rating saved on this device';
+  // where you stand among everyone on the ladder, bots included
+  const above = WCLADDER.livePool().filter(function (b) { return b.elo > p.elo; }).length;
+  const field = WCLADDER.livePool().length + 1;
+  document.getElementById('profSummary').textContent =
+    (total ? 'Rated ' + p.elo + ' \u00b7 #' + (above + 1) + ' of ' + field + ' on the ladder' : 'No rated games yet') +
+    (signedIn ? ' \u00b7 saved to your account' : ' \u00b7 saved on this device only');
+  const authB = document.getElementById('profAuth');
+  if (authB) {
+    authB.hidden = !WCCLOUD.enabled();
+    authB.textContent = signedIn ? 'Sign out' : 'Sign in to keep it';
+    authB.classList.toggle('primary', !signedIn);
+  }
 
   const log = p.log || [];
   const rated = log.filter(function (e) { return e.rated !== false && typeof e.after === 'number'; })
@@ -2442,6 +2485,29 @@ function renderProfile() {
     tile('Puzzle rating', pz ? pz.rating : 1000, solved + ' solved') +
     tile('Best streak', pz ? (pz.best || 0) : 0, 'puzzles in a row');
 
+  // form and records: the things a rating alone does not say
+  const byTime = log.slice().sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+  const resOf = function (e) { return e.score === 1 ? 'win' : (e.score === 0 ? 'loss' : 'draw'); };
+  let streak = 0;
+  for (const e of byTime) { if (resOf(e) === 'win') streak++; else break; }
+  const beaten = byTime.filter(function (e) { return e.score === 1 && e.botElo; })
+                       .sort(function (a, b) { return b.botElo - a.botElo; })[0];
+  const side = function (c) {
+    const g = byTime.filter(function (e) { return e.youColor === c; });
+    return g.length ? Math.round(g.filter(function (e) { return e.score === 1; }).length / g.length * 100) + '%' : '\u2013';
+  };
+  const formEl = document.getElementById('profForm');
+  if (formEl) {
+    formEl.innerHTML = !byTime.length ? '' :
+      '<div class="pf-item"><div class="pf-l">Last ' + Math.min(8, byTime.length) + '</div><div class="pf-chips">' +
+        byTime.slice(0, 8).reverse().map(function (e) { const r = resOf(e); return '<i class="pf-chip ' + r + '" title="' + r + ' vs ' + esc(e.botName || 'opponent') + '">' + r.charAt(0).toUpperCase() + '</i>'; }).join('') + '</div></div>' +
+      '<div class="pf-item"><div class="pf-l">Win streak</div><div class="pf-v">' + streak + '</div></div>' +
+      '<div class="pf-item"><div class="pf-l">Best win</div><div class="pf-v">' + (beaten ? esc(beaten.botName) + ' <small>' + beaten.botElo + '</small>' : '\u2013') + '</div></div>' +
+      '<div class="pf-item"><div class="pf-l">As White / Black</div><div class="pf-v">' + side('white') + ' <small>/</small> ' + side('black') + '</div></div>';
+  }
+  const chartCard = document.querySelector('.prof-chartcard');
+  if (chartCard) chartCard.hidden = rated.length < 2;       // one point is not a chart
+
   drawRatingChart(rated, p.elo);
 
   // win / draw / loss as one proportional bar — the shape of your record
@@ -2457,11 +2523,20 @@ function renderProfile() {
   }
 
   if (!matchListEl) return;
+  const filt = document.getElementById('profFilter');
+  if (filt) filt.hidden = !log.length;
   if (!log.length) {
-    matchListEl.innerHTML = '<div class="match-empty">Nothing here yet.</div>';
+    matchListEl.innerHTML = '<div class="match-empty prof-empty"><b>No games yet.</b><br>Play one and it shows up here, with a move-by-move review.' +
+      '<br><button id="profPlay" class="find-btn prof-play" type="button"><span class="find-title">Find a match</span></button></div>';
+    const pb = document.getElementById('profPlay');
+    if (pb) pb.addEventListener('click', function () { closeProfile(); openLobby(); });
     return;
   }
-  matchListEl.innerHTML = log.map(function (e, i) {
+  const shown = log.map(function (e, i) { return { e: e, i: i }; })
+                   .filter(function (x) { return profFilter === 'all' || resOf(x.e) === profFilter; });
+  if (!shown.length) { matchListEl.innerHTML = '<div class="match-empty">No ' + profFilter + 's yet.</div>'; return; }
+  matchListEl.innerHTML = shown.map(function (x) {
+    const e = x.e, i = x.i;
     const res = e.score === 1 ? 'win' : (e.score === 0 ? 'loss' : 'draw');
     const delta = (typeof e.after === 'number' && typeof e.before === 'number')
       ? (e.after - e.before) : null;
@@ -2472,7 +2547,7 @@ function renderProfile() {
       '<span class="mr-main">' +
         '<span class="mr-opp">' + esc(e.botName || 'Opponent') +
           (e.botElo ? ' <span class="mr-oelo">' + e.botElo + '</span>' : '') + '</span>' +
-        '<span class="mr-meta">' + (e.reason || '') + (e.plies ? ' \u00b7 ' + e.plies + ' plies' : '') +
+        '<span class="mr-meta">' + (e.youColor ? 'as ' + e.youColor + ' \u00b7 ' : '') + (e.reason || '') + (e.plies ? ' \u00b7 ' + Math.ceil(e.plies / 2) + ' moves' : '') +
           (e.rated === false ? ' \u00b7 friendly' : '') + '</span>' +
       '</span>' +
       '<span class="mr-right">' +

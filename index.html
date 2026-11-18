@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Jost:wght@400;500;600;700&family=Inter:wght@500;600;700&display=swap" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=82" />
+  <link rel="stylesheet" href="styles.css?v=83" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -187,9 +187,14 @@
       <header class="prof-head">
         <div class="prof-avatar" id="profAvatar" aria-hidden="true">Y</div>
         <div class="prof-id">
-          <h2 class="lobby-title" id="profName">Your profile</h2>
+          <div class="prof-namerow">
+            <h2 class="lobby-title" id="profName">Your profile</h2>
+            <input id="profNameInput" class="prof-nameinput" maxlength="16" spellcheck="false" aria-label="Your public name" hidden />
+            <button id="profEdit" class="prof-edit" type="button" title="Change your public name">Edit name</button>
+          </div>
           <p class="lobby-sub" id="profSummary">&nbsp;</p>
         </div>
+        <button id="profAuth" class="ghost-btn prof-auth" type="button">Sign in</button>
       </header>
 
       <div id="profReview" class="review">
@@ -225,12 +230,18 @@
 
       <div id="profList">
         <div class="prof-stats" id="profStats"></div>
+        <div class="prof-form" id="profForm"></div>
         <div class="prof-chartcard">
           <div class="prof-chart-head"><span class="lobby-label">Rating</span><span class="prof-chart-note" id="profChartNote"></span></div>
           <svg id="profChart" class="prof-chart" viewBox="0 0 600 140" preserveAspectRatio="none" role="img" aria-label="Rating over time"></svg>
           <div class="prof-wld" id="profWld"></div>
         </div>
-        <div class="lobby-label">Past games <span class="lobby-hint">click one to review it move by move</span></div>
+        <div class="prof-gameshead">
+          <span class="lobby-label">Past games <span class="lobby-hint">tap one to review it with the coach</span></span>
+          <span class="prof-filter" id="profFilter" role="group" aria-label="Filter games">
+            <button data-f="all" aria-pressed="true">All</button><button data-f="win" aria-pressed="false">Wins</button><button data-f="loss" aria-pressed="false">Losses</button><button data-f="draw" aria-pressed="false">Draws</button>
+          </span>
+        </div>
         <div id="matchList" class="match-list"></div>
       </div>
 
@@ -596,28 +607,28 @@
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=82"></script>
+  <script defer src="js/platform.js?v=83"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=82"></script>
-  <script defer src="js/stats.js?v=82"></script>
-  <script defer src="js/cloud.js?v=82"></script>
-  <script defer src="js/postgame-feedback.js?v=82"></script>
-  <script defer src="js/engine.js?v=82"></script>
-  <script defer src="js/pieces.js?v=82"></script>
-  <script defer src="js/themes.js?v=82"></script>
-  <script defer src="js/sound.js?v=82"></script>
-  <script defer src="js/tutorial.js?v=82"></script>
-  <script defer src="js/ai.js?v=82"></script>
-  <script defer src="js/ladder.js?v=82"></script>
+  <script defer src="js/config.js?v=83"></script>
+  <script defer src="js/stats.js?v=83"></script>
+  <script defer src="js/cloud.js?v=83"></script>
+  <script defer src="js/postgame-feedback.js?v=83"></script>
+  <script defer src="js/engine.js?v=83"></script>
+  <script defer src="js/pieces.js?v=83"></script>
+  <script defer src="js/themes.js?v=83"></script>
+  <script defer src="js/sound.js?v=83"></script>
+  <script defer src="js/tutorial.js?v=83"></script>
+  <script defer src="js/ai.js?v=83"></script>
+  <script defer src="js/ladder.js?v=83"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=82"></script>
-  <script defer src="js/net.js?v=82"></script>
-  <script defer src="js/share.js?v=82"></script>
-  <script defer src="js/analysis.js?v=82"></script>
-  <script defer src="js/solver.js?v=82"></script>
-  <script defer src="js/puzzles.js?v=82"></script>
-  <script defer src="js/main.js?v=82"></script>
-  <script defer src="js/native.js?v=82"></script>
+  <script defer src="js/matchmaking.js?v=83"></script>
+  <script defer src="js/net.js?v=83"></script>
+  <script defer src="js/share.js?v=83"></script>
+  <script defer src="js/analysis.js?v=83"></script>
+  <script defer src="js/solver.js?v=83"></script>
+  <script defer src="js/puzzles.js?v=83"></script>
+  <script defer src="js/main.js?v=83"></script>
+  <script defer src="js/native.js?v=83"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());

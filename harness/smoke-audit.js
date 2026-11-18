@@ -127,6 +127,23 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
     return { pos: revPos, info: document.getElementById('revMoveInfo').textContent, summary: document.getElementById('revSummary').textContent, best: revBest.length };
   });
   check('review coach: Next mistake finds the blunder and says what was better', rev.pos === 3 && /Better was/.test(rev.info) && /White: 1 blunder/.test(rev.summary), rev);
+  // --- v83: profile — empty state, then form row, rename, filters ---
+  const prof = await pzp.evaluate(async () => {
+    exitPuzzles(); closeLobby(); showMatchList && showMatchList();
+    openProfile();
+    const empty = !!document.getElementById('profPlay') && document.getElementById('profForm').innerHTML === '';
+    const pool = WCLADDER.livePool(); const m = (fc, fr, tc, tr) => ({ kind: 'm', from: { c: fc, r: fr }, to: { c: tc, r: tr } });
+    [1, 0, 1, 1].forEach((sc, i) => WCLADDER.recordResult(pool[i].id, sc, { acts: [m(4, 1, 4, 3)], youColor: i % 2 ? 'black' : 'white', reason: 'checkmate', plies: 30 }));
+    renderProfile();
+    const rows = () => document.querySelectorAll('#matchList .match-row').length;
+    const all = rows();
+    document.querySelector('#profFilter button[data-f="loss"]').click(); const losses = rows();
+    document.querySelector('#profFilter button[data-f="all"]').click();
+    document.getElementById('profEdit').click();
+    const inp = document.getElementById('profNameInput'); inp.value = 'AuditRook77'; inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    return { empty, all, losses, chips: document.querySelectorAll('.pf-chip').length, name: document.getElementById('profName').textContent, saved: WCLADDER.getProfile().name, summary: document.getElementById('profSummary').textContent };
+  });
+  check('profile: empty state, form row, loss filter, rename', prof.empty && prof.all === 4 && prof.losses === 1 && prof.chips === 4 && prof.name === 'AuditRook77' && prof.saved === 'AuditRook77' && /on the ladder/.test(prof.summary), prof);
   check('no page errors on the puzzle/review page', pzErrs.length === 0, pzErrs);
   await pzp.close();
 
