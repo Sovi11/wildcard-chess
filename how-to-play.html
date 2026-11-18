@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>How to play Hollow Chess: rules of the chess variant where you move the board</title>
+<meta name="description" content="The complete rules of Hollow Chess, a free chess variant. Every third turn you may move an empty square of the board. Holes block rooks, bishops and queens." />
+<link rel="canonical" href="https://hollowchess.com/how-to-play.html" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="How to play Hollow Chess: rules of the chess variant where you move the board" />
+<meta property="og:description" content="The complete rules of Hollow Chess, a free chess variant. Every third turn you may move an empty square of the board. Holes block rooks, bishops and queens." />
+<meta property="og:url" content="https://hollowchess.com/how-to-play.html" />
+<meta property="og:image" content="https://hollowchess.com/icons/og-card.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Jost:wght@400;500;600&display=swap" />
+<style>
+  :root { --paper:#f6efe2; --card:#fffaf0; --ink:#1d2b2c; --muted:#5f6b67; --rule:#ddd0b8; --peacock:#0f6a5b; --sunset:#b8431f; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:"Jost",system-ui,sans-serif; font-size:17px; line-height:1.6; }
+  .wrap { max-width:760px; margin:0 auto; padding:28px 20px 70px; }
+  nav { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:26px; font-size:15px; }
+  nav a { color:var(--ink); text-decoration:none; font-weight:600; } nav a:hover { text-decoration:underline; }
+  nav .brand { font-family:"DM Serif Display",Georgia,serif; font-size:22px; font-weight:400; margin-right:auto; }
+  h1 { font-family:"DM Serif Display",Georgia,serif; font-weight:400; font-size:40px; line-height:1.1; margin:0 0 10px; }
+  h2 { font-family:"DM Serif Display",Georgia,serif; font-weight:400; font-size:27px; margin:34px 0 8px; }
+  h3 { font-size:18px; margin:22px 0 4px; }
+  p { margin:0 0 14px; } .lede { font-size:19px; color:var(--muted); }
+  a { color:var(--sunset); }
+  .cta { display:inline-block; margin:8px 0 6px; padding:13px 26px; border-radius:999px; background:var(--peacock); color:#fffaf0; font-weight:600; text-decoration:none; }
+  table { border-collapse:collapse; width:100%; margin:8px 0 16px; font-size:16px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--rule); vertical-align:top; }
+  code { background:var(--card); border:1px solid var(--rule); border-radius:6px; padding:1px 6px; font-size:.92em; }
+  .seq { display:inline-flex; gap:6px; flex-wrap:wrap; margin:4px 0 12px; }
+  .seq i { font-style:normal; font-weight:600; padding:4px 10px; border-radius:8px; border:1px solid var(--rule); background:var(--card); }
+  .seq i.s { border-color:var(--sunset); color:var(--sunset); }
+  footer { margin-top:44px; padding-top:16px; border-top:1px solid var(--rule); font-size:14.5px; color:var(--muted); }
+</style>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is Hollow Chess?", "acceptedAnswer": {"@type": "Answer", "text": "Hollow Chess is a free chess variant played with the normal pieces and rules, plus one addition: every third turn is a board turn, on which you may move an empty square of the board instead of a piece. The square you lift leaves a hole behind."}}, {"@type": "Question", "name": "How often can I move a square?", "acceptedAnswer": {"@type": "Answer", "text": "Every third turn of the game is a board turn, alternating between the players. Black gets the first one on move 1, White on move 3, Black again on move 4, and so on. A board turn is optional: you can always move a piece instead."}}, {"@type": "Question", "name": "What do holes do?", "acceptedAnswer": {"@type": "Answer", "text": "A hole is a missing square. Rooks, bishops and queens cannot slide across a hole, kings and pawns cannot step into one, and knights jump over holes but must land on a real square."}}, {"@type": "Question", "name": "Where can a lifted square be put down?", "acceptedAnswer": {"@type": "Answer", "text": "Anywhere that shares an edge with the rest of the board, including in a hole or outside the original eight by eight. Touching only at a corner is not enough. Only empty squares can be lifted."}}, {"@type": "Question", "name": "Can I get out of check by moving a square?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. On a board turn you can remove a square the attacking piece slides through, which cuts the line of attack. It is only checkmate if no piece move and no board move saves the king."}}, {"@type": "Question", "name": "How does pawn promotion work on a board that changes shape?", "acceptedAnswer": {"@type": "Answer", "text": "A pawn promotes when there is no square anywhere ahead of it in its file. If your opponent attaches a new square in front of your pawn, it has to march further before it promotes."}}, {"@type": "Question", "name": "Is Hollow Chess free?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. It runs in any modern browser on a phone or computer, with no download and no account needed. You can play bots, a friend by link, or ranked games."}}]}</script>
+</head>
+<body>
+<div class="wrap">
+<nav><a class="brand" href="/">Hollow Chess</a><a href="how-to-play.html">How to play</a><a href="notation.html">Notation</a><a href="/">Play</a></nav>
+<h1>How to play Hollow Chess</h1>
+<p class="lede">Hollow Chess is chess with one extra rule: every third turn, you may move a square of the board instead of a piece. Everything else is the chess you already know.</p>
+<a class="cta" href="/">Play free in your browser</a>
+
+<h2>The rules in one minute</h2>
+<p>The pieces start where they always do and move the way they always do. You win by checkmate. The difference is the board: it is not fixed. Squares can be picked up and moved, and the place a square used to be becomes a <strong>hole</strong>.</p>
+
+<h2>Board turns</h2>
+<p>Every third turn of the game is a <strong>board turn</strong>. The turns go like this, with board turns marked:</p>
+<div class="seq"><i>White</i><i class="s">Black ✦</i><i>White</i><i>Black</i><i class="s">White ✦</i><i>Black</i><i>White</i><i class="s">Black ✦</i></div>
+<p>So Black gets the first board turn on move 1, White gets one on move 3, Black again on move 4, and it carries on like that. Neither player ever has two board turns in a row.</p>
+<p>A board turn is a choice, not an obligation. You can move a piece as usual, or you can move a square.</p>
+
+<h2>Moving a square</h2>
+<p>On your board turn, pick any <strong>empty</strong> square and lift it. Then set it down anywhere that shares an <strong>edge</strong> with the rest of the board. Touching only at a corner does not count. You can drop it into an existing hole, or outside the original eight by eight, so the board can grow in any direction.</p>
+<p>The square you lifted leaves a hole. You cannot lift a square with a piece on it, and you cannot make a board move that leaves your own king in check.</p>
+
+<h2>What holes do</h2>
+<table>
+<tr><th>Piece</th><th>Effect of a hole</th></tr>
+<tr><td>Rook, bishop, queen</td><td>Cannot slide across a hole. The line stops at the edge of it.</td></tr>
+<tr><td>Knight</td><td>Jumps over holes, but must land on a real square.</td></tr>
+<tr><td>King</td><td>Cannot step into a hole. Castling needs every square between king and rook to exist.</td></tr>
+<tr><td>Pawn</td><td>Cannot advance into a hole. It promotes only when no square is left ahead of it in its file.</td></tr>
+</table>
+
+<h2>Check and checkmate</h2>
+<p>Check works as in chess, with one more way out. On a board turn you can lift a square the attacker slides through, and the check is gone. A position is only checkmate when no piece move and no board move saves the king. Positions that would be mate in ordinary chess are sometimes not mate here.</p>
+<p>The reverse also happens. Dropping a square into a hole can open a line for your rook, bishop or queen, which gives check, or mate, without moving a piece at all.</p>
+
+<h2>Promotion and the edge of the world</h2>
+<p>A pawn promotes when it reaches the edge of the board in its file, wherever that edge is. If your opponent attaches a new square in front of your pawn, the edge has moved and the pawn has further to go.</p>
+
+<h2>Draws</h2>
+<p>Stalemate, threefold repetition and the fifty-move rule all apply. Board moves do not reset the fifty-move count, so a king that walls itself off on an island still ends the game in a draw.</p>
+
+<h2>First ideas to try</h2>
+<h3>Cut a line</h3>
+<p>If a bishop or queen is aiming at your king, remove one square on the diagonal between them. The attack stops at the hole.</p>
+<h3>Open a line</h3>
+<p>Put a rook or queen on a file with a hole between it and the enemy king, then fill the hole on your board turn. That is a discovered check made by the board.</p>
+<h3>Stop a pawn</h3>
+<p>A hole directly in front of a pawn freezes it. A new square beyond the last rank makes it march further.</p>
+<h3>Take away an escape square</h3>
+<p>Lift the one empty square next to the enemy king that it could run to.</p>
+
+<h2>Common questions</h2>
+<h3>What is Hollow Chess?</h3>
+<p>Hollow Chess is a free chess variant played with the normal pieces and rules, plus one addition: every third turn is a board turn, on which you may move an empty square of the board instead of a piece. The square you lift leaves a hole behind.</p>
+<h3>How often can I move a square?</h3>
+<p>Every third turn of the game is a board turn, alternating between the players. Black gets the first one on move 1, White on move 3, Black again on move 4, and so on. A board turn is optional: you can always move a piece instead.</p>
+<h3>What do holes do?</h3>
+<p>A hole is a missing square. Rooks, bishops and queens cannot slide across a hole, kings and pawns cannot step into one, and knights jump over holes but must land on a real square.</p>
+<h3>Where can a lifted square be put down?</h3>
+<p>Anywhere that shares an edge with the rest of the board, including in a hole or outside the original eight by eight. Touching only at a corner is not enough. Only empty squares can be lifted.</p>
+<h3>Can I get out of check by moving a square?</h3>
+<p>Yes. On a board turn you can remove a square the attacking piece slides through, which cuts the line of attack. It is only checkmate if no piece move and no board move saves the king.</p>
+<h3>How does pawn promotion work on a board that changes shape?</h3>
+<p>A pawn promotes when there is no square anywhere ahead of it in its file. If your opponent attaches a new square in front of your pawn, it has to march further before it promotes.</p>
+<h3>Is Hollow Chess free?</h3>
+<p>Yes. It runs in any modern browser on a phone or computer, with no download and no account needed. You can play bots, a friend by link, or ranked games.</p>
+
+<p><a class="cta" href="/">Play Hollow Chess</a></p>
+<p>Games are written down in <a href="notation.html">Hollow Chess Notation</a>, which adds one symbol to ordinary chess notation.</p>
+<footer>Hollow Chess is a free chess variant that runs in your browser. <a href="/">Play it now</a> · <a href="how-to-play.html">How to play</a> · <a href="notation.html">Notation</a> · <a href="privacy.html">Privacy</a></footer>
+</div>
+</body>
+</html>

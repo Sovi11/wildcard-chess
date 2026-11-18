@@ -36,6 +36,10 @@ const liveAtBoot = (function () {
   return null;
 })();
 let resumedGame = false;
+// play-first front door (see startFirstGame): declared up here because sync() paints the coach on first load
+const FIRSTKEY = 'hollowchess.first.v1';
+let firstGame = false;
+const coachEl = document.getElementById('coach');
 
 // Piece symbols are namespaced by the active set: pc-classic-pawn, pc-gnome-rook…
 WCTHEME.load();
@@ -2296,6 +2300,7 @@ function resetGameState() {
   aiGen++;                   // invalidate any bot move still sitting on a timer
   aiThinking = false;
   endSounded = false;
+  firstGame = false;         // the coach belongs to the first game only
   nudgeThisGame = false;
   resultRecorded = false;    // the next finished game must be scored
   WCSOUND.setAmbient(false); // a game is starting: the menu tune stops NOW
@@ -3184,6 +3189,7 @@ function wildOnset(on) {
 }
 
 function sync() {
+  paintCoach();
   // A ranked or online game has its opponent fixed: hide the free-play setup.
   document.body.classList.toggle('fixed-opp', !!((activeBot && ratedGame) || onlineActive));
   paintClocks();
@@ -3315,6 +3321,48 @@ sync();
 render();
 refreshBotUI();
 refreshShareUI();
+// ---- play-first front door ---------------------------------------------------
+// More than half of first-time visitors left at the welcome screen without
+// tapping anything, and the ones who did tap still had a tour, a lobby and a
+// search between them and a board. A first visit now lands ON a board, White
+// to move against the gentlest bot, no clock, with a one-line coach above it.
+// The tour, the lobby and sign-in are one tap away; nothing is forced.
+function firstVisit() {
+  try { return !localStorage.getItem(FIRSTKEY) && !tutSeen(); } catch (e) { return false; }
+}
+function startFirstGame() {
+  try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {}
+  markTutSeen();                       // learning by playing counts; the tour stays on offer
+  closeWelcome();
+  WCSTATS.track('enter', { as: 'guest', door: 'play_first' });
+  if (oppModeEl) oppModeEl.value = 'bot';
+  if (botSideEl) botSideEl.value = 'black';
+  if (botLevelEl) botLevelEl.value = '1';
+  activeBot = null; ratedGame = false; onlineActive = false; myColor = null;
+  gameStarted({ mode: 'first', opponent: 'bot', signedIn: false });
+  resetGameState();
+  clockReset('none');                  // nobody should lose their first game on time
+  firstGame = true;
+  orientFor('white'); paintOppCard(); applyTutorVisibility();
+  refreshBotUI(); refreshShareUI();
+  runAnalysis(); sync(); render(); updateAmbient();
+}
+function paintCoach() {
+  if (!coachEl) return;
+  if (!firstGame || gameOver() || puzzleMode) { coachEl.hidden = true; return; }
+  coachEl.hidden = false;
+  const t = document.getElementById('coachText');
+  if (game.canWildcard() && game.turn === 'white') {
+    t.innerHTML = '<b>Board turn.</b> Tap any empty square to lift it, then a dashed spot to set it down. The hole it leaves blocks rooks, bishops and queens. Or just move a piece.';
+  } else if (!game.history.length) {
+    t.innerHTML = '<b>You are White.</b> This is normal chess with one twist: every third turn you may move a square of the board instead of a piece. Make a move.';
+  } else {
+    t.innerHTML = 'Your first board turn comes on your 3rd move. The bot gets them too.';
+  }
+}
+bind('coachTour', function () { WCTUT.open(updateAmbient); updateAmbient(); });
+bind('coachMenu', function () { openLobby(); });
+
 const bootRoom = (typeof WCNET !== 'undefined' && WCNET.roomFromLocation) ? WCNET.roomFromLocation() : null;
 if (!bootRoom && !bootedFromLink && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
 if (resumedGame) {
@@ -3326,7 +3374,8 @@ if (resumedGame) {
 } else if (!bootedFromLink) {
   // the welcome screen owns the first paint; enterSite() opens the lobby after
   const w = document.getElementById('welcome');
-  if (!w || !w.classList.contains('show')) openLobby();
+  if (w && w.classList.contains('show') && firstVisit()) startFirstGame();
+  else if (!w || !w.classList.contains('show')) openLobby();
 }
 if (bootedFromLink && shareMsgEl) shareMsgEl.textContent = "Your friend's move is loaded. Your turn.";
 if (!bootedFromLink) maybeAI();
@@ -3344,5 +3393,5 @@ if (!bootedFromLink) maybeAI();
       else ui.hint.textContent = 'New clock setting starts with your next game.';
     });
   }
-  if (!gameActs.length) clockReset();
+  if (!gameActs.length && !firstGame) clockReset();   // the first game stays untimed
 })();

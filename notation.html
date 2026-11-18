@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hollow Chess Notation: how to write down a game where the board moves</title>
+<meta name="description" content="Hollow Chess Notation is long algebraic chess notation with one extra symbol for moving a square of the board. Reference table and an example game score." />
+<link rel="canonical" href="https://hollowchess.com/notation.html" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Hollow Chess Notation: how to write down a game where the board moves" />
+<meta property="og:description" content="Hollow Chess Notation is long algebraic chess notation with one extra symbol for moving a square of the board. Reference table and an example game score." />
+<meta property="og:url" content="https://hollowchess.com/notation.html" />
+<meta property="og:image" content="https://hollowchess.com/icons/og-card.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Jost:wght@400;500;600&display=swap" />
+<style>
+  :root { --paper:#f6efe2; --card:#fffaf0; --ink:#1d2b2c; --muted:#5f6b67; --rule:#ddd0b8; --peacock:#0f6a5b; --sunset:#b8431f; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:"Jost",system-ui,sans-serif; font-size:17px; line-height:1.6; }
+  .wrap { max-width:760px; margin:0 auto; padding:28px 20px 70px; }
+  nav { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:26px; font-size:15px; }
+  nav a { color:var(--ink); text-decoration:none; font-weight:600; } nav a:hover { text-decoration:underline; }
+  nav .brand { font-family:"DM Serif Display",Georgia,serif; font-size:22px; font-weight:400; margin-right:auto; }
+  h1 { font-family:"DM Serif Display",Georgia,serif; font-weight:400; font-size:40px; line-height:1.1; margin:0 0 10px; }
+  h2 { font-family:"DM Serif Display",Georgia,serif; font-weight:400; font-size:27px; margin:34px 0 8px; }
+  h3 { font-size:18px; margin:22px 0 4px; }
+  p { margin:0 0 14px; } .lede { font-size:19px; color:var(--muted); }
+  a { color:var(--sunset); }
+  .cta { display:inline-block; margin:8px 0 6px; padding:13px 26px; border-radius:999px; background:var(--peacock); color:#fffaf0; font-weight:600; text-decoration:none; }
+  table { border-collapse:collapse; width:100%; margin:8px 0 16px; font-size:16px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--rule); vertical-align:top; }
+  code { background:var(--card); border:1px solid var(--rule); border-radius:6px; padding:1px 6px; font-size:.92em; }
+  .seq { display:inline-flex; gap:6px; flex-wrap:wrap; margin:4px 0 12px; }
+  .seq i { font-style:normal; font-weight:600; padding:4px 10px; border-radius:8px; border:1px solid var(--rule); background:var(--card); }
+  .seq i.s { border-color:var(--sunset); color:var(--sunset); }
+  footer { margin-top:44px; padding-top:16px; border-top:1px solid var(--rule); font-size:14.5px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav><a class="brand" href="/">Hollow Chess</a><a href="how-to-play.html">How to play</a><a href="notation.html">Notation</a><a href="/">Play</a></nav>
+<h1>Hollow Chess Notation</h1>
+<p class="lede">Ordinary chess notation cannot say that a square moved. Hollow Chess Notation is long algebraic chess notation plus one new symbol, <code>&gt;</code>, for moving a square.</p>
+
+<h2>Squares</h2>
+<p>Files are lettered <code>a</code> to <code>h</code> from left to right and ranks are numbered from 1, as in chess. Because the board can grow, a square attached above the eighth rank is on rank 9, and one attached below rank 1 is on rank 0. A file to the right of <code>h</code> is <code>i</code>, then <code>j</code>, and so on.</p>
+
+<h2>Piece moves</h2>
+<p>The starting square is always written. Short notation would be ambiguous on a board with holes.</p>
+<table>
+<tr><th>Notation</th><th>Meaning</th></tr>
+<tr><td><code>e2-e4</code></td><td>Pawn from e2 to e4. Pawns have no letter.</td></tr>
+<tr><td><code>Nb1-c3</code></td><td>Knight from b1 to c3.</td></tr>
+<tr><td><code>Qd4xh8</code></td><td>Queen captures on h8.</td></tr>
+<tr><td><code>e5xd6 ep</code></td><td>En passant capture.</td></tr>
+<tr><td><code>O-O</code>, <code>O-O-O</code></td><td>Castling kingside and queenside.</td></tr>
+<tr><td><code>a7-a8=Q</code></td><td>Promotion, at the edge of the board wherever that is. <code>e8-e9=Q</code> is legal on a board that has grown.</td></tr>
+<tr><td><code>+</code>, <code>#</code></td><td>Check and checkmate, added to the end of a move.</td></tr>
+</table>
+
+<h2>Board moves</h2>
+<table>
+<tr><th>Notation</th><th>Meaning</th></tr>
+<tr><td><code>e5&gt;c9</code></td><td>The empty square e5 is lifted and attached at c9. e5 is now a hole.</td></tr>
+<tr><td><code>g7&gt;a9+</code></td><td>A board move that gives check, usually by opening a line.</td></tr>
+<tr><td><code>h3&gt;f3#</code></td><td>A board move that gives checkmate.</td></tr>
+</table>
+<p>The rule of thumb: <code>-</code> and <code>x</code> move pieces, <code>&gt;</code> moves the board.</p>
+
+<h2>Writing down a game</h2>
+<p>Moves are numbered in pairs, White then Black, exactly as in chess. Every third turn is a board turn, but the numbering ignores that. You can spot the board moves by the <code>&gt;</code>.</p>
+<p><code>1. e2-e4 d7&gt;d9 2. Ng1-f3 e7-e6 3. d2&gt;a9</code></p>
+<p>Results are written <code>1-0</code>, <code>0-1</code> or <code>½-½</code>. In the game, the Copy button under the move list exports the whole score in this format.</p>
+
+<p><a class="cta" href="/">Play Hollow Chess</a></p>
+<p>New to the game? Read <a href="how-to-play.html">how to play Hollow Chess</a>.</p>
+<footer>Hollow Chess is a free chess variant that runs in your browser. <a href="/">Play it now</a> · <a href="how-to-play.html">How to play</a> · <a href="notation.html">Notation</a> · <a href="privacy.html">Privacy</a></footer>
+</div>
+</body>
+</html>

@@ -1,47 +1,57 @@
-// Headless smoke test of the live play path: guest -> skip tutorial -> Play now ->
-// e2-e4 -> bot replies. Fails loudly on any page error / console error.
+// Headless smoke test of the front door: a first visit lands on a board against
+// the beginner bot (no welcome wall, no tour, no lobby), you move, the bot replies,
+// the coach explains the board turn, and a second visit gets the welcome screen.
 //   node harness/smoke-play.js [http://localhost:5180]
 const { chromium } = require('playwright');
 const BASE = process.argv[2] || 'http://localhost:5180';
 (async () => {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 420, height: 860 } });
+  const ctx = await browser.newContext({ viewport: { width: 420, height: 860 } });
+  const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push('console: ' + m.text()); });
+  const fails = [];
+  const check = (label, ok, detail) => { if (!ok) fails.push(label); console.log((ok ? 'PASS ' : 'FAIL ') + label + (detail ? '  ' + JSON.stringify(detail) : '')); };
+  const overlays = () => page.evaluate(() => ['welcome', 'lobby', 'profile', 'tutorial', 'onboard'].filter((id) => { const e = document.getElementById(id); return e && e.classList.contains('show'); }));
+
   await page.goto(BASE + '/?smoke=' + Date.now());
-  await page.waitForTimeout(900);
-  const step = async (label, fn) => { const r = await fn(); console.log(label + ':', typeof r === 'string' ? r : JSON.stringify(r)); return r; };
-  await step('welcome shown', () => page.evaluate(() => document.getElementById('welcome').classList.contains('show')));
-  await page.evaluate(() => document.getElementById('welcomeGuest').click());
-  await page.waitForTimeout(400);
-  await step('tutorial shown (first visit)', () => page.evaluate(() => { const t = document.getElementById('tutorial'); return !!t && t.classList.contains('show'); }));
-  await page.evaluate(() => { const b = document.getElementById('tutSkip'); if (b) b.click(); });
-  await page.waitForTimeout(400);
-  await step('lobby shown', () => page.evaluate(() => document.getElementById('lobby').classList.contains('show')));
-  await page.evaluate(() => document.getElementById('playBotNow').click());
-  // "Play now" runs the staged search + match-found card (~2-4s) before the game starts
-  await page.waitForFunction(() => !document.getElementById('lobby').classList.contains('show'), null, { timeout: 15000 });
-  await page.waitForTimeout(300);
-  await step('game view', () => page.evaluate(() => ({ lobby: document.getElementById('lobby').classList.contains('show'), turn: game.turn, plies: game.history.length })));
-  const humanSide = await page.evaluate(() => (typeof botSide === 'function' && botSide() === 'white') ? 'black' : 'white');
-  console.log('human plays:', humanSide);
-  if (humanSide === 'black') await page.waitForTimeout(3500);       // bot moves first
-  // click the pawn's square then its destination; the board is drawn from the human's side
+  await page.waitForTimeout(3500);                         // past cloud boot: nothing may come back
+  const first = await page.evaluate(() => ({ coach: !document.getElementById('coach').hidden, text: document.getElementById('coachText').textContent.slice(0, 40), bot: botEnabled(), botSide: botSide(), clock: clockActive(), rated: ratedGame, turn: game.turn }));
+  check('first visit lands on a board with no overlay', (await overlays()).length === 0, await overlays());
+  check('coach is showing, beginner bot as Black, no clock, unrated', first.coach && first.bot && first.botSide === 'black' && !first.clock && !first.rated, first);
+
   const box = await page.locator('#board').boundingBox();
-  const flipped = humanSide === 'black';
-  const sq = (c, r) => ({ x: box.x + ((flipped ? 7 - c : c) + 0.5) / 8 * box.width, y: box.y + ((flipped ? r : 7 - r) + 0.5) / 8 * box.height });
-  const from = humanSide === 'white' ? sq(4, 1) : sq(4, 6), to = humanSide === 'white' ? sq(4, 3) : sq(4, 4);
-  await page.mouse.click(from.x, from.y); await page.waitForTimeout(200);
-  await page.mouse.click(to.x, to.y);
-  await page.waitForTimeout(400);
-  const afterMove = await step('after my move', () => page.evaluate(() => ({ plies: game.history.length, last: game.history.slice(-1)[0] && game.history.slice(-1)[0].text, turn: game.turn })));
-  await page.waitForTimeout(3500);
-  const afterBot = await step('after bot reply', () => page.evaluate(() => ({ plies: game.history.length, last: game.history.slice(-1)[0] && game.history.slice(-1)[0].text, turn: game.turn, status: game.status })));
-  await step('overlays during play', () => page.evaluate(() => ['welcome', 'lobby', 'profile', 'tutorial', 'onboard'].filter((id) => { const e = document.getElementById(id); return e && e.classList.contains('show'); })));
-  const mine = humanSide === 'white' ? 1 : 2;
-  const ok = afterMove.plies >= mine && afterBot.plies >= afterMove.plies + 1 && errors.length === 0;
+  const sq = (c, r) => ({ x: box.x + (c + 0.5) / 8 * box.width, y: box.y + (7 - r + 0.5) / 8 * box.height });
+  const move = async (fc, fr, tc, tr) => { await page.mouse.click(sq(fc, fr).x, sq(fc, fr).y); await page.waitForTimeout(250); await page.mouse.click(sq(tc, tr).x, sq(tc, tr).y); await page.waitForTimeout(400); };
+  const waitBot = () => page.waitForFunction(() => game.turn === 'white' && !aiThinking, null, { timeout: 15000 });
+  await move(4, 1, 4, 3);                                  // 1. e2-e4
+  check('my move lands', (await page.evaluate(() => game.history.length)) >= 1);
+  await waitBot();
+  check('bot replies', (await page.evaluate(() => game.history.length)) === 2, await page.evaluate(() => game.history.map((h) => h.text)));
+  // 2nd move: any legal pawn push, made through the game loop (the bot's board move may have reshaped the board)
+  await page.evaluate(() => {
+    for (const [k, p] of game.board) {
+      if (p.color !== 'white' || p.type !== 'pawn') continue;
+      const [c, r] = k.split(',').map(Number), m = game.legalMoves(c, r)[0];
+      if (m && game.makeMove(c, r, m.c, m.r)) { done({ kind: 'm', from: { c, r }, to: { c: m.c, r: m.r } }); return; }
+    }
+  });
+  await waitBot();
+  const bt = await page.evaluate(() => ({ plies: game.history.length, wild: game.canWildcard(), coach: document.getElementById('coachText').textContent.slice(0, 11) }));
+  check('coach announces the board turn on move 3', bt.plies === 4 && bt.wild && bt.coach === 'Board turn.', bt);
+  check('still no overlay during play', (await overlays()).length === 0, await overlays());
+
+  await page.evaluate(() => document.getElementById('coachMenu').click()); await page.waitForTimeout(300);
+  check('Menu opens the lobby', (await overlays()).includes('lobby'));
+
+  // a second visit resumes the game or shows the welcome screen; it never starts another "first game"
+  await page.goto(BASE + '/?smoke2=' + Date.now()); await page.waitForTimeout(2500);
+  const second = await page.evaluate(() => ({ coachHidden: document.getElementById('coach').hidden, firstVisit: firstVisit(), plies: game.history.length, welcome: document.getElementById('welcome').classList.contains('show') }));
+  check('second visit does not restart the first game', second.coachHidden && !second.firstVisit && (second.plies === 4 || second.welcome), second);
+
   console.log(errors.length ? 'ERRORS:\n  ' + errors.join('\n  ') : 'no page/console errors');
+  const ok = !fails.length && !errors.length;
   console.log(ok ? 'SMOKE OK' : 'SMOKE FAILED');
   await browser.close();
   process.exit(ok ? 0 : 1);

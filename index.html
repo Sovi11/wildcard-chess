@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Jost:wght@400;500;600;700&family=Inter:wght@500;600;700&display=swap" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=80" />
+  <link rel="stylesheet" href="styles.css?v=81" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -383,6 +383,10 @@
     <main>
       <section class="board-wrap">
         <div id="banner" class="banner"><span id="bannerText"></span><button id="analyzeBtn" class="analyze-btn">✦ Analyze game</button><button id="playAgainBtn" class="analyze-btn again">↻ Play again</button><span class="bn-exits"><button id="bannerHomeBtn" class="analyze-btn exit" type="button">⌂ Home</button><button id="bannerProfileBtn" class="analyze-btn exit" type="button">☰ Profile</button></span><button id="saveRatingBtn" class="bn-save" type="button" hidden>Keep your rating — sign in</button></div>
+        <div id="coach" class="coach" hidden>
+          <p id="coachText" class="coach-text"></p>
+          <span class="coach-acts"><button id="coachTour" class="coach-btn" type="button">60-second tour</button><button id="coachMenu" class="coach-btn" type="button">Menu</button></span>
+        </div>
         <div id="browseBar" class="browse-bar"></div>
         <div id="promoPick" class="promo-pick" role="dialog" aria-label="Choose a piece to promote to"></div>
         <div id="clockTop" class="clock-bar"></div>
@@ -583,33 +587,34 @@
 
         <p>Hollow Chess is free, runs in any browser on desktop or mobile, and needs no download and no
           sign-up. It installs as an app if you want it to.</p>
+        <p class="legal-links"><a href="how-to-play.html">How to play Hollow Chess</a> · <a href="notation.html">Notation</a></p>
         <p class="legal-links"><a href="privacy.html">Privacy policy</a> · <a href="delete-account.html">Delete your account</a> · <a href="mailto:hollowchess11@gmail.com">Contact</a></p>
       </section>
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=80"></script>
+  <script defer src="js/platform.js?v=81"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=80"></script>
-  <script defer src="js/stats.js?v=80"></script>
-  <script defer src="js/cloud.js?v=80"></script>
-  <script defer src="js/postgame-feedback.js?v=80"></script>
-  <script defer src="js/engine.js?v=80"></script>
-  <script defer src="js/pieces.js?v=80"></script>
-  <script defer src="js/themes.js?v=80"></script>
-  <script defer src="js/sound.js?v=80"></script>
-  <script defer src="js/tutorial.js?v=80"></script>
-  <script defer src="js/ai.js?v=80"></script>
-  <script defer src="js/ladder.js?v=80"></script>
+  <script defer src="js/config.js?v=81"></script>
+  <script defer src="js/stats.js?v=81"></script>
+  <script defer src="js/cloud.js?v=81"></script>
+  <script defer src="js/postgame-feedback.js?v=81"></script>
+  <script defer src="js/engine.js?v=81"></script>
+  <script defer src="js/pieces.js?v=81"></script>
+  <script defer src="js/themes.js?v=81"></script>
+  <script defer src="js/sound.js?v=81"></script>
+  <script defer src="js/tutorial.js?v=81"></script>
+  <script defer src="js/ai.js?v=81"></script>
+  <script defer src="js/ladder.js?v=81"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=80"></script>
-  <script defer src="js/net.js?v=80"></script>
-  <script defer src="js/share.js?v=80"></script>
-  <script defer src="js/analysis.js?v=80"></script>
-  <script defer src="js/solver.js?v=80"></script>
-  <script defer src="js/puzzles.js?v=80"></script>
-  <script defer src="js/main.js?v=80"></script>
-  <script defer src="js/native.js?v=80"></script>
+  <script defer src="js/matchmaking.js?v=81"></script>
+  <script defer src="js/net.js?v=81"></script>
+  <script defer src="js/share.js?v=81"></script>
+  <script defer src="js/analysis.js?v=81"></script>
+  <script defer src="js/solver.js?v=81"></script>
+  <script defer src="js/puzzles.js?v=81"></script>
+  <script defer src="js/main.js?v=81"></script>
+  <script defer src="js/native.js?v=81"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());

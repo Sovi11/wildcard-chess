@@ -8,6 +8,8 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 420, height: 860 } });
+  // these checks exercise the welcome -> lobby path, i.e. a visitor who has been here before
+  await page.addInitScript(() => { try { localStorage.setItem('hollowchess.first.v1', '1'); } catch (e) {} });
   const errors = [], warnings = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('dialog', (d) => d.accept());   // v73: leaving a live rated game asks first
@@ -93,6 +95,7 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
 
   // --- v79: entering as a guest before cloud boot finishes must not bring the welcome screen back ---
   const fast = await browser.newPage({ viewport: { width: 420, height: 860 } });
+  await fast.addInitScript(() => { try { localStorage.setItem('hollowchess.first.v1', '1'); } catch (e) {} });
   await fast.goto(BASE + '/?audit3=' + Date.now(), { waitUntil: 'domcontentloaded' });
   await fast.waitForFunction(() => !!document.getElementById('welcomeGuest') && typeof enterSite === 'function');
   await fast.evaluate(() => document.getElementById('welcomeGuest').click());      // well inside the boot window
