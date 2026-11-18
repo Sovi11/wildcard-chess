@@ -1668,3 +1668,11 @@ body.deco .banner .analyze-btn.exit { margin: 10px 4px 0; padding: 7px 14px; fon
 .coach-btn { font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer;
   background: transparent; color: var(--ink); border: 1px solid var(--line, #ddd0b8); white-space: nowrap; }
 .coach-btn:hover { border-color: var(--ink); }
+
+/* review coach + puzzle challenge */
+.rev-coach { margin-top: 6px; font-size: 13.5px; line-height: 1.45; color: var(--ink); padding: 8px 10px; border-radius: 10px;
+  background: var(--sunken, rgba(0,0,0,.05)); border-left: 3px solid var(--accent); }
+.rev-coach b { color: var(--accent-text, var(--accent)); }
+.rev-summary { margin-top: 4px; }
+.act-btn.rev-mistake { white-space: nowrap; flex: 1 1 auto; }
+.act-btn.pz-share { width: 100%; margin: 0 0 10px; }

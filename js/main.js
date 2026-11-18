@@ -2028,7 +2028,7 @@ WCCLOUD.onChange(function (u) {
 // The welcome screen must be there the instant the page paints — cloud init is
 // an await away, so decide synchronously from supabase-js's cached session in
 // localStorage. bootCloud corrects the guess if it was wrong.
-const bootOnInvite = /[#&](room|g)=/.test(location.hash || '');
+const bootOnInvite = /[#&](room|g|puzzle)=/.test(location.hash || '');
 function hasCachedSession() {
   try {
     return Object.keys(localStorage).some(function (k) {
@@ -2512,6 +2512,7 @@ function openReview(acts, title, expectedPlies) {
   revPos = 0;
   revEvals = [];
   revQuality = [];
+  revBest = [];                       // revBest[i]: the engine's choice instead of ply i
   document.getElementById('reviewTitle').textContent = title;
 
   // Instant walkthrough: replay without analysis to get the move list. If an
@@ -2537,19 +2538,26 @@ function openReview(acts, title, expectedPlies) {
 
   // Stream the deep pass one ply at a time so the page never freezes.
   const g = new Game();
-  let prevStm = null, i = 0;
+  let prevStm = null, prevBest = null, i = 0;
+  // the engine's pick for the position on the board, in words, before the game moves on
+  const noteBest = function (best) {
+    const gm = best ? WCAI.moveToGame(best) : null;
+    return gm ? { text: WCAN.describe(gm, g), why: WCAN.explain(gm, g) } : null;
+  };
   const step = function () {
     if (token !== revToken) return;                 // review closed or replaced
     if (prevStm === null) {
       const first = WCAN.analyse(g, 2, 200);
       revEvals.push(first.whiteScore);
-      prevStm = first.stmScore;
+      prevStm = first.stmScore; prevBest = noteBest(first.best);
       setTimeout(step, 15);
       return;
     }
+    if (i < revActs.length) revBest[i] = prevBest;
     if (i >= revActs.length || !WCAI.applyToGame(g, revActs[i])) { finish(); return; }
     const res = WCAN.analyse(g, REV_DEPTH, REV_MOVETIME);
     if (token !== revToken) return;
+    prevBest = noteBest(res.best);
     revEvals.push(res.whiteScore);
     revQuality[i] = WCAN.classify(WCAN.clamp(prevStm) - WCAN.clamp(-res.stmScore));
     prevStm = res.stmScore;
@@ -2571,6 +2579,14 @@ function openReview(acts, title, expectedPlies) {
       'Accuracy · White ' + (aw != null ? aw + '%' : '–') +
       ' · Black ' + (ab != null ? ab + '%' : '–') +
       ' · depth ' + REV_DEPTH;
+    // the coach's tally: how many slips each side made, by size
+    const tally = function (color) {
+      const n = { blunder: 0, mistake: 0, inaccuracy: 0 };
+      revMoves.forEach(function (h, k) { const q = revQuality[k]; if (q && h.color === color && n[q.key] != null) n[q.key]++; });
+      return n.blunder + ' blunder' + (n.blunder === 1 ? '' : 's') + ', ' + n.mistake + ' mistake' + (n.mistake === 1 ? '' : 's') + ', ' + n.inaccuracy + ' inaccurac' + (n.inaccuracy === 1 ? 'y' : 'ies');
+    };
+    const sumEl = document.getElementById('revSummary');
+    if (sumEl) sumEl.textContent = 'White: ' + tally('white') + '. Black: ' + tally('black') + '.';
     revSeek(revPos);
   };
   setTimeout(step, 30);
@@ -2642,6 +2658,17 @@ if (revGraphEl) revGraphEl.addEventListener('click', function (e) {
   revSeek(Math.round(((e.clientX - r.left) / r.width) * (n - 1)));
 });
 
+let revBest = [];
+// Jump to the next slip after the current position (wraps round) — the way a
+// coach walks you through a game: only the moments that mattered.
+function revNextMistake() {
+  const n = revActs.length;
+  for (let k = 1; k <= n; k++) {
+    const i = (revPos - 1 + k) % n;                 // ply index
+    const q = revQuality[i];
+    if (q && /mistake|blunder/.test(q.key)) { revSeek(i + 1); return; }
+  }
+}
 function revSeek(n) {
   revPos = Math.max(0, Math.min(revActs.length, n));
   const g = new Game();
@@ -2667,6 +2694,12 @@ function revSeek(n) {
     const q = revQuality[revPos - 1];
     info.innerHTML = '<b>' + plyLabel(revPos - 1) + '</b> ' + esc(h ? h.text : '') +
       (q ? ' <span class="q q-' + q.key + '">' + q.mark + ' ' + q.label + '</span>' : '');
+    // the coach: on a slip, say what the engine would have played instead
+    const b = revBest[revPos - 1];
+    const played = h ? h.text.replace(/[+#]+$/, '') : '';
+    if (q && /inaccuracy|mistake|blunder/.test(q.key) && b && b.text && b.text !== played) {
+      info.innerHTML += '<div class="rev-coach">Better was <b>' + esc(b.text) + '</b>.' + (b.why ? ' ' + esc(b.why) : '') + '</div>';
+    }
   }
 
   drawEvalGraph();
@@ -2730,6 +2763,7 @@ bind('revFirst', function () { revSeek(0); });
 bind('revPrev', function () { revSeek(revPos - 1); });
 bind('revNext', function () { revSeek(revPos + 1); });
 bind('revLast', function () { revSeek(revActs.length); });
+bind('revMistake', revNextMistake);
 if (profileEl) profileEl.addEventListener('click', function (e) { if (e.target === profileEl) closeProfile(); });
 document.addEventListener('keydown', function (e) {
   if (!profileEl.classList.contains('show') || !profReviewEl.classList.contains('show')) return;
@@ -2790,6 +2824,7 @@ window.addEventListener('hashchange', () => {
     const room = WCNET.roomFromLocation();
     if (room) { openLobby(); joinRoom(room); return; }
   } catch (e) {}
+  { const pid = puzzleIdFromHash(); if (pid) { if (leaveLiveGame()) openPuzzleById(pid); return; } }
   try {
     if (!WCSHARE.fromLocation(game)) return;
     leavePuzzleMode();
@@ -3048,6 +3083,47 @@ async function startPuzzles() {
   // live ratings arrive after first paint; seeds cover the gap
   if (WCCLOUD.enabled()) WCCLOUD.puzzleRatings().then(function (m) { WCPUZZLE.setPuzzleRatings(m); if (puzzleMode) paintPuzzle(); });
 }
+
+// ---- puzzle challenges -------------------------------------------------------
+// A puzzle has an address: hollowchess.com/#puzzle=hc-012 opens straight onto
+// it. "Challenge a friend" hands that link to the share sheet (or the
+// clipboard), which is how a puzzle gets from one person to the next.
+function puzzleIdFromHash() {
+  const m = /[#&]puzzle=([\w-]+)/.exec(location.hash || '');
+  return m ? m[1] : null;
+}
+async function openPuzzleById(id) {
+  closeWelcome();
+  try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {}     // an invite is not a "first game" visit
+  await startPuzzles();
+  if (!puzzleMode) return;
+  if (WCPUZZLE.list().some(function (p) { return p.id === id; })) {
+    loadPuzzle(function () { return WCPUZZLE.startById(id); });
+    pzSay('A friend sent you this one. ' + (WCPUZZLE.current().mateIn === 1 ? 'Find the mate.' : 'Find the forced mate.'));
+  }
+  history.replaceState(null, '', location.pathname + location.search);
+}
+function sharePuzzle() {
+  const p = WCPUZZLE.current();
+  if (!p) return;
+  const base = (window.HC ? HC.publicBase : location.origin + location.pathname);
+  const url = base + '#puzzle=' + p.id;
+  const text = 'Can you solve this Hollow Chess puzzle? Mate in ' + p.mateIn + ', and the board itself can move.';
+  const btn = document.getElementById('pzShare');
+  const copied = function () { if (btn) { btn.textContent = 'Link copied'; setTimeout(function () { btn.textContent = 'Challenge a friend'; }, 1800); } };
+  if (navigator.share) { navigator.share({ title: 'Hollow Chess puzzle', text: text, url: url }).catch(function () {}); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text + ' ' + url).then(copied, function () { window.prompt('Copy this link', url); });
+  else window.prompt('Copy this link', url);
+}
+bind('pzShare', sharePuzzle);
+// game-over card: straight to a live room link for a friend
+bind('bannerFriendBtn', function () {
+  if (!gameOver()) return;
+  ui.banner.classList.remove('show');
+  openLobby();
+  const b = document.querySelector('[data-lobbymode="online"]');
+  if (b) b.click();
+});
 
 // Out of puzzles: back to the lobby to pick what's next, not onto an empty
 // same-screen board (which also logged a fake "hotseat game_start").
@@ -3364,14 +3440,17 @@ bind('coachTour', function () { WCTUT.open(updateAmbient); updateAmbient(); });
 bind('coachMenu', function () { openLobby(); });
 
 const bootRoom = (typeof WCNET !== 'undefined' && WCNET.roomFromLocation) ? WCNET.roomFromLocation() : null;
-if (!bootRoom && !bootedFromLink && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
+const bootPuzzle = puzzleIdFromHash();
+if (!bootRoom && !bootedFromLink && !bootPuzzle && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
 if (resumedGame) {
   closeWelcome();            // straight back to the board you were on
   updateAmbient();
 } else if (bootRoom) {
   openLobby();
   joinRoom(bootRoom);
-} else if (!bootedFromLink) {
+} else if (bootPuzzle) {
+  openPuzzleById(bootPuzzle);
+} else if (!bootedFromLink && !bootPuzzle) {
   // the welcome screen owns the first paint; enterSite() opens the lobby after
   const w = document.getElementById('welcome');
   if (w && w.classList.contains('show') && firstVisit()) startFirstGame();

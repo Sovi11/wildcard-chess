@@ -104,6 +104,32 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
   check('welcome screen stays dismissed when cloud boot finishes after guest entry', !reshown, { reshown });
   await fast.close();
 
+  // --- v82: puzzle challenge link, share text, review coach ---
+  const pzp = await browser.newPage({ viewport: { width: 420, height: 860 } });
+  const pzErrs = []; pzp.on('pageerror', (e) => pzErrs.push(e.message));
+  await pzp.goto(BASE + '/?audit4=' + Date.now() + '#puzzle=hc-003', { waitUntil: 'domcontentloaded' });
+  await pzp.waitForFunction(() => typeof puzzleMode !== 'undefined' && puzzleMode && WCPUZZLE.current(), null, { timeout: 15000 });
+  await pzp.waitForTimeout(2500);
+  const link = await pzp.evaluate(async () => {
+    let copied = '';
+    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: (t) => { copied = t; return Promise.resolve(); } }, configurable: true });
+    document.getElementById('pzShare').click();
+    await new Promise((r) => setTimeout(r, 100));
+    return { id: WCPUZZLE.current().id, welcome: document.getElementById('welcome').classList.contains('show'), coach: !document.getElementById('coach').hidden, copied, hash: location.hash };
+  });
+  check('a #puzzle= link opens that puzzle; Challenge a friend copies its link', link.id === 'hc-003' && !link.welcome && !link.coach && /#puzzle=hc-003$/.test(link.copied) && link.hash === '', link);
+  const rev = await pzp.evaluate(async () => {
+    const m = (fc, fr, tc, tr) => ({ kind: 'm', from: { c: fc, r: fr }, to: { c: tc, r: tr } });
+    openReview([m(4, 1, 4, 3), m(3, 6, 3, 4), m(3, 0, 6, 3), m(2, 7, 6, 3)], 'audit');      // 1.e4 d5 2.Qg4?? Bxg4
+    for (let i = 0; i < 200 && !/^Accuracy/.test(document.getElementById('revAccuracy').textContent); i++) await new Promise((r) => setTimeout(r, 100));
+    revSeek(0); revNextMistake();
+    return { pos: revPos, info: document.getElementById('revMoveInfo').textContent, summary: document.getElementById('revSummary').textContent, best: revBest.length };
+  });
+  check('review coach: Next mistake finds the blunder and says what was better', rev.pos === 3 && /Better was/.test(rev.info) && /White: 1 blunder/.test(rev.summary), rev);
+  check('no page errors on the puzzle/review page', pzErrs.length === 0, pzErrs);
+  await pzp.close();
+
   // --- #8 inputs are 16px on touch devices (no iOS focus zoom) ---
   const ctx = await browser.newContext({ ...devices['iPhone 13'] });
   const mp = await ctx.newPage();
