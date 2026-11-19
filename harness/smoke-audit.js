@@ -116,9 +116,11 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: (t) => { copied = t; return Promise.resolve(); } }, configurable: true });
     document.getElementById('pzShare').click();
     await new Promise((r) => setTimeout(r, 100));
-    return { id: WCPUZZLE.current().id, welcome: document.getElementById('welcome').classList.contains('show'), coach: !document.getElementById('coach').hidden, copied, hash: location.hash };
+    document.getElementById('shareCopy').click(); await new Promise((r) => setTimeout(r, 100));
+    window.__x = document.querySelector('#shareSheet a[data-net="x"]').href; window.__sheet = document.getElementById('shareSheet').classList.contains('show'); closeShare();
+    return { x: window.__x, sheet: window.__sheet, id: WCPUZZLE.current().id, welcome: document.getElementById('welcome').classList.contains('show'), coach: !document.getElementById('coach').hidden, copied, hash: location.hash };
   });
-  check('a #puzzle= link opens that puzzle; Challenge a friend copies its link', link.id === 'hc-003' && !link.welcome && !link.coach && /#puzzle=hc-003$/.test(link.copied) && link.hash === '', link);
+  check('a #puzzle= link opens that puzzle; Challenge a friend copies its link', link.id === 'hc-003' && !link.welcome && !link.coach && /#puzzle=hc-003$/.test(link.copied) && link.hash === '' && link.sheet && /^https:\/\/twitter\.com\/intent\/tweet\?text=.*puzzle%3Dhc-003$/.test(link.x), link);
   const rev = await pzp.evaluate(async () => {
     const m = (fc, fr, tc, tr) => ({ kind: 'm', from: { c: fc, r: fr }, to: { c: tc, r: tr } });
     openReview([m(4, 1, 4, 3), m(3, 6, 3, 4), m(3, 0, 6, 3), m(2, 7, 6, 3)], 'audit');      // 1.e4 d5 2.Qg4?? Bxg4

@@ -1706,3 +1706,13 @@ body.deco .banner .analyze-btn.exit { margin: 10px 4px 0; padding: 7px 14px; fon
 @media (max-width: 640px) { .prof-form { grid-template-columns: 1fr 1fr; } .prof-auth { font-size: 12.5px; padding: 7px 10px; } }
 
 body.deco .prof-auth.primary, body .prof-auth.primary { background: var(--peacock, var(--accent)); color: var(--on-peacock, #fff); border-color: var(--peacock, var(--accent)); }
+
+/* share sheet */
+.share-sheet { z-index: 60; }
+.share-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.share-opt { display: flex; align-items: center; justify-content: center; padding: 12px 8px; border-radius: 12px; font: inherit; font-size: 14px; font-weight: 600;
+  text-decoration: none; cursor: pointer; background: var(--btn-bg, #fffaf0); color: var(--ink); border: 1px solid var(--hairline-strong, var(--line)); }
+.share-opt:hover { border-color: var(--ink); }
+.share-linkrow { display: flex; gap: 8px; margin-bottom: 12px; }
+.share-linkrow .share-input { margin: 0; flex: 1; }
+.share-linkrow .share-btn { width: auto; white-space: nowrap; margin: 0; }

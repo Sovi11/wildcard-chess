@@ -3178,17 +3178,76 @@ async function openPuzzleById(id) {
   }
   history.replaceState(null, '', location.pathname + location.search);
 }
+// ---- share sheet -----------------------------------------------------------------
+// One panel for every "send this to someone": the site, a result, a puzzle.
+// Each network gets its own compose link (no SDKs, no trackers); "More" hands
+// over to the phone's own share sheet where there is one; the link is always
+// there to copy.
+const shareEl = document.getElementById('shareSheet');
+let shareCtx = { what: 'site', text: '', url: '' };
+function shareLinks(text, url) {
+  const t = encodeURIComponent(text), u = encodeURIComponent(url);
+  return {
+    x: 'https://twitter.com/intent/tweet?text=' + t + '&url=' + u,
+    whatsapp: 'https://wa.me/?text=' + encodeURIComponent(text + ' ' + url),
+    telegram: 'https://t.me/share/url?url=' + u + '&text=' + t,
+    reddit: 'https://www.reddit.com/submit?url=' + u + '&title=' + t,
+    facebook: 'https://www.facebook.com/sharer/sharer.php?u=' + u,
+  };
+}
+function openShare(what, title, text, url) {
+  if (!shareEl) return;
+  shareCtx = { what: what, text: text, url: url };
+  document.getElementById('shareTitle').textContent = title;
+  document.getElementById('shareText').textContent = text;
+  document.getElementById('shareUrl').value = url;
+  const links = shareLinks(text, url);
+  shareEl.querySelectorAll('a.share-opt').forEach(function (a) { a.href = links[a.dataset.net]; });
+  const more = document.getElementById('shareMore');
+  if (more) more.hidden = !navigator.share;
+  const cp = document.getElementById('shareCopy'); if (cp) cp.textContent = 'Copy link';
+  shareEl.classList.add('show');
+}
+function closeShare() { if (shareEl) shareEl.classList.remove('show'); }
+if (shareEl) {
+  shareEl.addEventListener('click', function (e) {
+    if (e.target === shareEl) { closeShare(); return; }
+    const opt = e.target.closest('.share-opt');
+    if (opt) WCSTATS.track('share', { what: shareCtx.what, via: opt.dataset.net });
+  });
+  bind('shareClose', closeShare);
+  bind('shareMore', function () {
+    if (navigator.share) navigator.share({ title: 'Hollow Chess', text: shareCtx.text, url: shareCtx.url }).catch(function () {});
+  });
+  bind('shareCopy', function () {
+    const btn = document.getElementById('shareCopy'), inp = document.getElementById('shareUrl');
+    const done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy link'; }, 1800); };
+    WCSTATS.track('share', { what: shareCtx.what, via: 'copy' });
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(shareCtx.url).then(done, function () { inp.select(); });
+    else { inp.select(); try { document.execCommand('copy'); done(); } catch (e) {} }
+  });
+}
+const SITE_URL = function () { return (window.HC ? HC.publicBase : location.origin + location.pathname); };
+bind('shareBtn', function () {
+  openShare('site', 'Share Hollow Chess', 'Chess, except every third turn you can move a square of the board. Free in the browser:', SITE_URL());
+});
+bind('bannerShareBtn', function () {
+  if (!gameOver()) return;
+  const me = localColor(), moves = Math.ceil(game.history.length / 2);
+  const text = !game.winner ? 'I just drew a game of Hollow Chess, the chess where the board itself moves. Try it:'
+    : (game.winner === me || (!botEnabled() && !onlineActive))
+      ? 'I just won a game of Hollow Chess in ' + moves + ' moves. It is chess, except you can move the board. Can you?'
+      : 'I just lost a game of Hollow Chess, the chess where the board itself moves. Avenge me:';
+  openShare('result', 'Share your game', text, SITE_URL());
+});
 function sharePuzzle() {
   const p = WCPUZZLE.current();
   if (!p) return;
-  const base = (window.HC ? HC.publicBase : location.origin + location.pathname);
-  const url = base + '#puzzle=' + p.id;
-  const text = 'Can you solve this Hollow Chess puzzle? Mate in ' + p.mateIn + ', and the board itself can move.';
-  const btn = document.getElementById('pzShare');
-  const copied = function () { if (btn) { btn.textContent = 'Link copied'; setTimeout(function () { btn.textContent = 'Challenge a friend'; }, 1800); } };
-  if (navigator.share) { navigator.share({ title: 'Hollow Chess puzzle', text: text, url: url }).catch(function () {}); return; }
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text + ' ' + url).then(copied, function () { window.prompt('Copy this link', url); });
-  else window.prompt('Copy this link', url);
+  const st = WCPUZZLE.state ? WCPUZZLE.state() : null;
+  const solved = !!(st && st.finished && !st.failed);
+  openShare('puzzle', 'Challenge a friend',
+    (solved ? 'I solved this Hollow Chess puzzle first try. ' : 'Can you solve this Hollow Chess puzzle? ') + 'Mate in ' + p.mateIn + ', and the board itself can move.',
+    SITE_URL() + '#puzzle=' + p.id);
 }
 bind('pzShare', sharePuzzle);
 // game-over card: straight to a live room link for a friend
