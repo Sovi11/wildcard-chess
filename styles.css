@@ -2135,3 +2135,14 @@ body.deco.ink .pool-peek { border-top: 1px solid var(--rule); margin-top: 0; pad
 @media (max-width: 880px) { .pick.swatches { gap: 4px; } .sw { width: 30px; height: 30px; } }
 
 body.deco.ink #roomSide { display: none !important; }
+
+/* v87: back */
+.back-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin-right: 6px; flex: none;
+  background: transparent; border: 0; border-radius: 10px; color: var(--muted); cursor: pointer; }
+.back-btn:hover { color: var(--ink); background: rgba(255,255,255,.07); }
+.back-btn .ico, .ov-back .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ov-back { display: inline-flex; align-items: center; gap: 4px; margin: -6px 0 10px -6px; padding: 6px 10px 6px 4px; font: inherit; font-size: 13.5px; font-weight: 550;
+  background: transparent; border: 0; border-radius: 9px; color: var(--muted); cursor: pointer; }
+.ov-back:hover { color: var(--ink); background: rgba(255,255,255,.07); }
+body.light .back-btn:hover, body.light .ov-back:hover { background: rgba(11,12,14,.06); }
+.ov-back .ico { width: 16px; height: 16px; }

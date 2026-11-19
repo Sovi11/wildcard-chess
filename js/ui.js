@@ -162,5 +162,62 @@
   });
   document.addEventListener('click', function (e) { if (more && more.classList.contains('show') && !e.target.closest('#actionBar')) closeMore(); });
 
+  // ---- back ------------------------------------------------------------------------
+  // Three ways back, all doing the same thing: the arrow in the header (to the
+  // menu), a Back link at the top of every panel that opens over the game, and
+  // the browser's or phone's own back button, which closes the top panel
+  // instead of leaving the site.
+  const homeBtn = $('homeBtn');
+  if (homeBtn) homeBtn.addEventListener('click', function () { if (typeof openLobby === 'function') openLobby(); });
+
+  const CLOSERS = {
+    lobby: function () { closeLobby(); },
+    profile: function () { closeProfile(); },
+    setupSheet: function () { hide(setupEl); },
+    settingsSheet: function () { hide(settingsEl); },
+    shareSheet: function () { const e = $('shareSheet'); if (e) e.classList.remove('show'); },
+    authModal: function () { closeAuthModal(); },
+    feedback: function () { closeFeedback(); },
+    tutorial: function () { if (window.WCTUT) WCTUT.close(); },
+  };
+  const BACK_LABEL = { lobby: 'Back to the board', profile: 'Back', setupSheet: 'Back', settingsSheet: 'Back', tutorial: null, shareSheet: null, authModal: null, feedback: null };
+  function addBackLink(id) {
+    const el = $(id); if (!el || !BACK_LABEL[id]) return;
+    const inner = el.querySelector('.lobby-inner'); if (!inner || inner.querySelector('.ov-back')) return;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'ov-back';
+    b.innerHTML = '<svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span>' + BACK_LABEL[id] + '</span>';
+    b.addEventListener('click', function () { CLOSERS[id](); });
+    inner.insertBefore(b, inner.firstChild);
+  }
+  Object.keys(CLOSERS).forEach(addBackLink);
+
+  const stack = [];                 // overlay ids, in the order they opened
+  let fromPop = false, ignorePop = 0;
+  const isOpen = function (id) { const e = $(id); return !!(e && e.classList.contains('show')); };
+  function reconcile() {
+    Object.keys(CLOSERS).forEach(function (id) {
+      const open = isOpen(id), at = stack.indexOf(id);
+      if (open && at < 0) {
+        stack.push(id);
+        try { history.pushState({ hcOv: stack.length }, ''); } catch (e) {}
+      } else if (!open && at >= 0) {
+        stack.splice(at, 1);
+        // closed from the page, not by Back: drop the history entry we added for it
+        if (!fromPop && history.state && history.state.hcOv) { ignorePop++; try { history.back(); } catch (e) { ignorePop--; } }
+      }
+    });
+  }
+  new MutationObserver(reconcile).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+  window.addEventListener('popstate', function () {
+    if (ignorePop > 0) { ignorePop--; return; }
+    const top = stack[stack.length - 1];
+    if (!top) return;
+    fromPop = true;
+    try { CLOSERS[top](); } catch (e) {}
+    // the observer runs as a microtask; let it see the close before clearing the flag
+    Promise.resolve().then(function () { reconcile(); fromPop = false; });
+  });
+
   window.HCUI = { openSetup: function () { show(setupEl); }, openSettings: function () { show(settingsEl); }, refresh: refreshAll };
 })();

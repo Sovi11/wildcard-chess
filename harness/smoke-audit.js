@@ -155,6 +155,26 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
     ui.visibleSelects.length === 0 && ui.open && ui.started.level === '4' && ui.started.botSide === 'white' && ui.started.bot && !ui.started.rated && ui.started.clock === '3+2' && !ui.started.lobby && !ui.started.sheet && ui.board === 'slate' && ui.anaOff && ui.anaDeep, ui);
   await pzp.evaluate(() => { try { gameActs.length = 0; } catch (e) {} });
 
+  // --- v87: back. Header arrow opens the menu; Back links close panels; browser Back closes the top panel ---
+  const back = await pzp.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const open = (id) => document.getElementById(id).classList.contains('show');
+    closeLobby(); await wait(150);
+    document.getElementById('homeBtn').click(); await wait(100);
+    const menu = open('lobby');
+    document.querySelector('[data-lobbymode="computer"]').click(); await wait(100);
+    const both = open('lobby') && open('setupSheet');
+    history.back(); await wait(250);
+    const afterBack1 = { setup: open('setupSheet'), lobby: open('lobby') };
+    history.back(); await wait(250);
+    const afterBack2 = { lobby: open('lobby') };
+    openProfile(); await wait(100);
+    document.querySelector('#profile .ov-back').click(); await wait(250);
+    return { menu, both, afterBack1, afterBack2, profileClosed: !open('profile'), href: location.pathname };
+  });
+  check('v87: header arrow, Back links and browser Back all close panels in order',
+    back.menu && back.both && !back.afterBack1.setup && back.afterBack1.lobby && !back.afterBack2.lobby && back.profileClosed, back);
+
   // --- v83: profile — empty state, then form row, rename, filters ---
   const prof = await pzp.evaluate(async () => {
     exitPuzzles(); closeLobby(); showMatchList && showMatchList();
