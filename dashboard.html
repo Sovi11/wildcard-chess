@@ -7,35 +7,23 @@
 <title>Hollow Chess — traffic</title>
 <link rel="icon" href="icons/icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Jost:wght@400;500;600;700&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" />
 <style>
   :root {
-    color-scheme: light;
-    --paper: #f6efe2; --card: #fffaf0; --well: #f3ead9; --rule: #ddd0b8;
-    --ink: #1d2b2c; --ink-2: #4c5a57; --muted: #6b7672;
-    --peacock: #0f6a5b; --on-peacock: #fffaf0;
-    --series-1: #2a78d6;   /* visitors */
-    --series-2: #eb6834;   /* players  */
-    --bar: #2a78d6; --bar-soft: #cfe0f5;
-    --good: #1f6e52; --bad: #b8431f;
-    --serif: "DM Serif Display", Georgia, serif; --sans: "Jost", system-ui, sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
-      --paper: #151817; --card: #1d2120; --well: #252a28; --rule: #353c39;
-      --ink: #f0efe8; --ink-2: #c5c9c2; --muted: #9aa39d;
-      --peacock: #3fae98; --on-peacock: #0c1513;
-      --series-1: #3987e5; --series-2: #d95926;
-      --bar: #3987e5; --bar-soft: #24364d;
-      --good: #6fcfa8; --bad: #f08a66;
-    }
+    color-scheme: dark;
+    --paper: #0b0c0e; --card: #131417; --well: #191b1f; --rule: #23262b;
+    --ink: #f2f1ed; --ink-2: #c9c8c3; --muted: #8b9097;
+    --peacock: #f2f1ed; --on-peacock: #0b0c0e;
+    --series-1: #3987e5; --series-2: #d95926;
+    --bar: #3987e5; --bar-soft: #24364d;
+    --good: #7fe0ae; --bad: #ff6a55;
+    --serif: "Geist", system-ui, sans-serif; --sans: "Geist", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.45; }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 22px 18px 60px; }
   header { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; margin-bottom: 18px; }
-  h1 { font-family: var(--serif); font-weight: 400; font-size: 34px; line-height: 1; margin: 0; }
+  h1 { font-family: var(--serif); font-weight: 650; letter-spacing: -.035em; font-size: 34px; line-height: 1; margin: 0; }
   .sub { color: var(--muted); font-size: 13.5px; margin-top: 6px; }
   .grow { flex: 1; }
   .pills { display: inline-flex; border: 1.5px solid var(--ink); border-radius: 999px; overflow: hidden; }
@@ -48,14 +36,14 @@
   .tile, .panel { background: var(--card); border: 1px solid var(--rule); border-radius: 16px; }
   .tile { padding: 14px 16px 13px; min-width: 0; }
   .tile .k { font-size: 12.5px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); }
-  .tile .v { font-family: var(--serif); font-size: 34px; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .tile .v { font-family: var(--serif); font-weight: 600; letter-spacing: -.03em; font-size: 34px; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
   .tile .d { font-size: 12.5px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
   .d .up { color: var(--good); font-weight: 600; } .d .down { color: var(--bad); font-weight: 600; }
 
   .grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; }
   .panel { padding: 16px 18px 16px; min-width: 0; }
   .panel.wide { grid-column: 1 / -1; }
-  .panel h2 { font-family: var(--serif); font-weight: 400; font-size: 21px; margin: 0; }
+  .panel h2 { font-family: var(--serif); font-weight: 600; letter-spacing: -.02em; font-size: 21px; margin: 0; }
   .panel .note { color: var(--muted); font-size: 13px; margin: 2px 0 10px; }
   .phead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   .legend { display: inline-flex; gap: 14px; font-size: 13px; color: var(--ink-2); }

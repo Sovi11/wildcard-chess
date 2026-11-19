@@ -10,6 +10,15 @@
   const KEY = 'wildcardchess.appearance.v1';
 
   const BOARD_THEMES = {
+    mono: {
+      name: 'Graphite',
+      desc: 'The house style. Bone and graphite; holes are the page showing through.',
+      light: '#e9e7e1', dark: '#7f8791',
+      void: '#0b0c0e', voidLight: '#f4f3ef', label: '#6f757c',
+      grid: 'rgba(11,12,14,0.10)',
+      holeLight: '#111214',
+      holeRim: 'rgba(200,240,60,.26)',
+    },
     bombay: {
       name: 'Bombay',
       desc: 'The house style. Mint tile and cream, like an old Bandra floor.',
@@ -58,7 +67,7 @@
     },
   };
 
-  let current = { board: 'bombay', pieces: 'staunton' };
+  let current = { board: 'mono', pieces: 'staunton' };
 
   function load() {
     try {
@@ -67,6 +76,8 @@
         const p = JSON.parse(raw);
         // Slate was the default, not a choice: move those boards to the new one.
         if (p.board === 'slate' && !p.boardPicked) p.board = 'bombay';
+        // v85: Bombay was the default of the cream design; unless it was chosen, move to Graphite
+        if (p.board === 'bombay' && !p.boardPicked) p.board = 'mono';
         if (BOARD_THEMES[p.board]) current.board = p.board;
         if (p.boardPicked) current.boardPicked = true;
         if (p.picked) current.picked = true;
@@ -126,7 +137,8 @@
   // the player last chose.
   // v2: the site became a daylight design, so everyone starts on paper once;
   // the old key stored the OS preference for everybody, not a choice.
-  const MODEKEY = 'wildcardchess.mode.v2';
+  // v3: the site is a dark design again; everyone starts there once, then their choice sticks
+  const MODEKEY = 'wildcardchess.mode.v3';
   function prefersLight() {
     try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches; }
     catch (e) { return false; }
@@ -136,13 +148,13 @@
       const v = localStorage.getItem(MODEKEY);
       if (v === 'light' || v === 'dark') return v;
     } catch (e) {}
-    return 'light';
+    return 'dark';
   }
   function applyMode(mode) {
     const m = mode || getMode();
     document.body.classList.toggle('light', m === 'light');
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', m === 'light' ? '#f6efe2' : '#0f1d1c');
+    if (meta) meta.setAttribute('content', m === 'light' ? '#f4f3ef' : '#0b0c0e');
     try { localStorage.setItem(MODEKEY, m); } catch (e) {}
     apply();                       // re-pick the void for the new mode
     return m;

@@ -1,15 +1,25 @@
 {
   "name": "Hollow Chess",
   "short_name": "Hollow",
-  "description": "Chess where the board itself is fair game — tear out squares, grow new ground, checkmate anyway.",
+  "description": "Chess where the board itself is fair game \u2014 tear out squares, grow new ground, checkmate anyway.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f6efe2",
-  "theme_color": "#f6efe2",
+  "background_color": "#0b0c0e",
+  "theme_color": "#0b0c0e",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }
