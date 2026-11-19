@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hollow Chess</string>
+    <string name="title_activity_main">Hollow Chess</string>
+    <string name="package_name">com.hollowchess.app</string>
+    <string name="custom_url_scheme">com.hollowchess.app</string>
+</resources>
