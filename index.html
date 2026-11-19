@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=85" />
+  <link rel="stylesheet" href="styles.css?v=86" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -114,8 +114,13 @@
         </div>
       </div>
 
-      <div class="lobby-label">Or play a friend directly</div>
+      <div class="lobby-label">Other ways to play</div>
       <div class="lobby-modes">
+        <button class="mode-card" data-lobbymode="computer" type="button">
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M9 20h6M12 16v4"/></svg></span>
+          <span class="mode-name">Computer</span>
+          <span class="mode-desc">Five strengths, from Beginner to Brutal. Pick your side and tempo.</span>
+        </button>
         <button class="mode-card" data-lobbymode="online">
           <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 3.8 5.4 3.8 8.5s-1.2 5.9-3.8 8.5c-2.6-2.6-3.8-5.4-3.8-8.5S9.4 6.1 12 3.5z"/></svg></span>
           <span class="mode-name">Online, live</span>
@@ -137,6 +142,7 @@
         <div id="roomState" class="room-state">Opening a room…</div>
         <div class="room-siderow">
           <label class="room-sidelabel">You play</label>
+          <div id="pickRoomSide"></div>
           <select id="roomSide" aria-label="Which colour you play">
             <option value="white">White</option>
             <option value="black">Black</option>
@@ -293,6 +299,60 @@
     </div>
   </div>
 
+  <div id="settingsSheet" class="lobby sheet" role="dialog" aria-label="Settings">
+    <div class="lobby-inner sheet-inner">
+      <div class="sheet-head"><h2 class="lobby-title">Settings</h2><button class="sheet-x" data-close aria-label="Close" type="button">×</button></div>
+      <div class="set-row"><span class="set-l">Theme</span><div id="pickMode"></div></div>
+      <div class="set-row"><span class="set-l">Board</span><div id="pickBoard"></div></div>
+      <div class="set-row"><span class="set-l">Pieces</span><div id="pickPieces"></div></div>
+      <p class="appear-hint" id="themeHint"></p>
+      <label class="set-row set-switch"><span class="set-l">Menu music</span><input type="checkbox" id="musicOn" class="sw-input" /></label>
+      <div class="state-selects" hidden>
+        <select id="themeBoard" aria-label="Board theme"></select>
+        <select id="themePieces" aria-label="Piece set"></select>
+        <select id="themeMode" aria-label="Light or dark mode"><option value="dark">Dark</option><option value="light">Light</option></select>
+      </div>
+      <div class="set-rules">
+        <span class="lobby-label">The rules</span>
+        <ul>
+            <li>Standard chess for the pieces — but the <b>board itself</b> is fair game.</li>
+            <li><b>Every 3rd turn of the game is a board turn</b> (W&nbsp;B✦&nbsp;W&nbsp;B&nbsp;W✦&nbsp;B&nbsp;W&nbsp;B✦&nbsp;…): move a piece normally <i>or</i> <b>move a square</b>.</li>
+            <li><b>Click an empty square</b> to pick it up, then click where to put it (anywhere <b>edge-adjacent</b> to the board — sharing a side, not just a corner). It leaves a hole, and <b>holes block sliding pieces</b>.</li>
+            <li>Win by <b>checkmate</b> — on a board turn you may escape check by reshaping the board (e.g. cut the attacker's line).</li>
+            <li>Pawns promote at the board's edge — extend the board and they must march further.</li>
+          </ul>
+        <button id="howBtn" class="ghost-btn" type="button">Replay the 60-second tour</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="setupSheet" class="lobby sheet" role="dialog" aria-label="Play the computer">
+    <div class="lobby-inner sheet-inner">
+      <div class="sheet-head"><h2 class="lobby-title">Play the computer</h2><button class="sheet-x" data-close aria-label="Close" type="button">×</button></div>
+      <p class="setup-summary" id="setupSummary"></p>
+      <div class="set-block"><span class="lobby-label">Strength</span><div id="pickLevel"></div><p class="setup-blurb" id="setupBlurb"></p></div>
+      <div class="set-block"><span class="lobby-label">You play</span><div id="pickSide"></div></div>
+      <div class="set-block"><span class="lobby-label">Tempo</span><div id="pickTempo"></div></div>
+      <button id="setupStart" class="find-btn setup-start" type="button"><span class="find-title">Start game</span></button>
+      <p class="setup-note">Unrated. Your choices are remembered.</p>
+    </div>
+  </div>
+
+  <nav id="actionBar" class="action-bar" aria-label="Game actions">
+    <div id="actionMore" class="action-more">
+      <button data-do="drawBtn" type="button">Offer draw</button>
+      <button data-do="resignBtn" type="button" class="danger">Resign</button>
+      <button data-do="shareBtn" type="button">Share</button>
+      <button data-do="settings" type="button">Settings</button>
+      <button data-do="openProfileTop" type="button">Profile</button>
+    </div>
+    <button data-do="openLobby" type="button"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>New</span></button>
+    <button data-do="hintBtn" type="button"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 9.5l-4.4 3.9 1.3 5.9L12 16.3 7.1 19.3l1.3-5.9L4 9.5l5.8-.9z"/></svg><span>Best move</span></button>
+    <button data-do="wild" type="button" class="ab-wild" aria-label="Move a square"><span class="ab-star">✦</span></button>
+    <button data-do="flipBtn" type="button"><svg class="ico" viewBox="0 0 24 24"><path d="M8 4v16M8 4L4.5 7.5M8 4l3.5 3.5M16 20V4M16 20l-3.5-3.5M16 20l3.5-3.5"/></svg><span>Flip</span></button>
+    <button data-do="more" type="button"><svg class="ico" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg><span>More</span></button>
+  </nav>
+
   <div id="authModal" class="lobby auth-modal">
     <div class="lobby-inner auth-inner">
       <h2 class="lobby-title">Save your progress</h2>
@@ -408,6 +468,7 @@
         <span class="elo-chip" id="eloChip" title="Your rating">★ 500</span>
         <button id="soundBtn" class="lobby-btn ghosty sound-btn icon-only" title="Sound" aria-label="Sound"></button>
         <button id="shareBtn" class="lobby-btn ghosty" title="Share Hollow Chess" aria-label="Share"><svg class="ico" viewBox="0 0 24 24"><circle cx="18" cy="5.5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18.5" r="2.6"/><path d="M8.3 10.8l7.4-4M8.3 13.2l7.4 4"/></svg><span>Share</span></button>
+        <button id="settingsBtn" class="lobby-btn ghosty icon-only" title="Settings" aria-label="Settings"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg></button>
         <button id="feedbackBtn" class="lobby-btn ghosty" title="Send feedback"><svg class="ico" viewBox="0 0 24 24"><path d="M20.5 11.5a8 8 0 0 1-11.7 7.1L4 19.8l1.2-4.4A8 8 0 1 1 20.5 11.5z"/></svg><span>Feedback</span></button>
         <button id="openProfileTop" class="lobby-btn ghosty"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg><span>Profile</span></button>
         <button id="openLobby" class="lobby-btn primary"><svg class="ico fill" viewBox="0 0 24 24"><path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.6-6.8a.8.8 0 0 0 0-1.4L9.2 4.5A.8.8 0 0 0 8 5.2z"/></svg><span>New match</span></button>
@@ -485,8 +546,9 @@
         </div>
 
         <div class="tutor-group">
-          <div class="wild-label">Post-game analysis</div>
+          <div class="wild-label">Engine</div>
           <div class="tutor-row">
+            <div id="pickAna"></div>
             <label class="chk"><input type="checkbox" id="anaOn" checked /> Analysis</label>
             <select id="anaDepth" aria-label="Analysis depth">
               <option value="2">Fast</option>
@@ -559,38 +621,6 @@
 
         <button id="newGame" class="new-game">↻ New game</button>
 
-        <details class="rules appearance">
-          <summary>Appearance</summary>
-          <div class="appear-row">
-            <label class="appear-label" for="themeBoard">Board</label>
-            <select id="themeBoard" aria-label="Board theme"></select>
-          </div>
-          <div class="appear-row">
-            <label class="appear-label" for="themePieces">Pieces</label>
-            <select id="themePieces" aria-label="Piece set"></select>
-          </div>
-          <p class="appear-hint" id="themeHint"></p>
-          <div class="appear-row">
-            <label class="appear-label" for="themeMode">Appearance</label>
-            <select id="themeMode" aria-label="Light or dark mode">
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-            </select>
-          </div>
-          <label class="chk appear-chk"><input type="checkbox" id="musicOn" /> Menu music</label>
-        </details>
-
-        <details class="rules">
-          <summary>Rules</summary>
-          <ul>
-            <li>Standard chess for the pieces — but the <b>board itself</b> is fair game.</li>
-            <li><b>Every 3rd turn of the game is a board turn</b> (W&nbsp;B✦&nbsp;W&nbsp;B&nbsp;W✦&nbsp;B&nbsp;W&nbsp;B✦&nbsp;…): move a piece normally <i>or</i> <b>move a square</b>.</li>
-            <li><b>Click an empty square</b> to pick it up, then click where to put it (anywhere <b>edge-adjacent</b> to the board — sharing a side, not just a corner). It leaves a hole, and <b>holes block sliding pieces</b>.</li>
-            <li>Win by <b>checkmate</b> — on a board turn you may escape check by reshaping the board (e.g. cut the attacker's line).</li>
-            <li>Pawns promote at the board's edge — extend the board and they must march further.</li>
-          </ul>
-          <button id="howBtn" class="ghost-btn" style="margin-top:8px">✦ Replay the walkthrough</button>
-        </details>
       </aside>
 
       <section class="seo-content">
@@ -628,28 +658,29 @@
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=85"></script>
+  <script defer src="js/platform.js?v=86"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=85"></script>
-  <script defer src="js/stats.js?v=85"></script>
-  <script defer src="js/cloud.js?v=85"></script>
-  <script defer src="js/postgame-feedback.js?v=85"></script>
-  <script defer src="js/engine.js?v=85"></script>
-  <script defer src="js/pieces.js?v=85"></script>
-  <script defer src="js/themes.js?v=85"></script>
-  <script defer src="js/sound.js?v=85"></script>
-  <script defer src="js/tutorial.js?v=85"></script>
-  <script defer src="js/ai.js?v=85"></script>
-  <script defer src="js/ladder.js?v=85"></script>
+  <script defer src="js/config.js?v=86"></script>
+  <script defer src="js/stats.js?v=86"></script>
+  <script defer src="js/cloud.js?v=86"></script>
+  <script defer src="js/postgame-feedback.js?v=86"></script>
+  <script defer src="js/engine.js?v=86"></script>
+  <script defer src="js/pieces.js?v=86"></script>
+  <script defer src="js/themes.js?v=86"></script>
+  <script defer src="js/sound.js?v=86"></script>
+  <script defer src="js/tutorial.js?v=86"></script>
+  <script defer src="js/ai.js?v=86"></script>
+  <script defer src="js/ladder.js?v=86"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=85"></script>
-  <script defer src="js/net.js?v=85"></script>
-  <script defer src="js/share.js?v=85"></script>
-  <script defer src="js/analysis.js?v=85"></script>
-  <script defer src="js/solver.js?v=85"></script>
-  <script defer src="js/puzzles.js?v=85"></script>
-  <script defer src="js/main.js?v=85"></script>
-  <script defer src="js/native.js?v=85"></script>
+  <script defer src="js/matchmaking.js?v=86"></script>
+  <script defer src="js/net.js?v=86"></script>
+  <script defer src="js/share.js?v=86"></script>
+  <script defer src="js/analysis.js?v=86"></script>
+  <script defer src="js/solver.js?v=86"></script>
+  <script defer src="js/puzzles.js?v=86"></script>
+  <script defer src="js/main.js?v=86"></script>
+  <script defer src="js/ui.js?v=86"></script>
+  <script defer src="js/native.js?v=86"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());

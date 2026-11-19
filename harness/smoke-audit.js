@@ -129,6 +129,32 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
     return { pos: revPos, info: document.getElementById('revMoveInfo').textContent, summary: document.getElementById('revSummary').textContent, best: revBest.length };
   });
   check('review coach: Next mistake finds the blunder and says what was better', rev.pos === 3 && /Better was/.test(rev.info) && /White: 1 blunder/.test(rev.summary), rev);
+  // --- v86: no visible selects; pickers drive the hidden state; setup sheet starts a game ---
+  const ui = await pzp.evaluate(async () => {
+    exitPuzzles(); closeLobby();
+    const visibleSelects = [...document.querySelectorAll('select')].filter((e) => e.offsetParent !== null).map((e) => e.id);
+    openLobby(); document.querySelector('[data-lobbymode="computer"]').click();
+    const open = document.getElementById('setupSheet').classList.contains('show');
+    document.querySelector('#pickLevel .pick-opt[data-v="4"]').click();
+    document.querySelector('#pickSide .pick-opt[data-v="black"]').click();
+    document.querySelector('#pickTempo .pick-opt[data-v="3+2"]').click();
+    document.getElementById('setupStart').click();
+    await new Promise((r) => setTimeout(r, 300));
+    const started = { level: document.getElementById('botLevel').value, botSide: botSide(), bot: botEnabled(), rated: ratedGame, clock: clock.key, lobby: document.getElementById('lobby').classList.contains('show'), sheet: document.getElementById('setupSheet').classList.contains('show') };
+    document.getElementById('settingsBtn').click();
+    document.querySelector('#pickBoard .pick-opt[data-v="slate"]').click();
+    const board = WCTHEME.get().board;
+    document.querySelector('#pickBoard .pick-opt[data-v="mono"]').click();
+    document.querySelector('#pickAna .pick-opt[data-v="off"]').click(); const anaOff = !document.getElementById('anaOn').checked;
+    document.querySelector('#pickAna .pick-opt[data-v="4"]').click(); const anaDeep = document.getElementById('anaOn').checked && document.getElementById('anaDepth').value === '4';
+    document.querySelector('#pickAna .pick-opt[data-v="3"]').click();
+    document.querySelector('#settingsSheet [data-close]').click();
+    return { visibleSelects, open, started, board, anaOff, anaDeep };
+  });
+  check('v86: no visible dropdowns; setup sheet starts an unrated bot game; settings pickers work',
+    ui.visibleSelects.length === 0 && ui.open && ui.started.level === '4' && ui.started.botSide === 'white' && ui.started.bot && !ui.started.rated && ui.started.clock === '3+2' && !ui.started.lobby && !ui.started.sheet && ui.board === 'slate' && ui.anaOff && ui.anaDeep, ui);
+  await pzp.evaluate(() => { try { gameActs.length = 0; } catch (e) {} });
+
   // --- v83: profile — empty state, then form row, rename, filters ---
   const prof = await pzp.evaluate(async () => {
     exitPuzzles(); closeLobby(); showMatchList && showMatchList();
