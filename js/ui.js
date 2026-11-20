@@ -65,6 +65,23 @@
     return { value: k, html: '<b>' + TEMPO[k][0] + '</b><small>' + TEMPO[k][1] + '</small>' };
   }), 'chips');
 
+  // the same tempo chips, wherever a game is being set up
+  const tempoItems = Object.keys(TEMPO).map(function (k) { return { value: k, html: '<b>' + TEMPO[k][0] + '</b><small>' + TEMPO[k][1] + '</small>' }; });
+  bind($('pickTempoHot'), tempoSel, tempoItems, 'chips');
+  bind($('pickTempoRoom'), tempoSel, tempoItems, 'chips');
+
+  // two players, one screen: ask for the clock first
+  const hotEl = $('hotseatSheet');
+  const hotRow = document.querySelector('[data-lobbymode="hotseat"]');
+  if (hotRow && hotEl) hotRow.addEventListener('click', function (e) { e.stopImmediatePropagation(); refreshAll(); hotEl.classList.add('show'); }, true);
+  if (hotEl) hotEl.addEventListener('click', function (e) { if (e.target === hotEl || e.target.closest('[data-close]')) hotEl.classList.remove('show'); });
+  const hotStart = $('hotseatStart');
+  if (hotStart) hotStart.addEventListener('click', function () {
+    if (typeof leaveLiveGame === 'function' && !leaveLiveGame()) return;
+    hotEl.classList.remove('show');
+    startCasual('hotseat');               // resetGameState() reads the clock just chosen
+  });
+
   function paintSummary() {
     const el = $('setupSummary'); if (!el || !levelSel) return;
     const l = LV.find(function (x) { return String(x.id) === String(levelSel.value); }) || {};
@@ -175,12 +192,13 @@
     profile: function () { closeProfile(); },
     setupSheet: function () { hide(setupEl); },
     settingsSheet: function () { hide(settingsEl); },
+    hotseatSheet: function () { const e = $('hotseatSheet'); if (e) e.classList.remove('show'); },
     shareSheet: function () { const e = $('shareSheet'); if (e) e.classList.remove('show'); },
     authModal: function () { closeAuthModal(); },
     feedback: function () { closeFeedback(); },
     tutorial: function () { if (window.WCTUT) WCTUT.close(); },
   };
-  const BACK_LABEL = { lobby: 'Back to the board', profile: 'Back', setupSheet: 'Back', settingsSheet: 'Back', tutorial: null, shareSheet: null, authModal: null, feedback: null };
+  const BACK_LABEL = { lobby: 'Back to the board', profile: 'Back', setupSheet: 'Back', settingsSheet: 'Back', hotseatSheet: 'Back', tutorial: null, shareSheet: null, authModal: null, feedback: null };
   function addBackLink(id) {
     const el = $(id); if (!el || !BACK_LABEL[id]) return;
     const inner = el.querySelector('.lobby-inner'); if (!inner || inner.querySelector('.ov-back')) return;

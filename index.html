@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=87" />
+  <link rel="stylesheet" href="styles.css?v=88" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -153,6 +153,7 @@
           <input id="roomLink" class="share-input" readonly placeholder="link appears here" />
           <button id="copyRoom" class="share-btn room-copy">Copy</button>
         </div>
+        <div class="room-tempo"><span class="lobby-label">Tempo</span><div id="pickTempoRoom"></div></div>
         <div class="room-joinrow">
           <input id="joinCode" class="share-input" placeholder="or type a friend's code" maxlength="8" />
           <button id="joinRoom" class="ghost-btn">Join</button>
@@ -323,6 +324,16 @@
           </ul>
         <button id="howBtn" class="ghost-btn" type="button">Replay the 60-second tour</button>
       </div>
+    </div>
+  </div>
+
+  <div id="hotseatSheet" class="lobby sheet" role="dialog" aria-label="Two players, one screen">
+    <div class="lobby-inner sheet-inner">
+      <div class="sheet-head"><h2 class="lobby-title">Two players, one screen</h2><button class="sheet-x" data-close aria-label="Close" type="button">×</button></div>
+      <p class="setup-summary" id="hotseatSummary">Pass the device after each move. The board turns to face whoever is to move.</p>
+      <div class="set-block"><span class="lobby-label">Tempo</span><div id="pickTempoHot"></div></div>
+      <button id="hotseatStart" class="find-btn setup-start" type="button"><span class="find-title">Start game</span></button>
+      <p class="setup-note">Unrated. Each side gets the same clock.</p>
     </div>
   </div>
 
@@ -659,29 +670,29 @@
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=87"></script>
+  <script defer src="js/platform.js?v=88"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=87"></script>
-  <script defer src="js/stats.js?v=87"></script>
-  <script defer src="js/cloud.js?v=87"></script>
-  <script defer src="js/postgame-feedback.js?v=87"></script>
-  <script defer src="js/engine.js?v=87"></script>
-  <script defer src="js/pieces.js?v=87"></script>
-  <script defer src="js/themes.js?v=87"></script>
-  <script defer src="js/sound.js?v=87"></script>
-  <script defer src="js/tutorial.js?v=87"></script>
-  <script defer src="js/ai.js?v=87"></script>
-  <script defer src="js/ladder.js?v=87"></script>
+  <script defer src="js/config.js?v=88"></script>
+  <script defer src="js/stats.js?v=88"></script>
+  <script defer src="js/cloud.js?v=88"></script>
+  <script defer src="js/postgame-feedback.js?v=88"></script>
+  <script defer src="js/engine.js?v=88"></script>
+  <script defer src="js/pieces.js?v=88"></script>
+  <script defer src="js/themes.js?v=88"></script>
+  <script defer src="js/sound.js?v=88"></script>
+  <script defer src="js/tutorial.js?v=88"></script>
+  <script defer src="js/ai.js?v=88"></script>
+  <script defer src="js/ladder.js?v=88"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=87"></script>
-  <script defer src="js/net.js?v=87"></script>
-  <script defer src="js/share.js?v=87"></script>
-  <script defer src="js/analysis.js?v=87"></script>
-  <script defer src="js/solver.js?v=87"></script>
-  <script defer src="js/puzzles.js?v=87"></script>
-  <script defer src="js/main.js?v=87"></script>
-  <script defer src="js/ui.js?v=87"></script>
-  <script defer src="js/native.js?v=87"></script>
+  <script defer src="js/matchmaking.js?v=88"></script>
+  <script defer src="js/net.js?v=88"></script>
+  <script defer src="js/share.js?v=88"></script>
+  <script defer src="js/analysis.js?v=88"></script>
+  <script defer src="js/solver.js?v=88"></script>
+  <script defer src="js/puzzles.js?v=88"></script>
+  <script defer src="js/main.js?v=88"></script>
+  <script defer src="js/ui.js?v=88"></script>
+  <script defer src="js/native.js?v=88"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());

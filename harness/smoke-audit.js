@@ -155,6 +155,21 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
     ui.visibleSelects.length === 0 && ui.open && ui.started.level === '4' && ui.started.botSide === 'white' && ui.started.bot && !ui.started.rated && ui.started.clock === '3+2' && !ui.started.lobby && !ui.started.sheet && ui.board === 'slate' && ui.anaOff && ui.anaDeep, ui);
   await pzp.evaluate(() => { try { gameActs.length = 0; } catch (e) {} });
 
+  // --- v88: same-screen games ask for a tempo; the Modern piece set is the default ---
+  const hot = await pzp.evaluate(async () => {
+    closeLobby(); openLobby();
+    document.querySelector('[data-lobbymode="hotseat"]').click();
+    const asked = document.getElementById('hotseatSheet').classList.contains('show') && !document.getElementById('lobby').classList.contains('show') === false;
+    document.querySelector('#pickTempoHot .pick-opt[data-v="5+3"]').click();
+    document.getElementById('hotseatStart').click();
+    await new Promise((r) => setTimeout(r, 300));
+    return { asked, clock: clock.key, white: clock.white, bot: botEnabled(), sheet: document.getElementById('hotseatSheet').classList.contains('show'), lobby: document.getElementById('lobby').classList.contains('show'),
+      pieces: WCTHEME.get().pieces, sym: !!document.querySelector('#board use[href^="#pc-modern-"]') };
+  });
+  check('v88: same-screen asks for tempo and starts with that clock; Modern pieces by default',
+    hot.asked && hot.clock === '5+3' && hot.white === 300000 && !hot.bot && !hot.sheet && !hot.lobby && hot.pieces === 'modern' && hot.sym, hot);
+  await pzp.evaluate(() => { try { gameActs.length = 0; } catch (e) {} });
+
   // --- v87: back. Header arrow opens the menu; Back links close panels; browser Back closes the top panel ---
   const back = await pzp.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

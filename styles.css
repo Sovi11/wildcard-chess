@@ -2146,3 +2146,8 @@ body.deco.ink #roomSide { display: none !important; }
 .ov-back:hover { color: var(--ink); background: rgba(255,255,255,.07); }
 body.light .back-btn:hover, body.light .ov-back:hover { background: rgba(11,12,14,.06); }
 .ov-back .ico { width: 16px; height: 16px; }
+
+/* v88: detail strokes inside a piece: dark on the light side, pale on the dark side */
+.pc.w { --pc-detail: #17191c; } .pc.b { --pc-detail: #9aa0a8; }
+body.deco.ink.light #board .pc.b, body.deco.ink.light #revBoard .pc.b { --pc-detail: #a9aeb5; }
+.room-tempo { margin: 10px 0 4px; } .room-tempo .lobby-label { display: block; margin-bottom: 6px; }
