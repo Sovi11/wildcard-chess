@@ -67,7 +67,7 @@
     },
   };
 
-  let current = { board: 'mono', pieces: 'modern' };
+  let current = { board: 'mono', pieces: 'staunton' };
 
   function load() {
     try {
@@ -85,8 +85,8 @@
         // choosing it, so they move to the new set once. Anyone who picks a set
         // from Appearance after this is marked and left alone.
         if (p.pieces === 'classic' && !p.picked) p.pieces = 'staunton';
-        // v88: the flat Modern set is the default; anyone who never chose a set moves to it
-        if (p.pieces === 'staunton' && !p.picked) p.pieces = 'modern';
+        // v89: the v88 'modern' set was withdrawn; anyone carrying it goes back to Staunton
+        if (p.pieces === 'modern') { p.pieces = 'staunton'; p.picked = false; }
         if (window.PIECE_SETS && window.PIECE_SETS[p.pieces]) current.pieces = p.pieces;
         else if (typeof PIECE_SETS !== 'undefined' && PIECE_SETS[p.pieces]) current.pieces = p.pieces;
       }

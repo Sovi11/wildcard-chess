@@ -70,49 +70,7 @@ const STAUNTON = {
     BASE_LINES + ' M15.5 20.1 h14 M16.6 17.6 h11.8'),
 };
 
-// ---- Modern (the default since v88) -------------------------------------------
-// Flat, geometric, no gloss. Every piece stands on the same plinth and wears the
-// same collar, so rank is read from the head alone, the way it is on a good
-// printed diagram. Detail strokes use --pc-detail, which CSS sets dark on the
-// light side and pale on the dark side, so inner lines show on both.
-const M_PLINTH = '<path fill="currentColor" d="M10.2 39.6 h24.6 a1.5 1.5 0 0 0 1.5 -1.5 v-.9 a2.6 2.6 0 0 0 -2.6 -2.6 H11.3 a2.6 2.6 0 0 0 -2.6 2.6 v.9 a1.5 1.5 0 0 0 1.5 1.5 z"/>';
-const M_COLLAR = (x0, x1, y) => `<rect fill="currentColor" x="${x0}" y="${y}" width="${x1 - x0}" height="2.7" rx="1.35"/>`;
-const M_LINE = (d) => `<path fill="none" stroke="var(--pc-detail, currentColor)" stroke-width="1.3" stroke-linecap="round" d="${d}"/>`;
-const M_STEM = (w, y) => `<path fill="currentColor" d="M${22.5 - w} ${y} C${22.5 - w} ${y + 5.2} ${13.8} ${31.4} ${12.9} 34.8 H${32.1} C${31.2} 31.4 ${22.5 + w} ${y + 5.2} ${22.5 + w} ${y} z"/>`;
-const MODERN = {
-  pawn:
-    M_PLINTH + M_STEM(4.6, 22.4) + M_COLLAR(16.4, 28.6, 20.3) +
-    '<circle fill="currentColor" cx="22.5" cy="13.6" r="6.3"/>',
-  rook:
-    M_PLINTH +
-    '<path fill="currentColor" d="M15.6 18.6 h13.8 l1.9 16.2 H13.7 z"/>' +
-    '<path fill="currentColor" d="M11.9 8.1 h4.7 v3 h3.5 v-3 h4.8 v3 h3.5 v-3 h4.7 v9.4 a1.3 1.3 0 0 1 -1.3 1.3 H13.2 a1.3 1.3 0 0 1 -1.3 -1.3 z"/>' +
-    M_LINE('M14.6 15.2 h15.8'),
-  knight:
-    M_PLINTH +
-    '<path fill="currentColor" d="M13.2 34.8 C13.3 29.9 16.3 26.6 21 23.7 C18.3 24.4 15 25.4 12.1 24.8 C10 24.3 9.2 22.4 10.3 20.6 L15.7 12.2 C16.5 10.7 17.6 9.4 19 8.4 L19.5 4.4 L23 7 C30.2 7.7 34.6 13.6 34.6 21.7 C34.6 26.7 33.6 31 32.4 34.8 z"/>' +
-    '<circle fill="var(--pc-detail, currentColor)" stroke="none" cx="19.2" cy="13.7" r="1.25"/>' +
-    M_LINE('M26 10.4 C29.8 12.8 31.6 17 31.5 22.2') + M_LINE('M11.3 21.9 q1.5 .5 2.8 -.2'),
-  bishop:
-    M_PLINTH + M_STEM(4.4, 25.6) + M_COLLAR(16.2, 28.8, 23.4) +
-    '<path fill="currentColor" d="M22.5 7.9 C28.9 11.8 30.3 18.6 26.9 23.6 H18.1 C14.7 18.6 16.1 11.8 22.5 7.9 z"/>' +
-    '<circle fill="currentColor" cx="22.5" cy="5.6" r="2.3"/>' +
-    M_LINE('M24.3 12.9 l-3.5 5.3'),
-  queen:
-    M_PLINTH + M_STEM(6.6, 25.6) + M_COLLAR(13.6, 31.4, 23.4) +
-    '<path fill="currentColor" d="M10.6 12.2 L14.3 23.6 H30.7 L34.4 12.2 L29 17.9 L28.5 9.7 L24.6 17 L22.5 8.6 L20.4 17 L16.5 9.7 L16 17.9 z"/>' +
-    '<circle fill="currentColor" cx="10.4" cy="10.4" r="2"/><circle fill="currentColor" cx="16.5" cy="7.7" r="2"/>' +
-    '<circle fill="currentColor" cx="22.5" cy="6.5" r="2.1"/><circle fill="currentColor" cx="28.5" cy="7.7" r="2"/>' +
-    '<circle fill="currentColor" cx="34.6" cy="10.4" r="2"/>',
-  king:
-    M_PLINTH + M_STEM(6.6, 25.6) + M_COLLAR(13.6, 31.4, 23.4) +
-    '<path fill="currentColor" d="M13.9 23.6 C10.9 18 14.6 12.3 22.5 12.3 C30.4 12.3 34.1 18 31.1 23.6 z"/>' +
-    '<path fill="currentColor" d="M21.1 2.9 h2.8 v2.7 h2.7 v2.7 h-2.7 v4.4 h-2.8 V8.3 h-2.7 V5.6 h2.7 z"/>' +
-    M_LINE('M22.5 14.6 v6.4') + M_LINE('M17.4 16.2 q1.6 2.6 1.9 4.8') + M_LINE('M27.6 16.2 q-1.6 2.6 -1.9 4.8'),
-};
-
 const PIECE_SETS = {
-  modern: { name: 'Modern', pieces: MODERN },
   staunton: { name: 'Staunton', shaded: true, pieces: STAUNTON },
   classic: {
     name: 'Flat',
@@ -237,8 +195,8 @@ const PIECE_SETS = {
 
 // Symbol defs for one set: ids look like pc-classic-pawn, pc-gnome-rook, ...
 function pieceDefs(setId) {
-  const set = PIECE_SETS[setId] || PIECE_SETS.modern;
-  const key = PIECE_SETS[setId] ? setId : 'modern';
+  const set = PIECE_SETS[setId] || PIECE_SETS.staunton;
+  const key = PIECE_SETS[setId] ? setId : 'staunton';
   // The sheen is alpha-only, so the one gradient lights both sides: it lifts
   // ebony and gives ivory a shaded flank. objectBoundingBox = per-shape.
   let defs = '<defs><linearGradient id="pcSheen" x1="0" y1="0" x2="1" y2="1">' +
