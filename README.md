@@ -111,7 +111,7 @@ wildcard-chess/
   index.html          # page + UI shell
   styles.css          # dark theme, board + void styling
   js/engine.js        # pure game logic (cells Set + pieces Map) — Node-testable, no DOM
-  js/pieces.js        # original flat SVG piece set (no licensing issues)
+  js/pieces.js        # piece sets: cburnett (default, BSD, see js/CBURNETT-LICENSE.txt) + original sets
   js/main.js          # SVG rendering + click/UI wiring
   js/solver.js        # full-width prover — puzzle proofs, Node + browser
   js/puzzles.js       # puzzle mode: state machine over a proven line
@@ -393,3 +393,7 @@ node harness/verify-puzzles.js             # re-prove the shipped puzzle set
 ## License
 
 MIT — see [LICENSE](LICENSE). © 2026 Pravar Kataria.
+
+## Credits
+
+The default chess pieces are the "cburnett" set by Colin M.L. Burnett, used under the BSD licence (`js/CBURNETT-LICENSE.txt`). Source: Wikimedia Commons, "Chess_*t45.svg".

@@ -164,10 +164,10 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
     document.getElementById('hotseatStart').click();
     await new Promise((r) => setTimeout(r, 300));
     return { asked, clock: clock.key, white: clock.white, bot: botEnabled(), sheet: document.getElementById('hotseatSheet').classList.contains('show'), lobby: document.getElementById('lobby').classList.contains('show'),
-      pieces: WCTHEME.get().pieces, sym: !!document.querySelector('#board use[href^="#pc-staunton-"]') };
+      pieces: WCTHEME.get().pieces, sym: !!document.querySelector('#board use[href^="#pc-cburnett-"]') };
   });
   check('v88: same-screen asks for tempo and starts with that clock; Staunton pieces by default',
-    hot.asked && hot.clock === '5+3' && hot.white === 300000 && !hot.bot && !hot.sheet && !hot.lobby && hot.pieces === 'staunton' && hot.sym, hot);
+    hot.asked && hot.clock === '5+3' && hot.white === 300000 && !hot.bot && !hot.sheet && !hot.lobby && hot.pieces === 'cburnett' && hot.sym, hot);
   await pzp.evaluate(() => { try { gameActs.length = 0; } catch (e) {} });
 
   // --- v87: back. Header arrow opens the menu; Back links close panels; browser Back closes the top panel ---

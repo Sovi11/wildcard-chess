@@ -341,7 +341,7 @@ function closePromo() { if (promoEl) promoEl.classList.remove('show'); }
 function openPromo(from, to, color) {
   if (!promoEl) return;
   const set = WCTHEME.get().pieces;
-  const sym = function (t) { return 'pc-' + (PIECE_SETS[set] ? set : 'staunton') + '-' + t; };
+  const sym = function (t) { return 'pc-' + (PIECE_SETS[set] ? set : 'cburnett') + '-' + t; };
   promoEl.innerHTML = ['queen', 'rook', 'bishop', 'knight'].map(function (t) {
     return '<button class="promo-opt" data-t="' + t + '" title="' + t + '" aria-label="Promote to ' + t + '">' +
       '<svg viewBox="0 0 45 45"><use href="#' + sym(t) + '" class="pc ' + (color === 'white' ? 'w' : 'b') + '"/></svg></button>';
@@ -2503,7 +2503,7 @@ function renderProfile() {
         byTime.slice(0, 8).reverse().map(function (e) { const r = resOf(e); return '<i class="pf-chip ' + r + '" title="' + r + ' vs ' + esc(e.botName || 'opponent') + '">' + r.charAt(0).toUpperCase() + '</i>'; }).join('') + '</div></div>' +
       '<div class="pf-item"><div class="pf-l">Win streak</div><div class="pf-v">' + streak + '</div></div>' +
       '<div class="pf-item"><div class="pf-l">Best win</div><div class="pf-v">' + (beaten ? esc(beaten.botName) + ' <small>' + beaten.botElo + '</small>' : '\u2013') + '</div></div>' +
-      '<div class="pf-item"><div class="pf-l">As White / Black</div><div class="pf-v">' + side('white') + ' <small>/</small> ' + side('black') + '</div></div>';
+      '<div class="pf-item"><div class="pf-l">White / Black</div><div class="pf-v">' + side('white') + ' <small>/</small> ' + side('black') + '</div></div>';
   }
   const chartCard = document.querySelector('.prof-chartcard');
   if (chartCard) chartCard.hidden = rated.length < 2;       // one point is not a chart
@@ -2525,6 +2525,7 @@ function renderProfile() {
   if (!matchListEl) return;
   const filt = document.getElementById('profFilter');
   if (filt) filt.hidden = !log.length;
+  profListEl.classList.toggle('prof-new', !log.length);
   if (!log.length) {
     matchListEl.innerHTML = '<div class="match-empty prof-empty"><b>No games yet.</b><br>Play one and it shows up here, with a move-by-move review.' +
       '<br><button id="profPlay" class="find-btn prof-play" type="button"><span class="find-title">Find a match</span></button></div>';

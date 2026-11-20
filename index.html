@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=89" />
+  <link rel="stylesheet" href="styles.css?v=90" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -308,6 +308,7 @@
       <div class="set-row"><span class="set-l">Pieces</span><div id="pickPieces"></div></div>
       <p class="appear-hint" id="themeHint"></p>
       <label class="set-row set-switch"><span class="set-l">Menu music</span><input type="checkbox" id="musicOn" class="sw-input" /></label>
+      <p class="set-credit">Standard pieces by Colin M.L. Burnett, used under the <a href="js/CBURNETT-LICENSE.txt" target="_blank" rel="noopener">BSD licence</a>.</p>
       <div class="state-selects" hidden>
         <select id="themeBoard" aria-label="Board theme"></select>
         <select id="themePieces" aria-label="Piece set"></select>
@@ -635,64 +636,35 @@
 
       </aside>
 
-      <section class="seo-content">
-        <h2>What is Hollow Chess?</h2>
-        <p>Hollow Chess is a free <strong>chess variant</strong> where the board itself is a piece you can
-          move. It plays by standard chess rules &mdash; same pieces, same moves, win by checkmate &mdash;
-          with one addition: <strong>every third turn is a board turn</strong>. On a board turn you may move
-          a piece as normal, or pick up an empty square and reattach it anywhere along the edge of the board.</p>
-        <p>The square you lift leaves a <strong>hole</strong>, and holes block sliding pieces. A bishop cannot
-          see through one. Neither can a rook or a queen. So you can defend by deleting the ground an attack
-          travels over, and escape check by reshaping the board instead of moving your king.</p>
-
-        <h2>How is it different from normal chess?</h2>
-        <ul>
-          <li><strong>The board is not fixed.</strong> It grows, shrinks and changes shape as you play.</li>
-          <li><strong>Holes block lines.</strong> Bishops, rooks and queens cannot slide across a hole. Knights jump them.</li>
-          <li><strong>Promotion moves.</strong> Pawns promote at the edge of the world &mdash; extend the board and they must march further.</li>
-          <li><strong>Check has a second escape.</strong> On a board turn you can cut the attacker&rsquo;s line rather than run.</li>
-        </ul>
-
-        <h2>Ways to play</h2>
-        <ul>
-          <li><strong>Against bots</strong> &mdash; a ladder of opponents from beginner to brutal, no account needed.</li>
-          <li><strong>Ranked online</strong> &mdash; matched against a player near your rating.</li>
-          <li><strong>With a friend by link</strong> &mdash; send one link and play live in the browser.</li>
-          <li><strong>Two players, one screen</strong> &mdash; offline hotseat.</li>
-          <li><strong>Correspondence</strong> &mdash; trade links a move at a time.</li>
-        </ul>
-
-        <p>Hollow Chess is free, runs in any browser on desktop or mobile, and needs no download and no
-          sign-up. It installs as an app if you want it to.</p>
-        <p class="legal-links"><a href="how-to-play.html">How to play Hollow Chess</a> · <a href="notation.html">Notation</a></p>
-        <p class="legal-links"><a href="privacy.html">Privacy policy</a> · <a href="delete-account.html">Delete your account</a> · <a href="mailto:hollowchess11@gmail.com">Contact</a></p>
-      </section>
+      <footer class="site-foot">
+        <a href="how-to-play.html">How to play</a><a href="notation.html">Notation</a><a href="privacy.html">Privacy</a><a href="delete-account.html">Delete account</a><a href="mailto:hollowchess11@gmail.com">Contact</a>
+      </footer>
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=89"></script>
+  <script defer src="js/platform.js?v=90"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=89"></script>
-  <script defer src="js/stats.js?v=89"></script>
-  <script defer src="js/cloud.js?v=89"></script>
-  <script defer src="js/postgame-feedback.js?v=89"></script>
-  <script defer src="js/engine.js?v=89"></script>
-  <script defer src="js/pieces.js?v=89"></script>
-  <script defer src="js/themes.js?v=89"></script>
-  <script defer src="js/sound.js?v=89"></script>
-  <script defer src="js/tutorial.js?v=89"></script>
-  <script defer src="js/ai.js?v=89"></script>
-  <script defer src="js/ladder.js?v=89"></script>
+  <script defer src="js/config.js?v=90"></script>
+  <script defer src="js/stats.js?v=90"></script>
+  <script defer src="js/cloud.js?v=90"></script>
+  <script defer src="js/postgame-feedback.js?v=90"></script>
+  <script defer src="js/engine.js?v=90"></script>
+  <script defer src="js/pieces.js?v=90"></script>
+  <script defer src="js/themes.js?v=90"></script>
+  <script defer src="js/sound.js?v=90"></script>
+  <script defer src="js/tutorial.js?v=90"></script>
+  <script defer src="js/ai.js?v=90"></script>
+  <script defer src="js/ladder.js?v=90"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=89"></script>
-  <script defer src="js/net.js?v=89"></script>
-  <script defer src="js/share.js?v=89"></script>
-  <script defer src="js/analysis.js?v=89"></script>
-  <script defer src="js/solver.js?v=89"></script>
-  <script defer src="js/puzzles.js?v=89"></script>
-  <script defer src="js/main.js?v=89"></script>
-  <script defer src="js/ui.js?v=89"></script>
-  <script defer src="js/native.js?v=89"></script>
+  <script defer src="js/matchmaking.js?v=90"></script>
+  <script defer src="js/net.js?v=90"></script>
+  <script defer src="js/share.js?v=90"></script>
+  <script defer src="js/analysis.js?v=90"></script>
+  <script defer src="js/solver.js?v=90"></script>
+  <script defer src="js/puzzles.js?v=90"></script>
+  <script defer src="js/main.js?v=90"></script>
+  <script defer src="js/ui.js?v=90"></script>
+  <script defer src="js/native.js?v=90"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());

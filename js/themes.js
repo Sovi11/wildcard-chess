@@ -67,7 +67,7 @@
     },
   };
 
-  let current = { board: 'mono', pieces: 'staunton' };
+  let current = { board: 'mono', pieces: 'cburnett' };
 
   function load() {
     try {
@@ -87,6 +87,8 @@
         if (p.pieces === 'classic' && !p.picked) p.pieces = 'staunton';
         // v89: the v88 'modern' set was withdrawn; anyone carrying it goes back to Staunton
         if (p.pieces === 'modern') { p.pieces = 'staunton'; p.picked = false; }
+        // v90: the standard (cburnett) set is the default; Staunton stays for anyone who chose it
+        if (p.pieces === 'staunton' && !p.picked) p.pieces = 'cburnett';
         if (window.PIECE_SETS && window.PIECE_SETS[p.pieces]) current.pieces = p.pieces;
         else if (typeof PIECE_SETS !== 'undefined' && PIECE_SETS[p.pieces]) current.pieces = p.pieces;
       }
