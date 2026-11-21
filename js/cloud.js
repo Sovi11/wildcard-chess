@@ -322,6 +322,18 @@
     catch (e) { return null; }
   }
 
+  // ---- Sunday Arena --------------------------------------------------------
+  async function arenaBoard(who) {
+    if (!client) return null;
+    try { const { data, error } = await client.rpc('hc_arena_board', { p_who: who || null }); return error ? null : (data || null); }
+    catch (e) { return null; }
+  }
+  async function arenaReport(who, score) {
+    if (!client) return null;
+    try { const { data, error } = await client.rpc('hc_arena_report', { p_who: who || null, p_score: score }); return error ? null : (data || null); }
+    catch (e) { return null; }
+  }
+
   // ---- feedback ------------------------------------------------------------
   // Insert-only, no account required. Context (version, screen, signed-in) is
   // attached automatically so a bug report is actionable without interrogating
@@ -358,7 +370,7 @@
     signOut, deleteAccount, currentUser, onChange,
     loadProfile, saveProfile, leaderboard,
     joinQueue, leaveQueue, findWaiting,
-    puzzleRatings, recordPuzzleAttempt, shareGame, sharedGame, dailyStats, dailySolve,
+    puzzleRatings, recordPuzzleAttempt, shareGame, sharedGame, dailyStats, dailySolve, arenaBoard, arenaReport,
     saveGame, loadGames,
   };
 })();

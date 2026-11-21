@@ -92,7 +92,7 @@ const probe = () => {
       document.getElementById('shareBtn').click();
       return { n: gameActs.length, url: document.getElementById('shareUrl').value, title: document.getElementById('shareTitle').textContent };
     });
-    await page.waitForTimeout(2500);
+    await page.waitForFunction(() => /#r=/.test(document.getElementById('shareUrl').value), null, { timeout: 12000 }).catch(() => {});   // the short link comes from the server
     link.url = await page.evaluate(() => document.getElementById('shareUrl').value);
     check(dev + ' · share during a game hands out a short link to that game', link.n === 4 && /#r=[\w-]{8}$/.test(link.url) && /game/i.test(link.title), link);
     await screen('share sheet');
@@ -102,7 +102,8 @@ const probe = () => {
     const p2 = await ctx.newPage();
     p2.on('pageerror', (e) => errors.push(e.message));
     await p2.goto(BASE + '/?mob3=' + Date.now() + link.url.slice(link.url.indexOf('#')));
-    await p2.waitForTimeout(3000);
+    await p2.waitForFunction(() => document.getElementById('profReview').classList.contains('show'), null, { timeout: 12000 }).catch(() => {});
+    await p2.waitForTimeout(400);
     const rep = await p2.evaluate(() => ({ review: document.getElementById('profReview').classList.contains('show'),
       moves: document.querySelectorAll('#revLog .logline').length, title: document.getElementById('reviewTitle').textContent,
       welcome: document.getElementById('welcome').classList.contains('show'), hash: location.hash }));
@@ -141,6 +142,24 @@ const probe = () => {
     await page.evaluate(() => exitPuzzles());
     const card = await page.evaluate(() => document.getElementById('dailyTag').textContent);
     check(dev + ' · the lobby card says the daily is solved', /^solved in \d+:\d\d$/.test(card), card);
+
+    // the Sunday Arena: countdown before, standings and Play now during
+    await page.goto(BASE + '/?mob5=' + Date.now() + '#arena');
+    await page.waitForFunction(() => document.getElementById('arenaSheet').classList.contains('show'), null, { timeout: 15000 });
+    await screen('arena');
+    const ar = await page.evaluate(() => {
+      const before = { status: document.getElementById('arenaStatus').innerText, go: document.getElementById('arenaGo').innerText, tag: document.getElementById('arenaTag').textContent, hash: location.hash };
+      const real = Date.now; Date.now = () => ARENA_T0 + 3 * WEEK_MS + 600000;          // ten minutes into arena #4
+      arenaData = { live: true, week: 4, players: 2, rows: [{ name: 'Asha', pts: 4, games: 2, wins: 2, you: false }, { name: 'Guest', pts: 2, games: 1, wins: 1, you: true }], you: { pts: 2, games: 1, wins: 1, rank: 2 } };
+      paintArena(); paintArenaCard();
+      const live = { status: document.getElementById('arenaStatus').innerText, rows: document.getElementById('arenaRows').innerText, you: document.getElementById('arenaYou').textContent, go: document.getElementById('arenaGo').innerText, tag: document.getElementById('arenaTag').textContent };
+      Date.now = real;
+      return { before, live };
+    });
+    check(dev + ' · #arena shows the countdown, and standings with Play now while live', /Arena #\d+ starts/.test(ar.before.status) && /Invite/.test(ar.before.go) && /^(in|live)/.test(ar.before.tag) && ar.before.hash === '' &&
+      /Arena #4 is live\. 50 min left/.test(ar.live.status) && /Asha/.test(ar.live.rows) && /You/.test(ar.live.rows) && /2nd of 2 with 2 points/.test(ar.live.you) && /Play now/.test(ar.live.go) && /^live · 50 min left$/.test(ar.live.tag), ar);
+    await screen('arena live');
+    await page.evaluate(() => closeArena());
 
     check(dev + ' · no page errors', !errors.length, errors.slice(0, 4));
     await ctx.close();

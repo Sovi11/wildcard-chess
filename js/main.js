@@ -1170,7 +1170,7 @@ function renderLobby() {
 
 function openLobby() {
   renderLobby(); renderLeaderboard(); resetQueueUI(); lobbyEl.classList.add('show'); updateAmbient();
-  paintDailyCard(); dailyFetch();
+  paintDailyCard(); dailyFetch(); paintArenaCard();
   if (pendingOnboard) { const r = pendingOnboard; pendingOnboard = null; maybeOnboard(r); }
 }
 
@@ -2337,6 +2337,7 @@ function settleResult() {
         reason: game.endReason || game.status, plies: game.history.length,
       });
       if (WCCLOUD.enabled() && WCCLOUD.currentUser()) WCCLOUD.saveGame(p.log[0]);
+      if (onlineActive) arenaReport(game.winner === me ? 1 : (game.winner ? 0 : 0.5));
     }
     return null;
   }
@@ -2353,6 +2354,7 @@ function settleResult() {
   paintProfile(); paintOppCard(); renderLeaderboard();
   syncProfileUp();
   if (WCCLOUD.enabled() && WCCLOUD.currentUser()) WCCLOUD.saveGame(WCLADDER.getProfile().log[0]);
+  arenaReport(score);
   return r;
 }
 
@@ -2364,6 +2366,7 @@ if (closeLobbyBtn) closeLobbyBtn.addEventListener('click', closeLobby);
 document.querySelectorAll('.mode-card').forEach(function (el) {
   el.addEventListener('click', function () {
     const kind = el.dataset.lobbymode;
+    if (kind === 'arena') { openArena(); return; }
     if (!leaveLiveGame()) return;
     if (kind === 'online') { hostRoom(); return; }
     if (kind === 'puzzles') { startPuzzles(); return; }
@@ -3097,6 +3100,7 @@ window.addEventListener('hashchange', () => {
   } catch (e) {}
   { const pid = puzzleIdFromHash(); if (pid) { if (leaveLiveGame()) openPuzzleById(pid); return; } }
   if (dailyFromHash()) { if (leaveLiveGame()) openDaily(); return; }
+  if (arenaFromHash()) { openArena(); return; }
   { const ra = replayFromHash(); if (ra) { openSharedGame(ra); return; } }
   { const sid = shortIdFromHash(); if (sid) { openShortGame(sid); return; } }
   try {
@@ -3486,6 +3490,97 @@ function shareDaily() {
     rec.ms ? 'Hollow Chess Daily #' + no + ': solved ' + (rec.clean ? 'first try ' : '') + 'in ' + fmtDur(rec.ms) + '. It is ' + what + ' Beat my time:'
            : 'Hollow Chess Daily #' + no + ': ' + what + ' Everyone gets the same puzzle today:',
     SITE_URL() + '#daily');
+}
+
+// ---- the Sunday Arena ------------------------------------------------------------
+// One hour a week (Sundays 14:30 UTC, 8pm IST). Every ranked or online game you
+// finish inside the hour scores: 2 for a win, 1 for a draw. The server's clock
+// decides whether the arena is open; this copy of the schedule only draws the
+// countdown. hollowchess.com/#arena opens the standings.
+const ARENA_T0 = Date.UTC(2026, 10, 22, 14, 30), ARENA_LEN = 3600000, WEEK_MS = 7 * DAY_MS;
+let arenaData = null, arenaFetched = 0, arenaTimer = null;
+const arenaEl = document.getElementById('arenaSheet');
+function arenaClock() {
+  const now = Date.now(), k = Math.floor((now - ARENA_T0) / WEEK_MS);
+  if (k >= 0 && now < ARENA_T0 + k * WEEK_MS + ARENA_LEN) return { live: true, week: k + 1, ends: ARENA_T0 + k * WEEK_MS + ARENA_LEN };
+  return { live: false, week: k + 2, starts: ARENA_T0 + (k + 1) * WEEK_MS };
+}
+function arenaFromHash() { return /[#&]arena(?:&|$)/.test(location.hash || ''); }
+function arenaLeft(ms) {
+  const m = Math.max(1, Math.ceil(ms / 60000));
+  if (m < 60) return m + ' min';
+  if (m < 1440) return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+  return Math.floor(m / 1440) + 'd ' + Math.floor((m % 1440) / 60) + 'h';
+}
+function arenaWhen(ms) {
+  try { return new Date(ms).toLocaleString([], { weekday: 'long', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); }
+  catch (e) { return new Date(ms).toString().slice(0, 21); }
+}
+function arenaFetch(force) {
+  if (!WCCLOUD.arenaBoard || (!force && Date.now() - arenaFetched < 30000)) return;
+  arenaFetched = Date.now();
+  WCCLOUD.arenaBoard(WCSTATS.device()).then(function (b) { if (b) { arenaData = b; paintArena(); } });
+}
+function paintArenaCard() {
+  const tag = document.getElementById('arenaTag');
+  if (!tag) return;
+  const ck = arenaClock();
+  tag.textContent = ck.live ? 'live · ' + arenaLeft(ck.ends - Date.now()) + ' left' : 'in ' + arenaLeft(ck.starts - Date.now());
+  tag.classList.toggle('live', ck.live);
+}
+function paintArena() {
+  if (!arenaEl) return;
+  const ck = arenaClock(), b = arenaData, $ = function (id) { return document.getElementById(id); };
+  $('arenaStatus').innerHTML = ck.live
+    ? '<b>Arena #' + ck.week + ' is live.</b> ' + arenaLeft(ck.ends - Date.now()) + ' left.'
+    : '<b>Arena #' + ck.week + '</b> starts ' + esc(arenaWhen(ck.starts)) + ', your time. That is in ' + arenaLeft(ck.starts - Date.now()) + '.';
+  // the board on the server is the open arena, or the last one played
+  const rows = b && b.rows ? b.rows : [], showing = b && ((ck.live && b.live) || (!ck.live && !b.live && b.week >= 1));
+  $('arenaLabel').textContent = ck.live ? 'Standings' : (showing && rows.length ? 'Last arena (#' + b.week + ')' : 'Standings');
+  $('arenaRows').innerHTML = showing && rows.length ? rows.map(function (r, i) {
+    return '<div class="lb-row' + (r.you ? ' you' : '') + '"><span class="lb-rank">' + (i + 1) + '</span>' +
+      '<span class="lb-name">' + esc(r.you && r.name === 'Guest' ? 'You' : r.name) + '</span>' +
+      '<span class="arena-g">' + r.games + (r.games === 1 ? ' game' : ' games') + '</span><span class="lb-elo">' + r.pts + '</span></div>';
+  }).join('') : '<div class="arena-empty">' + (ck.live ? 'No games finished yet. The first result takes the lead.' : 'Nobody has played an arena yet. The first one sets the record.') + '</div>';
+  const you = showing && b.you ? b.you : null;
+  $('arenaYou').textContent = you ? (ck.live ? 'You: ' : 'You finished ') + ordinal(you.rank) + (ck.live ? ' of ' + b.players : '') + ' with ' + you.pts + (you.pts === 1 ? ' point' : ' points') + '.'
+    : (ck.live && !(WCCLOUD.currentUser && WCCLOUD.currentUser()) ? 'Guests show as Guest. Sign in to put your name on the board.' : '');
+  $('arenaGo').querySelector('.find-title').textContent = ck.live ? 'Play now' : 'Invite players';
+}
+function openArena() {
+  if (!arenaEl) return;
+  if (arenaFromHash()) history.replaceState(null, '', location.pathname + location.search);
+  WCSTATS.track('arena_open', { live: arenaClock().live });
+  paintArena(); arenaFetch(true);
+  arenaEl.classList.add('show');
+  clearInterval(arenaTimer);
+  arenaTimer = setInterval(function () { paintArena(); paintArenaCard(); if (arenaClock().live) arenaFetch(); }, 20000);
+}
+function closeArena() { if (arenaEl) arenaEl.classList.remove('show'); clearInterval(arenaTimer); arenaTimer = null; }
+if (arenaEl) {
+  arenaEl.addEventListener('click', function (e) { if (e.target === arenaEl) closeArena(); });
+  bind('arenaClose', closeArena);
+  bind('arenaGo', function () {
+    const ck = arenaClock();
+    if (ck.live) { closeArena(); if (!leaveLiveGame()) return; openLobby(); beginSearch(); return; }
+    openShare('arena', 'Invite players', 'Hollow Chess Sunday Arena #' + ck.week + ': one hour of ranked games on a board that moves, most points wins. Starts ' + arenaWhen(ck.starts) + ' my time.', SITE_URL() + '#arena');
+  });
+}
+// a finished game, 1 / 0.5 / 0. Counts only while the arena is open (the server checks too).
+function arenaReport(score) {
+  const note = document.getElementById('arenaNote');
+  if (note) note.hidden = true;
+  if (!arenaClock().live || !WCCLOUD.arenaReport) return;
+  if (!(window.HC && HC.native) && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;   // never from a developer's machine
+  WCSTATS.track('arena_game', { score: score });
+  WCCLOUD.arenaReport(WCSTATS.device(), score).then(function (b) {
+    if (!b) return;
+    arenaData = b; arenaFetched = Date.now(); paintArena();
+    if (note && b.live && b.you && gameOver()) {
+      note.textContent = 'Arena: ' + (score >= 1 ? '+2' : score > 0 ? '+1' : '+0') + ' · ' + b.you.pts + (b.you.pts === 1 ? ' point' : ' points') + ' · ' + ordinal(b.you.rank) + ' of ' + b.players;
+      note.hidden = false;
+    }
+  });
 }
 
 // ---- puzzle challenges -------------------------------------------------------
@@ -4017,7 +4112,8 @@ if (resumedGame) {
   openShortGame(bootShort);
 } else if (bootDaily) {
   openDaily();
-} else if (!bootedFromLink && !bootPuzzle) {
+}
+if (arenaFromHash()) { try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {} closeWelcome(); if (!resumedGame) openLobby(); openArena(); } else if (!bootedFromLink && !bootPuzzle) {
   // the welcome screen owns the first paint; enterSite() opens the lobby after
   const w = document.getElementById('welcome');
   if (w && w.classList.contains('show') && firstVisit()) startFirstGame();

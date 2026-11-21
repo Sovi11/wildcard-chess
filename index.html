@@ -34,7 +34,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" /></noscript>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=94" />
+  <link rel="stylesheet" href="styles.css?v=95" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -129,6 +129,11 @@
           <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.5a6.2 6.2 0 0 1 12.4 0"/><circle cx="16.5" cy="9" r="2.7"/><path d="M15.8 13.6a5.2 5.2 0 0 1 5.4 5.9"/></svg></span>
           <span class="mode-name">2 players, one screen</span>
           <span class="mode-desc">Offline hotseat. Pass the mouse.</span>
+        </button>
+        <button class="mode-card mode-wide mode-arena" data-lobbymode="arena">
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 5.5H4.5V7A3 3 0 0 0 7.2 10M17 5.5h2.500V7a3 3 0 0 1-2.700 3M12 14v3.500M8.500 20h7M9.500 17.500h5"/></svg></span>
+          <span class="mode-name">Sunday Arena <span id="arenaTag" class="lb-tag">weekly</span></span>
+          <span class="mode-desc">One hour of ranked games. Most points wins.</span>
         </button>
         <button class="mode-card mode-wide mode-daily" data-lobbymode="daily">
           <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/><path d="M9 15l2.2 2.2L15.5 13"/></svg></span>
@@ -326,6 +331,19 @@
     </div>
   </div>
 
+  <div id="arenaSheet" class="lobby auth-modal arena-sheet" role="dialog" aria-label="Sunday Arena">
+    <div class="lobby-inner auth-inner">
+      <h2 class="lobby-title">Sunday Arena</h2>
+      <p class="lobby-sub">One hour every Sunday. Play ranked games: a win is 2 points, a draw is 1. Most points wins.</p>
+      <p id="arenaStatus" class="arena-status"></p>
+      <div class="lobby-label" id="arenaLabel">Standings</div>
+      <div id="arenaRows" class="arena-rows"></div>
+      <p id="arenaYou" class="arena-you"></p>
+      <button id="arenaGo" class="find-btn" type="button"><span class="find-title">Play now</span></button>
+      <button id="arenaClose" class="ghost-btn" type="button">Close</button>
+    </div>
+  </div>
+
   <div id="settingsSheet" class="lobby sheet" role="dialog" aria-label="Settings">
     <div class="lobby-inner sheet-inner">
       <div class="sheet-head"><h2 class="lobby-title">Settings</h2><button class="sheet-x" data-close aria-label="Close" type="button">×</button></div>
@@ -517,7 +535,7 @@
 
     <main>
       <section class="board-wrap">
-        <div id="banner" class="banner"><span id="bannerText"></span><button id="analyzeBtn" class="analyze-btn">✦ Analyze game</button><button id="playAgainBtn" class="analyze-btn again">↻ Play again</button><span class="bn-exits"><button id="bannerHomeBtn" class="analyze-btn exit" type="button">⌂ Home</button><button id="bannerProfileBtn" class="analyze-btn exit" type="button">☰ Profile</button><button id="bannerFriendBtn" class="analyze-btn exit" type="button">⚔ Challenge a friend</button><button id="bannerShareBtn" class="analyze-btn exit" type="button">Share</button></span><button id="saveRatingBtn" class="bn-save" type="button" hidden>Keep your rating — sign in</button></div>
+        <div id="banner" class="banner"><span id="bannerText"></span><span id="arenaNote" class="arena-note" hidden></span><button id="analyzeBtn" class="analyze-btn">✦ Analyze game</button><button id="playAgainBtn" class="analyze-btn again">↻ Play again</button><span class="bn-exits"><button id="bannerHomeBtn" class="analyze-btn exit" type="button">⌂ Home</button><button id="bannerProfileBtn" class="analyze-btn exit" type="button">☰ Profile</button><button id="bannerFriendBtn" class="analyze-btn exit" type="button">⚔ Challenge a friend</button><button id="bannerShareBtn" class="analyze-btn exit" type="button">Share</button></span><button id="saveRatingBtn" class="bn-save" type="button" hidden>Keep your rating — sign in</button></div>
         <div id="coach" class="coach" hidden>
           <p id="coachText" class="coach-text"></p>
           <span class="coach-acts"><button id="coachTour" class="coach-btn" type="button">Tour</button><button id="coachMenu" class="coach-btn" type="button">Menu</button></span>
@@ -670,29 +688,29 @@
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=94"></script>
+  <script defer src="js/platform.js?v=95"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=94"></script>
-  <script defer src="js/stats.js?v=94"></script>
-  <script defer src="js/cloud.js?v=94"></script>
-  <script defer src="js/postgame-feedback.js?v=94"></script>
-  <script defer src="js/engine.js?v=94"></script>
-  <script defer src="js/pieces.js?v=94"></script>
-  <script defer src="js/themes.js?v=94"></script>
-  <script defer src="js/sound.js?v=94"></script>
-  <script defer src="js/tutorial.js?v=94"></script>
-  <script defer src="js/ai.js?v=94"></script>
-  <script defer src="js/ladder.js?v=94"></script>
+  <script defer src="js/config.js?v=95"></script>
+  <script defer src="js/stats.js?v=95"></script>
+  <script defer src="js/cloud.js?v=95"></script>
+  <script defer src="js/postgame-feedback.js?v=95"></script>
+  <script defer src="js/engine.js?v=95"></script>
+  <script defer src="js/pieces.js?v=95"></script>
+  <script defer src="js/themes.js?v=95"></script>
+  <script defer src="js/sound.js?v=95"></script>
+  <script defer src="js/tutorial.js?v=95"></script>
+  <script defer src="js/ai.js?v=95"></script>
+  <script defer src="js/ladder.js?v=95"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=94"></script>
-  <script defer src="js/net.js?v=94"></script>
-  <script defer src="js/share.js?v=94"></script>
-  <script defer src="js/analysis.js?v=94"></script>
-  <script defer src="js/solver.js?v=94"></script>
-  <script defer src="js/puzzles.js?v=94"></script>
-  <script defer src="js/main.js?v=94"></script>
-  <script defer src="js/ui.js?v=94"></script>
-  <script defer src="js/native.js?v=94"></script>
+  <script defer src="js/matchmaking.js?v=95"></script>
+  <script defer src="js/net.js?v=95"></script>
+  <script defer src="js/share.js?v=95"></script>
+  <script defer src="js/analysis.js?v=95"></script>
+  <script defer src="js/solver.js?v=95"></script>
+  <script defer src="js/puzzles.js?v=95"></script>
+  <script defer src="js/main.js?v=95"></script>
+  <script defer src="js/ui.js?v=95"></script>
+  <script defer src="js/native.js?v=95"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
