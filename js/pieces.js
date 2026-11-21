@@ -166,7 +166,7 @@ const PIECE_SETS = {
   //   queen  — flower crown: cap topped with a five-petal bloom (accent)
   //   king   — the tallest cap of all, banded like a crown
   gnome: {
-    name: 'Garden gnomes',
+    name: 'Gnomes',
     pieces: {
       pawn: `
         <path fill="var(--pc-hat, currentColor)" d="M22.5 6 L30 19 Q22.5 16.5 15 19 Z"/>

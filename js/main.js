@@ -1533,7 +1533,7 @@ function paintAuth() {
     }
   } else {
     authBtn.textContent = WCCLOUD.hasGoogle() ? 'Sign in with Google' : 'Sign in with email';
-    if (authStateEl) authStateEl.textContent = 'Rating is saved on this device only';
+    if (authStateEl) authStateEl.textContent = '';
   }
 }
 
@@ -1551,6 +1551,8 @@ async function syncProfileDown() {
         elo: remote.elo,
         wins: remote.wins, losses: remote.losses, draws: remote.draws,
         dob: remote.dob || local.dob, chessLevel: remote.chess_level || local.chessLevel,
+        nameChosen: local.nameChosen,
+        chesscom: remote.chesscom || local.chesscom || '', lichess: remote.lichess || local.lichess || '',
         log: local.log || [],
       });
       // Puzzles merge rather than overwrite: a solve on any device is a solve.
@@ -2028,7 +2030,7 @@ WCCLOUD.onChange(function (u) {
 // The welcome screen must be there the instant the page paints — cloud init is
 // an await away, so decide synchronously from supabase-js's cached session in
 // localStorage. bootCloud corrects the guess if it was wrong.
-const bootOnInvite = /[#&](room|g|puzzle)=/.test(location.hash || '');
+const bootOnInvite = /[#&](room|g|puzzle|replay)=/.test(location.hash || '');
 function hasCachedSession() {
   try {
     return Object.keys(localStorage).some(function (k) {
@@ -2375,7 +2377,7 @@ const matchListEl = document.getElementById('matchList');
 const profListEl = document.getElementById('profList');
 const profReviewEl = document.getElementById('profReview');
 
-function openProfile() { renderProfile(); showMatchList(); profileEl.classList.add('show'); updateAmbient(); }
+function openProfile() { setProfTab(profTab); renderProfile(); showMatchList(); profileEl.classList.add('show'); updateAmbient(); }
 function closeProfile() { revToken++; profileEl.classList.remove('show'); updateAmbient(); }
 function showMatchList() { revToken++; profListEl.style.display = ''; profReviewEl.classList.remove('show'); }
 function showReview() { profListEl.style.display = 'none'; profReviewEl.classList.add('show'); }
@@ -2383,13 +2385,12 @@ function showReview() { profListEl.style.display = 'none'; profReviewEl.classLis
 // Rating over time: one point per rated game, the line in ink and the area
 // under it faint, peak marked. Fewer than two points is not a chart, so it
 // says so instead of drawing a lonely dot.
-function drawRatingChart(rated, current) {
-  const el = document.getElementById('profChart'), note = document.getElementById('profChartNote');
+function drawSeries(elId, noteId, pts, noteText, emptyText) {
+  const el = document.getElementById(elId), note = document.getElementById(noteId);
   if (!el) return;
-  const pts = rated.length ? [rated[0].before].concat(rated.map(function (e) { return e.after; })) : [];
   if (pts.length < 2) {
-    el.innerHTML = '<text x="300" y="74" text-anchor="middle" class="pc-empty">Play a rated game and your rating history starts here</text>';
-    note.textContent = '';
+    el.innerHTML = '<text x="300" y="74" text-anchor="middle" class="pc-empty">' + emptyText + '</text>';
+    if (note) note.textContent = '';
     return;
   }
   const W = 600, H = 140, pad = 10;
@@ -2402,18 +2403,204 @@ function drawRatingChart(rated, current) {
   const area = line + 'L' + x(pts.length - 1).toFixed(1) + ',' + H + 'L' + x(0).toFixed(1) + ',' + H + 'Z';
   const pi = pts.indexOf(Math.max.apply(null, pts));
   el.innerHTML =
-    '<defs><linearGradient id="pcArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".18"/>' +
+    '<defs><linearGradient id="ar-' + elId + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".18"/>' +
     '<stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>' +
-    '<path d="' + area + '" fill="url(#pcArea)"/>' +
+    '<path d="' + area + '" fill="url(#ar-' + elId + ')"/>' +
     '<path d="' + line + '" class="pc-line"/>' +
     '<circle cx="' + x(pi).toFixed(1) + '" cy="' + y(pts[pi]).toFixed(1) + '" r="4" class="pc-peak"/>' +
     '<circle cx="' + x(pts.length - 1).toFixed(1) + '" cy="' + y(pts[pts.length - 1]).toFixed(1) + '" r="4.5" class="pc-now"/>';
-  const d = current - pts[0];
-  note.textContent = (d >= 0 ? '+' : '') + d + ' over ' + rated.length + ' rated game' + (rated.length === 1 ? '' : 's');
+  if (note) note.textContent = noteText;
 }
+function drawRatingChart(rated, current) {
+  const pts = rated.length ? [rated[0].before].concat(rated.map(function (e) { return e.after; })) : [];
+  const d = pts.length ? current - pts[0] : 0;
+  drawSeries('profChart', 'profChartNote', pts,
+    (d >= 0 ? '+' : '') + d + ' over ' + rated.length + ' rated game' + (rated.length === 1 ? '' : 's'),
+    'Play a rated game and your rating history starts here');
+}
+
+// ---- profile: the Puzzles tab --------------------------------------------------
+// Everything here is read from the same local progress blob the puzzle screen
+// writes (and the account syncs): rating after each rated attempt, the solved
+// set with first-try flags, and the streaks.
+let profTab = 'games', pzLoadAsked = false;
+function renderPuzzleStats() {
+  const box = document.getElementById('profPuzzles');
+  if (!box || !window.WCPUZZLE) return;
+  const pr = WCPUZZLE.progress(), list = WCPUZZLE.list() || [];
+  if (!list.length && !pzLoadAsked) {
+    pzLoadAsked = true;
+    WCPUZZLE.load().then(function () { if (profTab === 'puzzles') renderPuzzleStats(); }, function () {});
+  }
+  const ids = Object.keys(pr.solved || {});
+  const solved = ids.length, total = list.length;
+  const clean = ids.filter(function (id) { return pr.solved[id] && pr.solved[id].clean; }).length;
+  const hist = (Array.isArray(pr.hist) ? pr.hist : []).filter(function (h) { return Array.isArray(h) && h[1] > 0; });
+  const peak = hist.reduce(function (m, h) { return Math.max(m, h[1]); }, pr.rating);
+  const tile = function (label, value, sub) {
+    return '<div class="prof-tile"><div class="prof-tile-v">' + value + '</div>' +
+      '<div class="prof-tile-l">' + label + '</div>' + (sub ? '<div class="prof-tile-s">' + sub + '</div>' : '') + '</div>';
+  };
+  document.getElementById('pzStats').innerHTML =
+    tile('Puzzle rating', pr.rating, 'peak ' + peak) +
+    tile('Solved', solved + (total ? '<small> / ' + total + '</small>' : ''), total ? Math.round(solved / total * 100) + '% of the set' : '') +
+    tile('First try', solved ? Math.round(clean / solved * 100) + '%' : '–', clean + ' of ' + solved + ' clean') +
+    tile('Streak', pr.streak || 0, 'best ' + (pr.best || 0));
+
+  const pts = hist.map(function (h) { return h[1]; });
+  const card = document.getElementById('pzChartCard');
+  if (card) card.hidden = pts.length < 2;
+  const d = pts.length ? pr.rating - pts[0] : 0;
+  drawSeries('pzChart', 'pzChartNote', pts, (d >= 0 ? '+' : '') + d + ' over ' + Math.max(0, pts.length - 1) + ' rated puzzles', '');
+
+  // progress through the set, one bar per depth
+  const by = {};
+  list.forEach(function (p) { const k = p.mateIn; by[k] = by[k] || { n: 0, done: 0 }; by[k].n++; if (pr.solved[p.id]) by[k].done++; });
+  const prog = document.getElementById('pzProg');
+  prog.innerHTML = Object.keys(by).sort().map(function (k) {
+    const g = by[k], pct = g.n ? Math.round(g.done / g.n * 100) : 0;
+    return '<div class="pzp-row"><span class="pzp-l">Mate in ' + k + '</span>' +
+      '<span class="pzp-bar"><i style="width:' + pct + '%"></i></span>' +
+      '<span class="pzp-n">' + g.done + ' / ' + g.n + '</span></div>';
+  }).join('') || '<div class="match-empty">Loading the puzzle set…</div>';
+  document.getElementById('pzProgNote').textContent = total ? (total - solved) + ' left' : '';
+
+  // first attempts are the rated ones: how many landed
+  const rated = Object.keys(pr.rated || {}).map(function (id) { return pr.rated[id]; });
+  const hit = rated.filter(function (r) { return r && r.score === 1; }).length, miss = rated.length - hit;
+  const wld = document.getElementById('pzWld');
+  wld.innerHTML = !rated.length ? '' :
+    '<div class="wld-bar">' + (hit ? '<span class="wld-seg w" style="flex:' + hit + '"></span>' : '') +
+      (miss ? '<span class="wld-seg l" style="flex:' + miss + '"></span>' : '') + '</div>' +
+    '<div class="wld-legend"><span><i class="w"></i>' + hit + ' solved on the rated attempt</span><span><i class="l"></i>' + miss + ' missed</span></div>';
+
+  // activity: puzzles solved per day
+  const DAY = 86400000, today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = []; for (let i = 13; i >= 0; i--) days.push({ t: today.getTime() - i * DAY, n: 0 });
+  ids.forEach(function (id) {
+    const at = Number(pr.solved[id] && pr.solved[id].at) || 0;
+    const k = Math.floor((at - days[0].t) / DAY);
+    if (k >= 0 && k < 14) days[k].n++;
+  });
+  const top = days.reduce(function (m, x) { return Math.max(m, x.n); }, 0);
+  document.getElementById('pzDays').innerHTML = days.map(function (x) {
+    const lbl = new Date(x.t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return '<span class="pzd" title="' + lbl + ': ' + x.n + '"><i style="height:' + (top ? Math.max(x.n ? 10 : 0, Math.round(x.n / top * 100)) : 0) + '%"></i></span>';
+  }).join('');
+  const sum = days.reduce(function (m, x) { return m + x.n; }, 0);
+  document.getElementById('pzDaysNote').textContent = sum ? sum + ' solved' : 'nothing yet';
+}
+function setProfTab(t) {
+  profTab = t === 'puzzles' ? 'puzzles' : 'games';
+  const g = document.getElementById('profGames'), z = document.getElementById('profPuzzles'), tabs = document.getElementById('profTabs');
+  if (g) g.hidden = profTab !== 'games';
+  if (z) z.hidden = profTab !== 'puzzles';
+  if (tabs) tabs.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.t === profTab)); });
+  if (profTab === 'puzzles') renderPuzzleStats();
+}
+
+// ---- profile: linked chess.com / Lichess accounts ----------------------------
+// A username per site, shown as a link with that site's live rating beside it.
+// The rating comes from each site's public API, straight from the browser.
+const EXT_SITES = {
+  chesscom: { label: 'chess.com', url: function (u) { return 'https://www.chess.com/member/' + encodeURIComponent(u); },
+              api: function (u) { return 'https://api.chess.com/pub/player/' + encodeURIComponent(u.toLowerCase()) + '/stats'; } },
+  lichess:  { label: 'Lichess', url: function (u) { return 'https://lichess.org/@/' + encodeURIComponent(u); },
+              api: function (u) { return 'https://lichess.org/api/user/' + encodeURIComponent(u); } },
+};
+const EXT_KEY = 'hollowchess.ext.v1', EXT_TTL = 6 * 3600 * 1000;
+function extCache() { try { return JSON.parse(localStorage.getItem(EXT_KEY)) || {}; } catch (e) { return {}; } }
+function extBest(site, j) {
+  let best = null;
+  const take = function (kind, rating, games) { if (rating > 0 && (!best || games > best.games)) best = { kind: kind, rating: Math.round(rating), games: games }; };
+  if (site === 'chesscom') {
+    ['rapid', 'blitz', 'bullet', 'daily'].forEach(function (k) {
+      const s = j && j['chess_' + k]; if (!s || !s.last) return;
+      const r = s.record || {}; take(k, s.last.rating, (r.win | 0) + (r.loss | 0) + (r.draw | 0));
+    });
+  } else {
+    ['rapid', 'blitz', 'bullet', 'classical'].forEach(function (k) {
+      const s = j && j.perfs && j.perfs[k]; if (s) take(k, s.rating, s.games | 0);
+    });
+  }
+  return best;
+}
+// -> { ok, rating, kind } | { ok:false, missing:true } (no such player) | { ok:false } (could not reach the site)
+async function extFetch(site, user) {
+  try {
+    const res = await fetch(EXT_SITES[site].api(user), { headers: { Accept: 'application/json' } });
+    if (res.status === 404) return { ok: false, missing: true };
+    if (!res.ok) return { ok: false };
+    const best = extBest(site, await res.json());
+    const out = { ok: true, rating: best ? best.rating : 0, kind: best ? best.kind : '', at: Date.now(), user: user };
+    const c = extCache(); c[site] = out; try { localStorage.setItem(EXT_KEY, JSON.stringify(c)); } catch (e) {}
+    return out;
+  } catch (e) { return { ok: false }; }
+}
+function paintExtLinks() {
+  const el = document.getElementById('profLinks');
+  if (!el) return;
+  const p = WCLADDER.getProfile(), cache = extCache();
+  el.innerHTML = Object.keys(EXT_SITES).map(function (site) {
+    const u = p[site];
+    if (!u) return '<button class="ext-add" data-site="' + site + '" type="button">+ ' + EXT_SITES[site].label + '</button>';
+    const cz = cache[site] && cache[site].user === u ? cache[site] : null;
+    return '<span class="ext-chip"><a href="' + EXT_SITES[site].url(u) + '" target="_blank" rel="noopener">' +
+      '<span class="ext-site">' + EXT_SITES[site].label + '</span> ' + esc(u) +
+      '<b class="ext-r" data-r="' + site + '">' + (cz && cz.rating ? ' ' + cz.rating + ' ' + cz.kind : '') + '</b></a>' +
+      '<button class="ext-x" data-unlink="' + site + '" type="button" aria-label="Unlink ' + EXT_SITES[site].label + '">×</button></span>';
+  }).join('');
+  Object.keys(EXT_SITES).forEach(function (site) {
+    const u = p[site]; if (!u) return;
+    const cz = cache[site];
+    if (cz && cz.user === u && Date.now() - cz.at < EXT_TTL) return;
+    extFetch(site, u).then(function (r) {
+      const b = el.querySelector('[data-r="' + site + '"]');
+      if (b && r.ok && r.rating) b.textContent = ' ' + r.rating + ' ' + r.kind;
+    });
+  });
+}
+(function () {
+  const el = document.getElementById('profLinks');
+  if (!el) return;
+  const setLink = function (site, user) {
+    const p = WCLADDER.getProfile();
+    p[site] = user || '';
+    WCLADDER.saveProfile(p); syncProfileUp(); paintExtLinks();
+  };
+  const commit = async function (inp) {
+    if (inp.dataset.busy) return;
+    const site = inp.dataset.site;
+    // a pasted profile link works too: keep its last path segment
+    let v = (inp.value || '').trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+    if (/[\/@]/.test(v)) v = v.split(/[\/@]/).pop();
+    if (!v) { paintExtLinks(); return; }
+    if (!/^[A-Za-z0-9_-]{2,30}$/.test(v)) { inp.classList.add('bad'); return; }
+    inp.dataset.busy = '1'; inp.disabled = true;
+    const r = await extFetch(site, v);
+    if (r.missing) { delete inp.dataset.busy; inp.disabled = false; inp.value = ''; inp.placeholder = 'no such player'; inp.classList.add('bad'); inp.focus(); return; }
+    setLink(site, v);
+  };
+  el.addEventListener('click', function (e) {
+    const add = e.target.closest('.ext-add'), un = e.target.closest('.ext-x');
+    if (un) { setLink(un.dataset.unlink, ''); return; }
+    if (!add) return;
+    const site = add.dataset.site, inp = document.createElement('input');
+    inp.className = 'ext-input'; inp.dataset.site = site; inp.maxLength = 60; inp.spellcheck = false;
+    inp.autocapitalize = 'off'; inp.autocomplete = 'off';
+    inp.placeholder = EXT_SITES[site].label + ' username'; inp.setAttribute('aria-label', EXT_SITES[site].label + ' username');
+    add.replaceWith(inp); inp.focus();
+    inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') commit(inp); if (ev.key === 'Escape') paintExtLinks(); inp.classList.remove('bad'); });
+    inp.addEventListener('blur', function () { if ((inp.value || '').trim()) commit(inp); else setTimeout(paintExtLinks, 0); });
+  });
+})();
 
 let profFilter = 'all';
 (function () {
+  const tabsEl = document.getElementById('profTabs');
+  if (tabsEl) tabsEl.addEventListener('click', function (ev) { const b = ev.target.closest('button[data-t]'); if (b) setProfTab(b.dataset.t); });
+  const pzGo = document.getElementById('pzGo');
+  if (pzGo) pzGo.addEventListener('click', function () { closeProfile(); const b = document.querySelector('[data-lobbymode="puzzles"]'); if (b) b.click(); });
   const filt = document.getElementById('profFilter');
   if (filt) filt.addEventListener('click', function (ev) {
     const b = ev.target.closest('button[data-f]'); if (!b) return;
@@ -2471,8 +2658,6 @@ function renderProfile() {
   const rated = log.filter(function (e) { return e.rated !== false && typeof e.after === 'number'; })
                    .sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
   const peak = rated.reduce(function (m, e) { return Math.max(m, e.after); }, p.elo);
-  const pz = (window.WCPUZZLE && WCPUZZLE.progress) ? WCPUZZLE.progress() : null;
-  const solved = pz ? Object.keys(pz.solved || {}).length : 0;
 
   // the numbers worth knowing at a glance, in one row
   const tile = function (label, value, sub) {
@@ -2482,8 +2667,14 @@ function renderProfile() {
   document.getElementById('profStats').innerHTML =
     tile('Rating', p.elo, 'peak ' + peak) +
     tile('Games', total, total ? pct + '% won' : 'none yet') +
-    tile('Puzzle rating', pz ? pz.rating : 1000, solved + ' solved') +
-    tile('Best streak', pz ? (pz.best || 0) : 0, 'puzzles in a row');
+    tile('Ladder', '#' + (above + 1), 'of ' + field) +
+    (function () {
+      const wk = rated.filter(function (e) { return (e.at || 0) > Date.now() - 7 * 86400000; });
+      const dw = wk.length ? wk[wk.length - 1].after - wk[0].before : 0;
+      return tile('This week', (dw >= 0 ? '+' : '') + dw, wk.length + ' rated game' + (wk.length === 1 ? '' : 's'));
+    })();
+  paintExtLinks();
+  if (profTab === 'puzzles') renderPuzzleStats();
 
   // form and records: the things a rating alone does not say
   const byTime = log.slice().sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
@@ -2830,6 +3021,7 @@ bind('reviewBack', function () {
   showMatchList();
 });
 bind('analyzeBtn', analyzeCurrentGame);
+bind('reviewShare', function () { if (revActs && revActs.length) shareGame(revActs.slice(), 'A game of Hollow Chess, the chess where the board itself moves. Replay it move by move:'); });
 const revLogEl = document.getElementById('revLog');
 if (revLogEl) revLogEl.addEventListener('click', function (e) {
   const row = e.target.closest('.logline');
@@ -2901,6 +3093,7 @@ window.addEventListener('hashchange', () => {
     if (room) { openLobby(); joinRoom(room); return; }
   } catch (e) {}
   { const pid = puzzleIdFromHash(); if (pid) { if (leaveLiveGame()) openPuzzleById(pid); return; } }
+  { const ra = replayFromHash(); if (ra) { openSharedGame(ra); return; } }
   try {
     if (!WCSHARE.fromLocation(game)) return;
     leavePuzzleMode();
@@ -3179,6 +3372,67 @@ async function openPuzzleById(id) {
   }
   history.replaceState(null, '', location.pathname + location.search);
 }
+// ---- game links ------------------------------------------------------------------
+// A game has an address too: hollowchess.com/#replay=... carries every action of
+// the game (five characters a ply), and opens on the review board with the coach.
+// Coordinates are one character each, so a board may reach from -24 to 39.
+const RP_ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+const RP_PROMO = { queen: 'Q', rook: 'R', bishop: 'B', knight: 'N' };
+function encodeActs(acts) {
+  let out = '';
+  const n = function (v) { const ch = RP_ABC[v + 24]; if (ch === undefined) throw new Error('range'); return ch; };
+  try {
+    for (const a of acts) {
+      if (a.kind === 'm') out += (a.promo ? (RP_PROMO[a.promo] || 'Q') : 'm') + n(a.from.c) + n(a.from.r) + n(a.to.c) + n(a.to.r);
+      else if (a.kind === 'mc') out += 's' + n(a.from.c) + n(a.from.r) + n(a.to.c) + n(a.to.r);
+      else if (a.kind === 'ac') out += 'a' + n(a.cell.c) + n(a.cell.r);
+      else if (a.kind === 'rc') out += 'x' + n(a.cell.c) + n(a.cell.r);
+      else return null;
+    }
+  } catch (e) { return null; }
+  return out;
+}
+function decodeActs(str) {
+  const acts = [], v = function (i) { const k = RP_ABC.indexOf(str[i]); if (k < 0) throw new Error('bad'); return k - 24; };
+  const promo = { Q: 'queen', R: 'rook', B: 'bishop', N: 'knight' };
+  try {
+    for (let i = 0; i < str.length;) {
+      const k = str[i];
+      if (k === 'm' || promo[k] || k === 's') {
+        const a = { kind: k === 's' ? 'mc' : 'm', from: { c: v(i + 1), r: v(i + 2) }, to: { c: v(i + 3), r: v(i + 4) } };
+        if (promo[k]) a.promo = promo[k];
+        acts.push(a); i += 5;
+      } else if (k === 'a' || k === 'x') { acts.push({ kind: k === 'a' ? 'ac' : 'rc', cell: { c: v(i + 1), r: v(i + 2) } }); i += 3; }
+      else return null;
+    }
+  } catch (e) { return null; }
+  return acts.length ? acts : null;
+}
+function replayUrl(acts) {
+  if (!acts || !acts.length || acts.length > 600) return null;
+  const code = encodeActs(acts);
+  return code ? SITE_URL() + '#replay=' + code : null;
+}
+function replayFromHash() {
+  const m = /[#&]replay=([\w-]+)/.exec(location.hash || '');
+  return m && m[1].length <= 3200 ? decodeActs(m[1]) : null;
+}
+function openSharedGame(acts) {
+  closeWelcome();
+  try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {}     // a shared game is not a "first game" visit
+  closeLobby();
+  openReview(acts, 'Shared game · ' + Math.ceil(acts.length / 2) + ' moves');
+  reviewFromBoard = true;
+  const rb = document.getElementById('reviewBack'); if (rb) rb.textContent = '← Play';
+  renderProfile();
+  profileEl.classList.add('show');
+  updateAmbient();
+  history.replaceState(null, '', location.pathname + location.search);
+}
+function shareGame(acts, text) {
+  const url = replayUrl(acts);
+  openShare(url ? 'game' : 'site', 'Share this game', text, url || SITE_URL());
+}
 // ---- share sheet -----------------------------------------------------------------
 // One panel for every "send this to someone": the site, a result, a puzzle.
 // Each network gets its own compose link (no SDKs, no trackers); "More" hands
@@ -3230,6 +3484,13 @@ if (shareEl) {
 }
 const SITE_URL = function () { return (window.HC ? HC.publicBase : location.origin + location.pathname); };
 bind('shareBtn', function () {
+  // what is on the board is what gets shared: the puzzle, the game, or else the site
+  if (puzzleMode && WCPUZZLE.current()) { sharePuzzle(); return; }
+  if (gameActs.length >= 2 && replayUrl(gameActs)) {
+    shareGame(gameActs.slice(), gameOver() ? 'A game of Hollow Chess, the chess where the board itself moves. Replay it move by move:'
+      : 'My Hollow Chess game so far, ' + Math.ceil(gameActs.length / 2) + ' moves in. The board itself moves:');
+    return;
+  }
   openShare('site', 'Share Hollow Chess', 'Chess, except every third turn you can move a square of the board. Free in the browser:', SITE_URL());
 });
 bind('bannerShareBtn', function () {
@@ -3239,7 +3500,8 @@ bind('bannerShareBtn', function () {
     : (game.winner === me || (!botEnabled() && !onlineActive))
       ? 'I just won a game of Hollow Chess in ' + moves + ' moves. It is chess, except you can move the board. Can you?'
       : 'I just lost a game of Hollow Chess, the chess where the board itself moves. Avenge me:';
-  openShare('result', 'Share your game', text, SITE_URL());
+  const url = replayUrl(gameActs);
+  openShare(url ? 'game' : 'result', 'Share your game', url ? text.replace(/(Can you\?|Try it:|Avenge me:)$/, 'Replay it:') : text, url || SITE_URL());
 });
 function sharePuzzle() {
   const p = WCPUZZLE.current();
@@ -3564,11 +3826,11 @@ function paintCoach() {
   coachEl.hidden = false;
   const t = document.getElementById('coachText');
   if (game.canWildcard() && game.turn === 'white') {
-    t.innerHTML = '<b>Board turn.</b> Tap any empty square to lift it, then a dashed spot to set it down. The hole it leaves blocks rooks, bishops and queens. Or just move a piece.';
+    t.innerHTML = '<b>Board turn.</b> Tap an empty square, then a dashed spot. Or just move a piece.';
   } else if (!game.history.length) {
-    t.innerHTML = '<b>You are White.</b> This is normal chess with one twist: every third turn you may move a square of the board instead of a piece. Make a move.';
+    t.innerHTML = '<b>You are White.</b> Every third turn you can move a square instead of a piece.';
   } else {
-    t.innerHTML = 'Your first board turn comes on your 3rd move. The bot gets them too.';
+    t.innerHTML = 'Your first board turn is on move 3.';
   }
 }
 bind('coachTour', function () { WCTUT.open(updateAmbient); updateAmbient(); });
@@ -3576,7 +3838,8 @@ bind('coachMenu', function () { openLobby(); });
 
 const bootRoom = (typeof WCNET !== 'undefined' && WCNET.roomFromLocation) ? WCNET.roomFromLocation() : null;
 const bootPuzzle = puzzleIdFromHash();
-if (!bootRoom && !bootedFromLink && !bootPuzzle && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
+const bootReplay = replayFromHash();
+if (!bootRoom && !bootedFromLink && !bootPuzzle && !bootReplay && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
 if (resumedGame) {
   closeWelcome();            // straight back to the board you were on
   updateAmbient();
@@ -3585,6 +3848,8 @@ if (resumedGame) {
   joinRoom(bootRoom);
 } else if (bootPuzzle) {
   openPuzzleById(bootPuzzle);
+} else if (bootReplay) {
+  openSharedGame(bootReplay);
 } else if (!bootedFromLink && !bootPuzzle) {
   // the welcome screen owns the first paint; enterSite() opens the lobby after
   const w = document.getElementById('welcome');

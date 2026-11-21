@@ -30,10 +30,11 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Ccircle cx='18' cy='6.6' r='5.4' fill='%230f6a5b'/%3E%3Crect x='11' y='11.6' width='14' height='3.2' rx='1.2' fill='%230f6a5b'/%3E%3Cpath d='M13.2 14.6H22.8C23.3 20.5 27.6 24.6 30.6 28.6H5.4C8.4 24.6 12.7 20.5 13.2 14.6Z' fill='%230f6a5b'/%3E%3Crect x='3' y='28.4' width='30' height='6.6' rx='1.6' fill='%230f6a5b'/%3E%3Crect x='12' y='20.5' width='6' height='6' fill='%23f3e8d2'/%3E%3Crect x='18' y='20.5' width='6' height='6' fill='%230b3f37'/%3E%3Crect x='12' y='26.5' width='6' height='6' fill='%238fd0b6'/%3E%3Crect x='18' y='26.5' width='6' height='6' fill='%23f3e8d2'/%3E%3Crect x='25.5' y='2.5' width='7' height='7' fill='%23e5603a' transform='rotate%28-12 29 6%29'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" />
+  <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" /></noscript>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=90" />
+  <link rel="stylesheet" href="styles.css?v=91" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -73,7 +74,6 @@
       <header class="lobby-head">
         <div>
           <h2 class="lobby-title">Ranked play</h2>
-          <p class="lobby-sub">Queue up and you will be matched with someone near your rating.</p>
         </div>
         <div class="acct-col">
           <button id="authBtn" class="auth-btn">Sign in with Google</button>
@@ -93,7 +93,6 @@
       <div class="queue-box">
         <button id="findMatch" class="find-btn">
           <span class="find-title">Find a match</span>
-          <span class="find-sub">Ranked · a real player if one is around, otherwise the pool</span>
         </button>
         <div id="searchState" class="search-state">
           <div class="search-spin"></div>
@@ -200,6 +199,7 @@
             <button id="profEdit" class="prof-edit" type="button" title="Change your public name">Edit name</button>
           </div>
           <p class="lobby-sub" id="profSummary">&nbsp;</p>
+          <div class="prof-links" id="profLinks"></div>
         </div>
         <button id="profAuth" class="ghost-btn prof-auth" type="button">Sign in</button>
       </header>
@@ -208,6 +208,7 @@
         <div class="review-head">
           <button id="reviewBack" class="ghost-btn">← Back to games</button>
           <span id="reviewTitle" class="review-title"></span>
+          <button id="reviewShare" class="ghost-btn review-share" type="button">Share</button>
         </div>
         <div class="review-body">
           <div class="review-boardwrap">
@@ -236,6 +237,8 @@
       </div>
 
       <div id="profList">
+        <div class="prof-tabs" id="profTabs" role="group" aria-label="Profile section"><button data-t="games" aria-pressed="true" type="button">Games</button><button data-t="puzzles" aria-pressed="false" type="button">Puzzles</button></div>
+        <div id="profGames">
         <div class="prof-stats" id="profStats"></div>
         <div class="prof-form" id="profForm"></div>
         <div class="prof-chartcard">
@@ -250,6 +253,24 @@
           </span>
         </div>
         <div id="matchList" class="match-list"></div>
+        </div>
+        <div id="profPuzzles" hidden>
+          <div class="prof-stats" id="pzStats"></div>
+          <div class="prof-chartcard" id="pzChartCard">
+            <div class="prof-chart-head"><span class="lobby-label">Puzzle rating</span><span class="prof-chart-note" id="pzChartNote"></span></div>
+            <svg id="pzChart" class="prof-chart" viewBox="0 0 600 140" preserveAspectRatio="none" role="img" aria-label="Puzzle rating over time"></svg>
+          </div>
+          <div class="prof-chartcard">
+            <div class="prof-chart-head"><span class="lobby-label">Progress</span><span class="prof-chart-note" id="pzProgNote"></span></div>
+            <div id="pzProg" class="pz-prog"></div>
+            <div class="prof-wld" id="pzWld"></div>
+          </div>
+          <div class="prof-chartcard">
+            <div class="prof-chart-head"><span class="lobby-label">Last 14 days</span><span class="prof-chart-note" id="pzDaysNote"></span></div>
+            <div id="pzDays" class="pz-days"></div>
+          </div>
+          <button id="pzGo" class="find-btn prof-play pz-go" type="button"><span class="find-title">Solve puzzles</span></button>
+        </div>
       </div>
 
       <div class="lobby-foot">
@@ -270,13 +291,13 @@
         </svg>
       </div>
       <h2 class="welcome-title">Hollow Chess</h2>
-      <p class="welcome-tag">Chess, except the board itself is fair game. Lift squares, tear holes in your opponent's plans, checkmate anyway.</p>
+      <p class="welcome-tag">Chess, but the board moves.</p>
       <button id="welcomeGuest" class="find-btn welcome-btn">
         <span class="find-title">Play now</span>
-        <span class="find-sub">Free · no account · straight to a board</span>
+        <span class="find-sub">Free · no account</span>
       </button>
-      <button id="welcomeHow" class="ghost-btn welcome-how">✦ How to play — 60-second tour</button>
-      <button id="welcomeSignin" class="welcome-signin-link">or sign in to save your rating</button>
+      <button id="welcomeHow" class="ghost-btn welcome-how">How to play</button>
+      <button id="welcomeSignin" class="welcome-signin-link">Sign in</button>
     </div>
   </div>
 
@@ -357,6 +378,7 @@
       <button data-do="shareBtn" type="button">Share</button>
       <button data-do="settings" type="button">Settings</button>
       <button data-do="openProfileTop" type="button">Profile</button>
+      <button data-do="feedbackBtn" type="button">Feedback</button>
     </div>
     <button data-do="openLobby" type="button"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>New</span></button>
     <button data-do="hintBtn" type="button"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 9.5l-4.4 3.9 1.3 5.9L12 16.3 7.1 19.3l1.3-5.9L4 9.5l5.8-.9z"/></svg><span>Best move</span></button>
@@ -493,7 +515,7 @@
         <div id="banner" class="banner"><span id="bannerText"></span><button id="analyzeBtn" class="analyze-btn">✦ Analyze game</button><button id="playAgainBtn" class="analyze-btn again">↻ Play again</button><span class="bn-exits"><button id="bannerHomeBtn" class="analyze-btn exit" type="button">⌂ Home</button><button id="bannerProfileBtn" class="analyze-btn exit" type="button">☰ Profile</button><button id="bannerFriendBtn" class="analyze-btn exit" type="button">⚔ Challenge a friend</button><button id="bannerShareBtn" class="analyze-btn exit" type="button">Share</button></span><button id="saveRatingBtn" class="bn-save" type="button" hidden>Keep your rating — sign in</button></div>
         <div id="coach" class="coach" hidden>
           <p id="coachText" class="coach-text"></p>
-          <span class="coach-acts"><button id="coachTour" class="coach-btn" type="button">60-second tour</button><button id="coachMenu" class="coach-btn" type="button">Menu</button></span>
+          <span class="coach-acts"><button id="coachTour" class="coach-btn" type="button">Tour</button><button id="coachMenu" class="coach-btn" type="button">Menu</button></span>
         </div>
         <div id="browseBar" class="browse-bar"></div>
         <div id="promoPick" class="promo-pick" role="dialog" aria-label="Choose a piece to promote to"></div>
@@ -642,29 +664,29 @@
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=90"></script>
+  <script defer src="js/platform.js?v=91"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=90"></script>
-  <script defer src="js/stats.js?v=90"></script>
-  <script defer src="js/cloud.js?v=90"></script>
-  <script defer src="js/postgame-feedback.js?v=90"></script>
-  <script defer src="js/engine.js?v=90"></script>
-  <script defer src="js/pieces.js?v=90"></script>
-  <script defer src="js/themes.js?v=90"></script>
-  <script defer src="js/sound.js?v=90"></script>
-  <script defer src="js/tutorial.js?v=90"></script>
-  <script defer src="js/ai.js?v=90"></script>
-  <script defer src="js/ladder.js?v=90"></script>
+  <script defer src="js/config.js?v=91"></script>
+  <script defer src="js/stats.js?v=91"></script>
+  <script defer src="js/cloud.js?v=91"></script>
+  <script defer src="js/postgame-feedback.js?v=91"></script>
+  <script defer src="js/engine.js?v=91"></script>
+  <script defer src="js/pieces.js?v=91"></script>
+  <script defer src="js/themes.js?v=91"></script>
+  <script defer src="js/sound.js?v=91"></script>
+  <script defer src="js/tutorial.js?v=91"></script>
+  <script defer src="js/ai.js?v=91"></script>
+  <script defer src="js/ladder.js?v=91"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=90"></script>
-  <script defer src="js/net.js?v=90"></script>
-  <script defer src="js/share.js?v=90"></script>
-  <script defer src="js/analysis.js?v=90"></script>
-  <script defer src="js/solver.js?v=90"></script>
-  <script defer src="js/puzzles.js?v=90"></script>
-  <script defer src="js/main.js?v=90"></script>
-  <script defer src="js/ui.js?v=90"></script>
-  <script defer src="js/native.js?v=90"></script>
+  <script defer src="js/matchmaking.js?v=91"></script>
+  <script defer src="js/net.js?v=91"></script>
+  <script defer src="js/share.js?v=91"></script>
+  <script defer src="js/analysis.js?v=91"></script>
+  <script defer src="js/solver.js?v=91"></script>
+  <script defer src="js/puzzles.js?v=91"></script>
+  <script defer src="js/main.js?v=91"></script>
+  <script defer src="js/ui.js?v=91"></script>
+  <script defer src="js/native.js?v=91"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());

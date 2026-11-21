@@ -2178,3 +2178,77 @@ html.native .site-foot { display: none; }
   #profile .prof-form .pf-item:first-child { grid-column: 1 / -1; }
   #profile .pf-item { padding: 9px 11px; }
 }
+
+/* ---- v91 ---- */
+/* home: names only */
+#lobby .mode-card .mode-desc { display: none; }
+body.deco.ink #lobby .mode-card { align-items: center; }
+.welcome-tag { margin-bottom: 18px; }
+/* profile tabs */
+.prof-tabs { display: inline-flex; border: 1px solid var(--rule-strong, var(--line)); border-radius: var(--r-ctl, 10px); overflow: hidden; margin: 0 0 12px; }
+.prof-tabs button { font: inherit; font-size: 13.5px; font-weight: 600; padding: 7px 18px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.prof-tabs button[aria-pressed="true"] { background: var(--ink); color: var(--paper, #fff); }
+#profGames[hidden], #profPuzzles[hidden], .prof-chartcard[hidden] { display: none; }
+.prof-tile-v small { font-size: .55em; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.pz-prog { display: grid; gap: 10px; margin: 4px 0 2px; }
+.pzp-row { display: grid; grid-template-columns: 76px 1fr 58px; align-items: center; gap: 10px; font-size: 13px; }
+.pzp-l { color: var(--muted); } .pzp-n { text-align: right; font-variant-numeric: tabular-nums; }
+.pzp-bar { height: 8px; border-radius: 99px; background: var(--rule, rgba(128,128,128,.25)); overflow: hidden; }
+.pzp-bar i { display: block; height: 100%; border-radius: 99px; background: var(--ink); }
+#pzWld:not(:empty) { margin-top: 16px; }
+.pz-days { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; height: 64px; align-items: end; }
+.pzd { height: 100%; display: flex; align-items: flex-end; border-bottom: 1px solid var(--rule, rgba(128,128,128,.3)); }
+.pzd i { display: block; width: 100%; border-radius: 3px 3px 0 0; background: var(--ink); min-height: 0; }
+.pz-go { margin: 6px auto 0; display: block; }
+#profPuzzles .prof-chartcard { margin-bottom: 12px; }
+/* linked accounts */
+.prof-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.prof-links:empty { display: none; }
+.ext-add, .ext-chip, .ext-input { font: inherit; font-size: 12.5px; border: 1px solid var(--rule-strong, var(--line)); border-radius: 99px; background: transparent; color: var(--muted); }
+.ext-add { padding: 4px 11px; cursor: pointer; border-style: dashed; }
+.ext-add:hover { color: var(--ink); border-color: var(--ink); }
+.ext-chip { display: inline-flex; align-items: center; padding: 0 2px 0 11px; color: var(--ink); }
+.ext-chip a { color: inherit; text-decoration: none; padding: 4px 0; }
+.ext-chip a:hover { text-decoration: underline; }
+.ext-site { color: var(--muted); } .ext-r { font-weight: 600; }
+.ext-x { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 4px 8px; }
+.ext-x:hover { color: var(--ink); }
+.ext-input { padding: 4px 11px; width: 170px; color: var(--ink); outline: none; font-size: 16px; }
+.ext-input:focus { border-color: var(--ink); } .ext-input.bad { border-color: #e5603a; }
+.review-head .review-share { margin-left: auto; }
+/* phone header: one row. Share, Settings, Profile and Feedback live under More in the action bar. */
+@media (max-width: 640px) {
+  header .brand h1 .sub, header #eloChip, header #shareBtn, header #settingsBtn, header #feedbackBtn { display: none !important; }
+  header { flex-wrap: nowrap !important; align-items: center; }
+  header .head-right { flex-wrap: nowrap; }
+  .coach { padding: 10px 12px; gap: 8px; }
+  .coach-text { font-size: 13.5px; line-height: 1.4; margin: 0; }
+}
+/* a review is about the game, not the account: drop the profile header while one is open */
+.profile-inner:has(#profReview.show) .prof-head { display: none; }
+@media (max-width: 640px) {
+  #profile .prof-head { display: grid; grid-template-columns: 44px minmax(0, 1fr); }
+  #profile .prof-auth { grid-column: 1 / -1; }
+  .review-head { flex-wrap: wrap; gap: 8px; }
+}
+/* phones narrower than the action bar's five labels: the bar must shrink, not widen the page */
+@media (max-width: 640px) {
+  body.deco.ink .action-bar { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: calc(100vw - 24px); }
+  .action-bar > button { min-width: 0; padding-left: 2px; padding-right: 2px; }
+  .action-bar > button span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  #pickPieces, #pickBoard { flex-wrap: wrap; }
+  #pickPieces .pick-opt { flex: 1 1 40%; }
+  /* tap targets */
+  .you-nameinput { min-height: 30px; }
+  .prof-edit { padding: 8px 6px; margin: -8px 0; }
+  .ext-add, .ext-chip, .ext-input { min-height: 32px; }
+}
+/* the footer links sat on one unbreakable line and held every phone page 395px wide */
+.site-foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; }
+.site-foot a { margin: 0; }
+main > * { min-width: 0; }
+@media (max-width: 360px) {
+  header #soundBtn { display: none !important; }
+  header .brand h1 { font-size: 17px !important; }
+  header .brand { gap: 6px; min-width: 0; }
+}

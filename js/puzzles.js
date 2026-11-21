@@ -45,7 +45,7 @@
   function attach(h) { host = h; }
 
   // ---- progress (local only; puzzles are practice, not rating) ------------
-  const FRESH = () => ({ solved: {}, streak: 0, best: 0, rating: 1000, rated: {} });
+  const FRESH = () => ({ solved: {}, streak: 0, best: 0, rating: 1000, rated: {}, hist: [] });
   function readProgress() {
     try {
       const p = JSON.parse(localStorage.getItem(KEY)) || FRESH();
@@ -174,6 +174,11 @@
     const delta = Math.round(K_PLAYER * (score - expected));
     pr.rating = Math.max(100, rp + delta);
     pr.rated[p.id] = { score, at: Date.now() };
+    // rating after each rated attempt, for the profile chart: [ms, rating]
+    if (!Array.isArray(pr.hist)) pr.hist = [];
+    if (!pr.hist.length) pr.hist.push([Date.now() - 1, rp]);
+    pr.hist.push([Date.now(), pr.rating]);
+    if (pr.hist.length > 240) pr.hist = pr.hist.slice(-240);
     writeProgress(pr);
     lastSettle = {
       puzzleId: p.id, seed: p.rating || 1000, score, delta,
@@ -350,6 +355,8 @@
       // the account's rating is authoritative once it has one
       rating: remote.rating > 0 ? remote.rating : local.rating,
       rated: Object.assign({}, remote.rated || {}, local.rated || {}),
+      // the longer rating history is the one that has seen more attempts
+      hist: (Array.isArray(remote.hist) && remote.hist.length > ((local.hist || []).length)) ? remote.hist.slice(-240) : (local.hist || []),
     };
     writeProgress(merged);
     return merged;

@@ -165,9 +165,13 @@
     if (p.dob) row.dob = p.dob;
     if (p.chessLevel) row.chess_level = p.chessLevel;
     if (p.puzzles) row.puzzles = p.puzzles;          // solved set + streaks, one jsonb blob
+    // linked chess.com / Lichess usernames (null clears one)
+    const handle = function (v) { return /^[A-Za-z0-9_-]{2,30}$/.test(v || '') ? v : null; };
+    if ('chesscom' in p) row.chesscom = handle(p.chesscom);
+    if ('lichess' in p) row.lichess = handle(p.lichess);
     let { error } = await client.from('profiles').upsert(row);
     if (error && /column|schema/i.test(error.message || '')) {
-      delete row.dob; delete row.chess_level; delete row.puzzles;
+      delete row.dob; delete row.chess_level; delete row.puzzles; delete row.chesscom; delete row.lichess;
       ({ error } = await client.from('profiles').upsert(row));
       if (!error) console.warn('[cloud] profiles table is missing dob/chess_level/puzzles — run the ALTER TABLE in SUPABASE_SETUP.md');
     }
