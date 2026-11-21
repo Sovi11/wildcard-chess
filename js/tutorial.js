@@ -71,7 +71,7 @@
   const STEPS = [
     {
       title: 'This is Hollow Chess',
-      body: 'The pieces play <b>normal chess</b>. But the board is not safe: squares can be picked up and moved, leaving <b>holes</b> behind. The map you start on is not the map you finish on.',
+      body: 'The pieces play <b>normal chess</b>. But squares can be picked up and moved, leaving <b>holes</b> behind.',
       art: mini(4, 3, [
         [0, 0, ''], [1, 0, ''], [2, 0, ''], [3, 0, ''],
         [0, 1, ''], [1, 1, 'hole'], [2, 1, ''], [3, 1, ''],
@@ -80,12 +80,12 @@
     },
     {
       title: 'Every 3rd turn is a board turn',
-      body: 'The rhythm of a game: <span class="tut-seq"><i>W</i><i class="s">B✦</i><i>W</i><i>B</i><i class="s">W✦</i><i>B</i><i>W</i><i class="s">B✦</i></span><br>On a <b>✦ board turn</b> you may move a piece as usual <b>or</b> move a square instead. Black gets the first one (move 1), then White (move 3), then Black again (move 4)… The glowing board edge tells you it is yours.',
+      body: 'The rhythm of a game: <span class="tut-seq"><i>W</i><i class="s">B✦</i><i>W</i><i>B</i><i class="s">W✦</i><i>B</i><i>W</i><i class="s">B✦</i></span><br>On a <b>✦ board turn</b> you move a piece <b>or</b> a square. The glowing board edge means it is yours.',
       art: null,
     },
     {
-      title: 'Click a square to lift it',
-      body: 'On your board turn, <b>click any empty square</b> — it lifts off the world. Then click one of the <b>dashed spots</b> to set it down anywhere <b>edge-adjacent</b> to the board (sharing a side, not just a corner). It leaves a hole where it was. Click the lifted square again to cancel.',
+      title: 'Tap a square to lift it',
+      body: '<b>Tap an empty square</b> to lift it, then a <b>dashed spot</b> to set it down. It leaves a hole where it was.',
       art: liftAnim(4, 3, [
         [0, 0, ''], [1, 0, ''], [2, 0, ''], [3, 0, ''],
         [0, 1, ''], [1, 1, ''], [2, 1, ''], [3, 1, ''],
@@ -94,7 +94,7 @@
     },
     {
       title: 'Holes change everything',
-      body: 'Rooks, bishops and queens <b>cannot cross a hole</b> — tear out one square and a deadly diagonal is gone. <b>Knights jump over holes</b> but must land on real ground. Kings cannot step into the void, and a hole in the castling path denies the castle.',
+      body: 'Rooks, bishops and queens <b>cannot cross a hole</b>. <b>Knights jump over</b> them. Nothing can stand in one.',
       art: mini(5, 1, [
         [0, 0, ''], [1, 0, ''], [2, 0, 'hole'], [3, 0, ''], [4, 0, ''],
       ], [[0, 0, '♜', 'w'], [4, 0, '♚', 'b']],
@@ -102,7 +102,7 @@
     },
     {
       title: 'Win by checkmate — anyway',
-      body: 'Checkmate wins, exactly like chess — except on a board turn you can also <b>escape check by reshaping the world</b> (steal the square your attacker slides through). Pawns promote at the <b>edge of the world</b>: extend the board upward and they must march further. Good luck out there.',
+      body: 'Checkmate wins, as in chess. On a board turn you can also <b>escape check by removing the square</b> the attacker slides through.',
       art: mini(4, 3, [
         [0, 0, ''], [1, 0, ''], [2, 0, ''], [3, 0, ''],
         [0, 1, ''], [1, 1, ''], [2, 1, 'hole'], [3, 1, ''],

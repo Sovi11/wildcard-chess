@@ -2252,3 +2252,13 @@ main > * { min-width: 0; }
   header .brand h1 { font-size: 17px !important; }
   header .brand { gap: 6px; min-width: 0; }
 }
+/* ---- v93 ---- */
+/* the tour card must fit a short phone: picture sized to the screen, card scrolls if it still cannot */
+.tut-inner { max-height: calc(100dvh - 24px); overflow-y: auto; }
+.tut-art { max-width: min(300px, 34dvh); }
+.tut-body { min-height: 0; }
+@media (max-width: 640px) {
+  .tut-inner { padding: 18px 18px 14px; }
+  /* the status lines sat under the action bar */
+  .app { padding-bottom: 96px; }
+}

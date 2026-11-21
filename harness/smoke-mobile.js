@@ -51,6 +51,17 @@ const probe = () => {
     await page.goto(BASE + '/?mob=' + Date.now());
     await page.waitForTimeout(1200);
     await screen('first visit');
+    // the tour: every slide's picture and buttons are on screen without scrolling
+    await page.evaluate(() => document.getElementById('coachTour').click());
+    for (let i = 0; i < 5; i++) {
+      await page.waitForTimeout(350);
+      const t = await page.evaluate(() => { const vh = innerHeight, vw = document.documentElement.clientWidth; const box = (q) => { const e = document.querySelector(q); if (!e || !e.offsetParent) return null; const r = e.getBoundingClientRect(); return { t: Math.round(r.top), b: Math.round(r.bottom), l: Math.round(r.left), r: Math.round(r.right) }; };
+        const art = box('#tutArt'), next = box('.tut-next'); return { vh, vw, art, next, ok: !!next && next.b <= vh && next.r <= vw && (!art || (art.t >= 0 && art.r <= vw && art.l >= 0)) }; });
+      check(dev + ' · tour slide ' + (i + 1) + ': picture and Next button on screen', t.ok, t);
+      if (SHOTS) await page.screenshot({ path: path.join(SHOTS, dev.replace(/\s/g, '') + '-tour' + i + '.png') });
+      await page.evaluate(() => document.querySelector('.tut-next').click());
+    }
+    await page.waitForTimeout(300);
     await page.evaluate(() => { try { localStorage.setItem('hollowchess.first.v1', '1'); } catch (e) {} });
 
     // returning visitor: welcome, menu, each sheet
