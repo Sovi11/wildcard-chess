@@ -3546,6 +3546,7 @@ function paintArena() {
   $('arenaYou').textContent = you ? (ck.live ? 'You: ' : 'You finished ') + ordinal(you.rank) + (ck.live ? ' of ' + b.players : '') + ' with ' + you.pts + (you.pts === 1 ? ' point' : ' points') + '.'
     : (ck.live && !(WCCLOUD.currentUser && WCCLOUD.currentUser()) ? 'Guests show as Guest. Sign in to put your name on the board.' : '');
   $('arenaGo').querySelector('.find-title').textContent = ck.live ? 'Play now' : 'Invite players';
+  paintArenaReg();
 }
 function openArena() {
   if (!arenaEl) return;
@@ -3581,6 +3582,93 @@ function arenaReport(score) {
       note.hidden = false;
     }
   });
+}
+
+// ---- arena registration: a notification one hour before ---------------------------
+// Register once; the server sends a browser notification an hour before every
+// arena (sql/arena-remind.sql, supabase/functions/arena-remind). Where the
+// browser cannot show notifications the player still counts as registered and
+// is pointed at the calendar links, which carry their own one-hour alarm.
+const ARENA_VAPID = 'BHmJDopzqInonCuEKDZ6Zwws0wetRzXTSjh8QLuC-j_eAfuGA8oipu-S_MA6rbN2OBvqfAMw960BtVNHdXigSW0';
+const ARENA_REG_KEY = 'hollowchess.arena.reg.v1';      // '' | 'push' | 'cal'
+let arenaRegBusy = false, arenaRegErr = '';
+function arenaReg() { try { return localStorage.getItem(ARENA_REG_KEY) || ''; } catch (e) { return ''; } }
+function arenaRegSet(v) { try { if (v) localStorage.setItem(ARENA_REG_KEY, v); else localStorage.removeItem(ARENA_REG_KEY); } catch (e) {} }
+function arenaDev() { return !(window.HC && HC.native) && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname); }
+function pushOK() { return !(window.HC && HC.native) && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function b64uBytes(s) {
+  const raw = atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')), out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function swReady() { return Promise.race([navigator.serviceWorker.ready, new Promise(function (res) { setTimeout(function () { res(null); }, 4000); })]); }
+// asks for permission and subscribes; resolves to the subscription as JSON, or null
+function arenaPushSub() {
+  if (!pushOK()) return Promise.resolve(null);
+  return Promise.resolve(Notification.requestPermission()).then(function (perm) {
+    if (perm !== 'granted') return null;
+    return swReady().then(function (reg) {
+      if (!reg) return null;
+      return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uBytes(ARENA_VAPID) }).then(function (s) { return s.toJSON(); });
+    });
+  }).catch(function () { return null; });
+}
+function arenaCalLinks() {
+  const ck = arenaClock(), s = ck.live ? ck.ends - ARENA_LEN + WEEK_MS : ck.starts;
+  const z = function (ms) { return new Date(ms).toISOString().replace(/[-:]|\.\d{3}/g, ''); };
+  const url = SITE_URL() + '#arena', text = 'Hollow Chess Sunday Arena', details = 'One hour of ranked games. Win 2, draw 1, most points wins. ' + url;
+  const g = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(text) + '&dates=' + z(s) + '/' + z(s + ARENA_LEN) +
+    '&details=' + encodeURIComponent(details) + '&recur=' + encodeURIComponent('RRULE:FREQ=WEEKLY');
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Hollow Chess//Arena//EN', 'BEGIN:VEVENT', 'UID:arena@hollowchess.com', 'DTSTAMP:' + z(Date.now()),
+    'DTSTART:' + z(s), 'DTEND:' + z(s + ARENA_LEN), 'RRULE:FREQ=WEEKLY', 'SUMMARY:' + text, 'DESCRIPTION:' + details.replace(/,/g, '\\,'), 'URL:' + url,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Hollow Chess Arena starts in 1 hour', 'TRIGGER:-PT1H', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  return '<a href="' + esc(g) + '" target="_blank" rel="noopener">Google Calendar</a> or <a href="data:text/calendar;charset=utf-8,' + encodeURIComponent(ics) +
+    '" download="hollow-chess-arena.ics">Apple / Outlook</a>';
+}
+function paintArenaReg() {
+  const btn = document.getElementById('arenaReg'), note = document.getElementById('arenaRegNote');
+  if (!btn || !note) return;
+  const b = arenaData;
+  if (b && 'registered' in b && !arenaDev() && !arenaRegBusy) arenaRegSet(b.reg ? (b.reg.push ? 'push' : 'cal') : '');   // the server knows best
+  const st = arenaReg(), n = b && b.registered ? b.registered : 0;
+  btn.hidden = !!st; btn.disabled = arenaRegBusy;
+  btn.textContent = arenaRegBusy ? 'Registering…' : 'Register: remind me 1 hour before';
+  const others = n > 1 ? ' ' + n + ' players are registered.' : '';
+  const off = ' <button type="button" class="arena-off" data-arenaoff="1">Turn off</button>';
+  if (st === 'push') note.innerHTML = '<b>You are registered.</b> A notification arrives 1 hour before each arena.' + others + ' Also add it to ' + arenaCalLinks() + '.' + off;
+  else if (st === 'cal') note.innerHTML = '<b>You are registered.</b> ' +
+    (pushOK() ? 'Notifications are off for this site' : 'This browser cannot show notifications' + (/iPhone|iPad/.test(navigator.userAgent) ? ' (on iPhone, add Hollow Chess to your Home Screen first)' : '')) +
+    ', so add the arena to ' + arenaCalLinks() + '. It reminds you 1 hour before.' + others + off;
+  else note.innerHTML = esc(arenaRegErr) || (n ? n + (n === 1 ? ' player is' : ' players are') + ' registered.' : 'Free. No account needed.');
+}
+function arenaRegister() {
+  if (arenaRegBusy) return;
+  arenaRegBusy = true; arenaRegErr = ''; paintArenaReg();
+  arenaPushSub().then(function (sub) {
+    const done = function (r) {
+      arenaRegBusy = false;
+      if (r === false || (r && !r.registered)) arenaRegErr = 'Could not register. Check your connection and try again.';
+      else {
+        arenaRegSet(sub && (!r || r.push) ? 'push' : 'cal');
+        if (r && arenaData) { arenaData.registered = r.count; arenaData.reg = { push: !!r.push }; }
+        WCSTATS.track('arena_register', { push: !!sub });
+      }
+      paintArenaReg();
+    };
+    if (arenaDev() || !WCCLOUD.arenaRegister) return done(null);          // never from a developer's machine
+    return WCCLOUD.arenaRegister(WCSTATS.device(), sub).then(function (r) { done(r || false); });
+  });
+}
+function arenaUnregister() {
+  arenaRegSet(''); arenaRegErr = '';
+  if (arenaData) { arenaData.reg = null; arenaData.registered = Math.max(0, (arenaData.registered || 1) - 1); }
+  paintArenaReg();
+  if (pushOK()) swReady().then(function (reg) { return reg && reg.pushManager.getSubscription(); }).then(function (s) { if (s) s.unsubscribe(); }).catch(function () {});
+  if (!arenaDev() && WCCLOUD.arenaUnregister) WCCLOUD.arenaUnregister(WCSTATS.device());
+}
+if (arenaEl) {
+  bind('arenaReg', arenaRegister);
+  arenaEl.addEventListener('click', function (e) { if (e.target && e.target.getAttribute && e.target.getAttribute('data-arenaoff')) arenaUnregister(); });
 }
 
 // ---- puzzle challenges -------------------------------------------------------

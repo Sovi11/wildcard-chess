@@ -159,6 +159,23 @@ const probe = () => {
     check(dev + ' · #arena shows the countdown, and standings with Play now while live', /Arena #\d+ starts/.test(ar.before.status) && /Invite/.test(ar.before.go) && /^(in|live)/.test(ar.before.tag) && ar.before.hash === '' &&
       /Arena #4 is live\. 50 min left/.test(ar.live.status) && /Asha/.test(ar.live.rows) && /You/.test(ar.live.rows) && /2nd of 2 with 2 points/.test(ar.live.you) && /Play now/.test(ar.live.go) && /^live · 50 min left$/.test(ar.live.tag), ar);
     await screen('arena live');
+    // registering: no notifications in this browser, so it falls back to the calendar
+    const rg = await page.evaluate(async () => {
+      arenaData = null; arenaRegSet(''); paintArena();
+      const before = { btn: !document.getElementById('arenaReg').hidden, note: document.getElementById('arenaRegNote').innerText };
+      const perm = Notification.requestPermission; Notification.requestPermission = () => Promise.resolve('denied');
+      arenaRegister();
+      await new Promise((r) => setTimeout(r, 300));
+      Notification.requestPermission = perm;
+      const note = document.getElementById('arenaRegNote');
+      const after = { btn: !document.getElementById('arenaReg').hidden, note: note.innerText, state: arenaReg(),
+        g: (note.querySelector('a[href*="calendar.google.com"]') || {}).href || '', ics: decodeURIComponent((note.querySelector('a[download]') || {}).href || '') };
+      note.querySelector('[data-arenaoff]').click();
+      const off = { btn: !document.getElementById('arenaReg').hidden, state: arenaReg() };
+      return { before, after, off };
+    });
+    check(dev + ' · arena registration falls back to calendar links and can be turned off', rg.before.btn && !rg.after.btn && rg.after.state === 'cal' && /You are registered/.test(rg.after.note) &&
+      /dates=\d{8}T143000Z\/\d{8}T153000Z/.test(rg.after.g) && /TRIGGER:-PT1H/.test(rg.after.ics) && /RRULE:FREQ=WEEKLY/.test(rg.after.ics) && rg.off.btn && rg.off.state === '', rg);
     await page.evaluate(() => closeArena());
 
     check(dev + ' · no page errors', !errors.length, errors.slice(0, 4));

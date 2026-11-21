@@ -2,35 +2,36 @@
 // Cache-first for our own static files so the app opens instantly and bot games
 // work offline. Everything cross-origin (Supabase, PeerJS broker, CDNs) is left
 // alone: auth and matchmaking must always hit the network.
+// Also shows the arena reminder when the server pushes one.
 
-const CACHE = 'hollow-chess-v95';
+const CACHE = 'hollow-chess-v96';
 
 const CORE = [
   './',
   './index.html',
-  './styles.css?v=95',
-  './js/platform.js?v=95',
-  './js/config.js?v=95',
-  './js/stats.js?v=95',
-  './js/cloud.js?v=95',
-  './js/postgame-feedback.js?v=95',
-  './js/engine.js?v=95',
-  './js/pieces.js?v=95',
-  './js/themes.js?v=95',
-  './js/sound.js?v=95',
-  './js/tutorial.js?v=95',
-  './js/ai.js?v=95',
-  './js/ladder.js?v=95',
-  './js/matchmaking.js?v=95',
-  './js/net.js?v=95',
-  './js/share.js?v=95',
-  './js/analysis.js?v=95',
-  './js/solver.js?v=95',
-  './js/puzzles.js?v=95',
-  './js/puzzle-data.json?v=95',
-  './js/main.js?v=95',
-  './js/ui.js?v=95',
-  './js/native.js?v=95',
+  './styles.css?v=96',
+  './js/platform.js?v=96',
+  './js/config.js?v=96',
+  './js/stats.js?v=96',
+  './js/cloud.js?v=96',
+  './js/postgame-feedback.js?v=96',
+  './js/engine.js?v=96',
+  './js/pieces.js?v=96',
+  './js/themes.js?v=96',
+  './js/sound.js?v=96',
+  './js/tutorial.js?v=96',
+  './js/ai.js?v=96',
+  './js/ladder.js?v=96',
+  './js/matchmaking.js?v=96',
+  './js/net.js?v=96',
+  './js/share.js?v=96',
+  './js/analysis.js?v=96',
+  './js/solver.js?v=96',
+  './js/puzzles.js?v=96',
+  './js/puzzle-data.json?v=96',
+  './js/main.js?v=96',
+  './js/ui.js?v=96',
+  './js/native.js?v=96',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -80,6 +81,31 @@ self.addEventListener('fetch', (e) => {
         }
         return res;
       });
+    })
+  );
+});
+
+// ---- push: the arena reminder (supabase/functions/arena-remind) ----
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) {}
+  e.waitUntil(self.registration.showNotification(d.title || 'Hollow Chess', {
+    body: d.body || '',
+    icon: './icons/icon-192.png',
+    badge: './icons/favicon-96.png',
+    tag: d.tag || 'hollow-chess',
+    data: { url: d.url || './' },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => 'focus' in c);
+      if (open) return open.focus().then((c) => (c && c.navigate ? c.navigate(url) : null)).catch(() => null);
+      return self.clients.openWindow(url);
     })
   );
 });

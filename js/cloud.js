@@ -333,6 +333,17 @@
     try { const { data, error } = await client.rpc('hc_arena_report', { p_who: who || null, p_score: score }); return error ? null : (data || null); }
     catch (e) { return null; }
   }
+  // register this device for the reminder; sub is a push subscription (or null)
+  async function arenaRegister(who, sub) {
+    if (!client) return null;
+    try { const { data, error } = await client.rpc('hc_arena_register', { p_who: who || null, p_sub: sub || null }); return error ? null : (data || null); }
+    catch (e) { return null; }
+  }
+  async function arenaUnregister(who) {
+    if (!client) return null;
+    try { const { data, error } = await client.rpc('hc_arena_unregister', { p_who: who || null }); return error ? null : (data || null); }
+    catch (e) { return null; }
+  }
 
   // ---- feedback ------------------------------------------------------------
   // Insert-only, no account required. Context (version, screen, signed-in) is
@@ -370,7 +381,7 @@
     signOut, deleteAccount, currentUser, onChange,
     loadProfile, saveProfile, leaderboard,
     joinQueue, leaveQueue, findWaiting,
-    puzzleRatings, recordPuzzleAttempt, shareGame, sharedGame, dailyStats, dailySolve, arenaBoard, arenaReport,
+    puzzleRatings, recordPuzzleAttempt, shareGame, sharedGame, dailyStats, dailySolve, arenaBoard, arenaReport, arenaRegister, arenaUnregister,
     saveGame, loadGames,
   };
 })();

@@ -2292,3 +2292,12 @@ main > * { min-width: 0; }
 .arena-note { display: block; font-size: 12.5px; font-weight: 700; color: var(--accent-text, var(--accent)); margin: 4px 0 2px; }
 .arena-note[hidden] { display: none; }
 .arena-sheet .lobby-sub { margin-bottom: 14px; }
+
+/* ---- v96: arena registration and the reminder ---- */
+.arena-sheet .arena-reg { width: 100%; margin-bottom: 8px; }
+.arena-reg[hidden] { display: none; }
+.arena-regnote { font-size: 12.5px; line-height: 1.55; color: var(--muted); margin: 0 0 12px; }
+.arena-regnote b { color: var(--ink); }
+.arena-regnote a { color: var(--accent-text, var(--accent)); }
+.arena-off { background: none; border: 0; padding: 0; font: inherit; color: var(--muted); text-decoration: underline; cursor: pointer; }
+.arena-off:hover { color: var(--ink); }
