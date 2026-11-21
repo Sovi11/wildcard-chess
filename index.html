@@ -34,7 +34,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" /></noscript>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=93" />
+  <link rel="stylesheet" href="styles.css?v=94" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -130,9 +130,14 @@
           <span class="mode-name">2 players, one screen</span>
           <span class="mode-desc">Offline hotseat. Pass the mouse.</span>
         </button>
+        <button class="mode-card mode-wide mode-daily" data-lobbymode="daily">
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/><path d="M9 15l2.2 2.2L15.5 13"/></svg></span>
+          <span class="mode-name">Daily puzzle <span id="dailyTag" class="lb-tag">today</span></span>
+          <span class="mode-desc" id="dailyDesc">Same puzzle for everyone.</span>
+        </button>
         <button class="mode-card mode-wide" data-lobbymode="puzzles">
           <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.2"/><rect x="13" y="13" width="7" height="7" rx="1.2"/><path d="M15 4.5h4.5V9M9 19.5H4.5V15" /></svg></span>
-          <span class="mode-name">Puzzles <span id="puzzleCountTag" class="lb-tag">new</span></span>
+          <span class="mode-name">Puzzles</span>
           <span class="mode-desc">Forced mates where the terrain is the answer. One solution, proved.</span>
         </button>
       </div>
@@ -562,6 +567,7 @@
           <div id="pzPhase" class="pz-phase"></div>
           <div id="pzTags" class="pz-tags"></div>
           <div id="pzMsg" class="pz-msg">&nbsp;</div>
+          <div id="pzDaily" class="pz-daily" hidden></div>
           <div class="pz-actions">
             <button id="pzHint" class="act-btn">Hint</button>
             <button id="pzRetry" class="act-btn">↻ Retry</button>
@@ -664,29 +670,29 @@
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=93"></script>
+  <script defer src="js/platform.js?v=94"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=93"></script>
-  <script defer src="js/stats.js?v=93"></script>
-  <script defer src="js/cloud.js?v=93"></script>
-  <script defer src="js/postgame-feedback.js?v=93"></script>
-  <script defer src="js/engine.js?v=93"></script>
-  <script defer src="js/pieces.js?v=93"></script>
-  <script defer src="js/themes.js?v=93"></script>
-  <script defer src="js/sound.js?v=93"></script>
-  <script defer src="js/tutorial.js?v=93"></script>
-  <script defer src="js/ai.js?v=93"></script>
-  <script defer src="js/ladder.js?v=93"></script>
+  <script defer src="js/config.js?v=94"></script>
+  <script defer src="js/stats.js?v=94"></script>
+  <script defer src="js/cloud.js?v=94"></script>
+  <script defer src="js/postgame-feedback.js?v=94"></script>
+  <script defer src="js/engine.js?v=94"></script>
+  <script defer src="js/pieces.js?v=94"></script>
+  <script defer src="js/themes.js?v=94"></script>
+  <script defer src="js/sound.js?v=94"></script>
+  <script defer src="js/tutorial.js?v=94"></script>
+  <script defer src="js/ai.js?v=94"></script>
+  <script defer src="js/ladder.js?v=94"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=93"></script>
-  <script defer src="js/net.js?v=93"></script>
-  <script defer src="js/share.js?v=93"></script>
-  <script defer src="js/analysis.js?v=93"></script>
-  <script defer src="js/solver.js?v=93"></script>
-  <script defer src="js/puzzles.js?v=93"></script>
-  <script defer src="js/main.js?v=93"></script>
-  <script defer src="js/ui.js?v=93"></script>
-  <script defer src="js/native.js?v=93"></script>
+  <script defer src="js/matchmaking.js?v=94"></script>
+  <script defer src="js/net.js?v=94"></script>
+  <script defer src="js/share.js?v=94"></script>
+  <script defer src="js/analysis.js?v=94"></script>
+  <script defer src="js/solver.js?v=94"></script>
+  <script defer src="js/puzzles.js?v=94"></script>
+  <script defer src="js/main.js?v=94"></script>
+  <script defer src="js/ui.js?v=94"></script>
+  <script defer src="js/native.js?v=94"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());

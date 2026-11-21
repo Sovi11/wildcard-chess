@@ -308,6 +308,20 @@
     catch (e) { return null; }
   }
 
+  // ---- daily puzzle ------------------------------------------------------
+  // Counts for today's puzzle (and your own solve, if any). `who` is the
+  // anonymous device id; signed in, the server uses the account instead.
+  async function dailyStats(who) {
+    if (!client) return null;
+    try { const { data, error } = await client.rpc('hc_daily_stats', { p_who: who || null }); return error ? null : (data || null); }
+    catch (e) { return null; }
+  }
+  async function dailySolve(who, ms, clean) {
+    if (!client) return null;
+    try { const { data, error } = await client.rpc('hc_daily_solve', { p_who: who || null, p_ms: Math.round(ms), p_clean: !!clean }); return error ? null : (data || null); }
+    catch (e) { return null; }
+  }
+
   // ---- feedback ------------------------------------------------------------
   // Insert-only, no account required. Context (version, screen, signed-in) is
   // attached automatically so a bug report is actionable without interrogating
@@ -344,7 +358,7 @@
     signOut, deleteAccount, currentUser, onChange,
     loadProfile, saveProfile, leaderboard,
     joinQueue, leaveQueue, findWaiting,
-    puzzleRatings, recordPuzzleAttempt, shareGame, sharedGame,
+    puzzleRatings, recordPuzzleAttempt, shareGame, sharedGame, dailyStats, dailySolve,
     saveGame, loadGames,
   };
 })();

@@ -1170,6 +1170,7 @@ function renderLobby() {
 
 function openLobby() {
   renderLobby(); renderLeaderboard(); resetQueueUI(); lobbyEl.classList.add('show'); updateAmbient();
+  paintDailyCard(); dailyFetch();
   if (pendingOnboard) { const r = pendingOnboard; pendingOnboard = null; maybeOnboard(r); }
 }
 
@@ -2291,6 +2292,7 @@ function leavePuzzleMode() {
   if (pzReplyTimer) { clearTimeout(pzReplyTimer); pzReplyTimer = null; }
   pzReplyPending = false;
   WCPUZZLE.exit();
+  dailyStop();
   document.body.classList.remove('puzzle-mode', 'puzzle-solved');
   hintMove = null;
 }
@@ -2365,6 +2367,7 @@ document.querySelectorAll('.mode-card').forEach(function (el) {
     if (!leaveLiveGame()) return;
     if (kind === 'online') { hostRoom(); return; }
     if (kind === 'puzzles') { startPuzzles(); return; }
+    if (kind === 'daily') { openDaily(); return; }
     startCasual(kind);
   });
 });
@@ -3093,6 +3096,7 @@ window.addEventListener('hashchange', () => {
     if (room) { openLobby(); joinRoom(room); return; }
   } catch (e) {}
   { const pid = puzzleIdFromHash(); if (pid) { if (leaveLiveGame()) openPuzzleById(pid); return; } }
+  if (dailyFromHash()) { if (leaveLiveGame()) openDaily(); return; }
   { const ra = replayFromHash(); if (ra) { openSharedGame(ra); return; } }
   { const sid = shortIdFromHash(); if (sid) { openShortGame(sid); return; } }
   try {
@@ -3252,7 +3256,8 @@ function paintPuzzle() {
   const st = WCPUZZLE.state();
   if (!st) return;
   const p = WCPUZZLE.current();
-  pzEl.count.textContent = 'Puzzle ' + (st.index + 1) + ' of ' + st.total + ' · rated ' + st.puzzleRating;
+  pzEl.count.textContent = dailyOn ? 'Daily #' + dailyDay + ' · rated ' + st.puzzleRating
+    : 'Puzzle ' + (st.index + 1) + ' of ' + st.total + ' · rated ' + st.puzzleRating;
   const side = p.turn === 'white' ? 'White' : 'Black';
   pzEl.goal.textContent = side + ' to play. Mate in ' + st.mateIn + '.';
   // Themes are shown AFTER the solve. Before it, "the key move is a board
@@ -3279,6 +3284,7 @@ function paintPuzzle() {
   pzEl.hint.disabled = !!st.finished;
   paintPhase();
   paintSession();
+  paintDaily();
 }
 
 let pzReplyTimer = null, pzReplyPending = false;
@@ -3322,6 +3328,7 @@ function loadPuzzle(starter) {
   if (pzReplyTimer) { clearTimeout(pzReplyTimer); pzReplyTimer = null; }
   pzReplyPending = false;
   clearTimeout(pzAdvance); clearTimeout(wrongTimer);
+  dailyStop();                             // any other puzzle is not the daily; openDaily() turns it back on
   document.body.classList.remove('pz-wrong');
   wrongCell = null;
   pzHintLevel = 0;
@@ -3352,6 +3359,133 @@ async function startPuzzles() {
   loadPuzzle(function () { return WCPUZZLE.nextUnsolved(); });
   // live ratings arrive after first paint; seeds cover the gap
   if (WCCLOUD.enabled()) WCCLOUD.puzzleRatings().then(function (m) { WCPUZZLE.setPuzzleRatings(m); if (puzzleMode) paintPuzzle(); });
+}
+
+// ---- the daily puzzle --------------------------------------------------------
+// One puzzle a day, the same for everyone, rolling over at 00:00 UTC. It has
+// its own address (hollowchess.com/#daily), a clock, and a count of everyone
+// who solved it today. Your first solve of the day is the one that counts.
+const DAILY_KEY = 'hollowchess.daily.v1', DAILY_EPOCH = Date.UTC(2026, 10, 21), DAY_MS = 86400000;
+let dailyOn = false, dailyDay = 0, dailyStats = null, dailyTick = null, dailyFetched = 0;
+const pzDailyEl = document.getElementById('pzDaily');
+function dailyNo() { return Math.floor((Date.now() - DAILY_EPOCH) / DAY_MS) + 1; }
+function dailyFromHash() { return /[#&]daily(?:&|$)/.test(location.hash || ''); }
+function dailyRead() {
+  try { const d = JSON.parse(localStorage.getItem(DAILY_KEY)); return d && d.days ? d : { days: {} }; } catch (e) { return { days: {} }; }
+}
+function dailyWrite(d) { try { localStorage.setItem(DAILY_KEY, JSON.stringify(d)); } catch (e) {} }
+function dailyStreak(d) {                 // solved days in a row, ending today or yesterday
+  let n = 0, day = dailyNo();
+  if (!(d.days[day] && d.days[day].ms)) day--;
+  while (d.days[day] && d.days[day].ms) { n++; day--; }
+  return n;
+}
+function fmtDur(ms) { const t = Math.max(0, Math.round(ms / 1000)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
+function dailyNextIn() {
+  const left = DAY_MS - ((Date.now() - DAILY_EPOCH) % DAY_MS), h = Math.floor(left / 3600000), m = Math.floor((left % 3600000) / 60000);
+  return h ? h + 'h ' + m + 'm' : Math.max(1, m) + 'm';
+}
+function dailyStop() { dailyOn = false; if (dailyTick) { clearInterval(dailyTick); dailyTick = null; } if (pzDailyEl) pzDailyEl.hidden = true; }
+function dailyToday() { return dailyStats && dailyStats.day === dailyNo() ? dailyStats : null; }
+function dailyFetch(force) {
+  if (!WCCLOUD.dailyStats || (!force && Date.now() - dailyFetched < 60000)) return;
+  dailyFetched = Date.now();
+  WCCLOUD.dailyStats(WCSTATS.device()).then(function (st) {
+    if (!st) return;
+    dailyStats = st; paintDailyCard(); paintDaily();
+  });
+}
+const people = function (n) { return n === 1 ? '1 person' : n + ' people'; };
+function paintDailyCard() {
+  const tag = document.getElementById('dailyTag'), desc = document.getElementById('dailyDesc');
+  if (!tag || !desc) return;
+  const no = dailyNo(), rec = dailyRead().days[no], st = dailyToday();
+  // the lobby shows only the name and this tag, so the tag carries the news
+  tag.textContent = rec && rec.ms ? 'solved in ' + fmtDur(rec.ms) : (st && st.solved ? st.solved + ' solved today' : 'new today');
+  const crowd = st && st.solved ? people(st.solved) + ' solved it today' : '';
+  desc.textContent = rec && rec.ms ? 'Solved in ' + fmtDur(rec.ms) + (crowd ? ' · ' + crowd : '') + ' · next in ' + dailyNextIn()
+    : 'Same puzzle for everyone' + (crowd ? ' · ' + crowd : '. Be the first today.');
+}
+function paintDaily() {
+  if (!pzDailyEl) return;
+  if (!dailyOn) { pzDailyEl.hidden = true; return; }
+  const d = dailyRead(), rec = d.days[dailyDay] || {}, st = dailyToday();
+  let h = '';
+  if (!rec.ms) {
+    h = '<div class="pzd-clock" id="pzdClock">' + fmtDur(Date.now() - (rec.start || Date.now())) + '</div>' +
+        '<div class="pzd-line">' + (st && st.solved ? people(st.solved) + ' solved it today.' : 'Nobody has solved it yet today.') + '</div>';
+  } else {
+    const streak = dailyStreak(d);
+    h = '<div class="pzd-clock done">' + fmtDur(rec.ms) + '</div>' +
+        '<div class="pzd-line"><b>' + (rec.clean ? 'Solved first try' : 'Solved') + '</b>' + (streak > 1 ? ' · ' + streak + ' days in a row' : '') + '</div>';
+    if (st && st.solved) {
+      const bits = [people(st.solved) + ' solved it today'];
+      if (st.solved > 1) bits.push(Math.round(100 * st.clean / st.solved) + '% first try');
+      if (st.solved > 2 && st.median_ms) bits.push('typical time ' + fmtDur(st.median_ms));
+      h += '<div class="pzd-line">' + bits.join(' · ') + '</div>';
+      if (st.you && st.solved > 1) h += '<div class="pzd-line">You were <b>' + ordinal(st.you.rank) + '</b> fastest of ' + st.solved + '.</div>';
+      if (st.fastest && st.fastest.length > 1) h += '<div class="pzd-fast"><div class="pz-sess-label">Fastest first-try solves</div>' +
+        st.fastest.map(function (f, i) { return '<div class="pzd-row"><span>' + (i + 1) + '. ' + esc(f.name) + '</span><span>' + fmtDur(f.ms) + '</span></div>'; }).join('') + '</div>';
+    }
+    h += '<div class="pzd-btns"><button class="act-btn primary" id="pzdShare" type="button">Share result</button>' +
+         '<button class="act-btn" id="pzdMore" type="button">More puzzles</button></div>' +
+         '<div class="pzd-line pzd-next">Next daily in ' + dailyNextIn() + '</div>';
+  }
+  pzDailyEl.innerHTML = h;
+  pzDailyEl.hidden = false;
+}
+function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+if (pzDailyEl) pzDailyEl.addEventListener('click', function (e) {
+  if (e.target.closest('#pzdShare')) shareDaily();
+  else if (e.target.closest('#pzdMore')) loadPuzzle(function () { return WCPUZZLE.nextUnsolved(); });
+});
+async function openDaily() {
+  closeWelcome();
+  try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {}     // arriving for the daily is not a "first game" visit
+  await startPuzzles();
+  if (dailyFromHash()) history.replaceState(null, '', location.pathname + location.search);
+  if (!puzzleMode) return;
+  const no = dailyNo(), id = WCPUZZLE.dailyId(no);
+  if (!id) return;
+  loadPuzzle(function () { return WCPUZZLE.startById(id); });
+  dailyOn = true; dailyDay = no;
+  const d = dailyRead(), rec = d.days[no] || (d.days[no] = {});
+  if (!rec.start) { rec.start = Date.now(); dailyWrite(d); }
+  const p = WCPUZZLE.current();
+  pzSay(rec.ms ? 'You solved today’s already. Play it again if you like; your first time stands.'
+    : 'Today’s puzzle, the same for everyone. ' + (p && p.mateIn === 1 ? 'Find the mate.' : 'Find the forced mate.') +
+      (game.canWildcard() ? ' You may move a square of the board this turn.' : ''));
+  if (!rec.ms) {
+    WCSTATS.track('daily_start', { day: no });
+    dailyTick = setInterval(function () {
+      const el = document.getElementById('pzdClock'), r = dailyRead().days[dailyDay] || {};
+      if (el && !r.ms) el.textContent = fmtDur(Date.now() - (r.start || Date.now()));
+    }, 1000);
+  }
+  paintPuzzle();
+  dailyFetch(true);
+}
+function dailySolved(clean) {
+  const d = dailyRead(), rec = d.days[dailyDay] || (d.days[dailyDay] = { start: Date.now() });
+  if (rec.ms) return;                               // a replay; the first solve stands
+  rec.ms = Math.max(1000, Date.now() - rec.start); rec.clean = !!clean;
+  Object.keys(d.days).forEach(function (k) { if (+k < dailyDay - 90) delete d.days[k]; });
+  dailyWrite(d);
+  if (dailyTick) { clearInterval(dailyTick); dailyTick = null; }
+  WCSTATS.track('daily_solved', { day: dailyDay, clean: !!clean, s: Math.round(rec.ms / 1000) });
+  // a solve on a developer's machine must not land in the real count
+  const dev = !(window.HC && HC.native) && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  if (WCCLOUD.dailySolve && !dev) WCCLOUD.dailySolve(WCSTATS.device(), rec.ms, clean).then(function (st) {
+    if (st) { dailyStats = st; dailyFetched = Date.now(); paintDaily(); paintDailyCard(); }
+  });
+}
+function shareDaily() {
+  const no = dailyOn ? dailyDay : dailyNo(), rec = dailyRead().days[no] || {}, p = WCPUZZLE.current();
+  const what = 'mate in ' + (p ? p.mateIn : 2) + ', and the board itself can move.';
+  openShare('daily', 'Share the daily puzzle',
+    rec.ms ? 'Hollow Chess Daily #' + no + ': solved ' + (rec.clean ? 'first try ' : '') + 'in ' + fmtDur(rec.ms) + '. It is ' + what + ' Beat my time:'
+           : 'Hollow Chess Daily #' + no + ': ' + what + ' Everyone gets the same puzzle today:',
+    SITE_URL() + '#daily');
 }
 
 // ---- puzzle challenges -------------------------------------------------------
@@ -3531,6 +3665,7 @@ bind('bannerShareBtn', function () {
 function sharePuzzle() {
   const p = WCPUZZLE.current();
   if (!p) return;
+  if (dailyOn) { shareDaily(); return; }
   const st = WCPUZZLE.state ? WCPUZZLE.state() : null;
   const solved = !!(st && st.finished && !st.failed);
   openShare('puzzle', 'Challenge a friend',
@@ -3619,7 +3754,8 @@ function puzzleSubmit(gm) {
     pzLog(before && before.id, true, !(before && before.failed));
     // straight on to the next one — a run should not stall waiting on a button
     clearTimeout(pzAdvance);
-    pzAdvance = setTimeout(function () {
+    if (dailyOn) dailySolved(!(before && (before.failed || before.hinted)));   // the daily stays up: its result is the point
+    else pzAdvance = setTimeout(function () {
       if (puzzleMode) loadPuzzle(function () { return WCPUZZLE.nextUnsolved(); });
     }, 1600);
     pzSay(before && before.failed ? 'Solved.' : 'Solved, first try.', 'done');
@@ -3865,7 +4001,8 @@ const bootRoom = (typeof WCNET !== 'undefined' && WCNET.roomFromLocation) ? WCNE
 const bootPuzzle = puzzleIdFromHash();
 const bootReplay = replayFromHash();
 const bootShort = shortIdFromHash();
-if (!bootRoom && !bootedFromLink && !bootPuzzle && !bootReplay && !bootShort && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
+const bootDaily = dailyFromHash();
+if (!bootRoom && !bootedFromLink && !bootPuzzle && !bootReplay && !bootShort && !bootDaily && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
 if (resumedGame) {
   closeWelcome();            // straight back to the board you were on
   updateAmbient();
@@ -3878,6 +4015,8 @@ if (resumedGame) {
   openSharedGame(bootReplay);
 } else if (bootShort) {
   openShortGame(bootShort);
+} else if (bootDaily) {
+  openDaily();
 } else if (!bootedFromLink && !bootPuzzle) {
   // the welcome screen owns the first paint; enterSite() opens the lobby after
   const w = document.getElementById('welcome');

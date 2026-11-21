@@ -121,6 +121,27 @@ const probe = () => {
     await page.waitForTimeout(900);
     await screen('puzzle');
 
+    // the daily: its own link, a clock, a result that stays up, a share text with the time
+    await page.goto(BASE + '/?mob4=' + Date.now() + '#daily');
+    await page.waitForFunction(() => typeof dailyOn !== 'undefined' && dailyOn && WCPUZZLE.current(), null, { timeout: 15000 });
+    await screen('daily puzzle');
+    const dly = await page.evaluate(async () => {
+      const id = WCPUZZLE.current().id, want = WCPUZZLE.dailyId(dailyNo()), label = document.getElementById('pzCount').textContent;
+      for (let i = 0; i < 4 && !WCPUZZLE.state().finished; i++) { const a = WCPUZZLE.expected(); WCPUZZLE.playReply(a); done(a); await new Promise((r) => setTimeout(r, 700)); }
+      await new Promise((r) => setTimeout(r, 1900));           // an ordinary puzzle would have moved on by now
+      document.getElementById('pzdShare').click();
+      const out = { id, want, label, still: WCPUZZLE.current().id, on: dailyOn, box: document.getElementById('pzDaily').innerText,
+        text: document.getElementById('shareText').textContent, url: document.getElementById('shareUrl').value, hash: location.hash };
+      document.getElementById('shareClose').click();
+      return out;
+    });
+    check(dev + ' · #daily opens today\'s puzzle and its result stays up with a share text', dly.id === dly.want && dly.still === dly.id && dly.on && /^Daily #\d+/.test(dly.label) &&
+      /Solved first try/.test(dly.box) && /Daily #\d+: solved first try in \d+:\d\d/.test(dly.text) && /#daily$/.test(dly.url) && dly.hash === '', dly);
+    await screen('daily solved');
+    await page.evaluate(() => exitPuzzles());
+    const card = await page.evaluate(() => document.getElementById('dailyTag').textContent);
+    check(dev + ' · the lobby card says the daily is solved', /^solved in \d+:\d\d$/.test(card), card);
+
     check(dev + ' · no page errors', !errors.length, errors.slice(0, 4));
     await ctx.close();
   }

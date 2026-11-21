@@ -41,6 +41,7 @@
   let startedAt = 0;
   let lastSettle = null;        // the rating game this attempt produced, if any
   let cloudRatings = {};        // puzzle id -> live rating from the server
+  let dailyOrder = [];          // puzzle ids in the order the daily hands them out
 
   function attach(h) { host = h; }
 
@@ -63,6 +64,7 @@
     if (!res.ok) throw new Error('puzzle set not found (' + res.status + ')');
     const j = await res.json();
     all = order((j.puzzles || []).slice());
+    dailyOrder = (j.dailyOrder || []).filter((id) => all.some((p) => p.id === id));
     return all;
   }
 
@@ -97,6 +99,12 @@
   }
 
   const list = () => all;
+  // Daily #n (1-based). The order is a fixed list in the data file that only ever
+  // grows at the end, so adding puzzles never changes a day that has been played.
+  function dailyId(n) {
+    const ids = dailyOrder.length ? dailyOrder : all.map((p) => p.id).sort();
+    return ids.length ? ids[(((n - 1) % ids.length) + ids.length) % ids.length] : null;
+  }
   const count = () => all.length;
   const current = () => (idx >= 0 && idx < all.length ? all[idx] : null);
   const active = () => idx >= 0 && !!host;
@@ -390,7 +398,7 @@
   }
 
   window.WCPUZZLE = {
-    attach, load, list, count, start, startById, next, nextUnsolved,
+    attach, load, list, count, start, startById, next, nextUnsolved, dailyId,
     current, active, expected, submit, playReply, hint, state, progress, mergeProgress, exit, resetProgress,
     rating, setRating, ratingOf, setPuzzleRatings, setPuzzleRating,
     actionText, sameAction, retry: function () { const p = current(); if (p) { step = 0; failed = true; finished = false; hinted = false; place(p); } },
