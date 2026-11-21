@@ -2030,7 +2030,7 @@ WCCLOUD.onChange(function (u) {
 // The welcome screen must be there the instant the page paints — cloud init is
 // an await away, so decide synchronously from supabase-js's cached session in
 // localStorage. bootCloud corrects the guess if it was wrong.
-const bootOnInvite = /[#&](room|g|puzzle|replay)=/.test(location.hash || '');
+const bootOnInvite = /[#&](room|g|puzzle|replay|r)=/.test(location.hash || '');
 function hasCachedSession() {
   try {
     return Object.keys(localStorage).some(function (k) {
@@ -3094,6 +3094,7 @@ window.addEventListener('hashchange', () => {
   } catch (e) {}
   { const pid = puzzleIdFromHash(); if (pid) { if (leaveLiveGame()) openPuzzleById(pid); return; } }
   { const ra = replayFromHash(); if (ra) { openSharedGame(ra); return; } }
+  { const sid = shortIdFromHash(); if (sid) { openShortGame(sid); return; } }
   try {
     if (!WCSHARE.fromLocation(game)) return;
     leavePuzzleMode();
@@ -3417,6 +3418,20 @@ function replayFromHash() {
   const m = /[#&]replay=([\w-]+)/.exec(location.hash || '');
   return m && m[1].length <= 3200 ? decodeActs(m[1]) : null;
 }
+// the short form: #r=<id>, the game itself is looked up on the server
+function shortIdFromHash() {
+  const m = /[#&]r=([\w-]{6,12})(?:&|$)/.exec(location.hash || '');
+  return m ? m[1] : null;
+}
+async function openShortGame(id) {
+  closeWelcome();
+  try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {}
+  const code = WCCLOUD.sharedGame ? await WCCLOUD.sharedGame(id) : null;
+  const acts = code ? decodeActs(code) : null;
+  if (acts) { openSharedGame(acts); return; }
+  history.replaceState(null, '', location.pathname + location.search);
+  openLobby();                       // link not found (or offline): land on the menu, not a blank page
+}
 function openSharedGame(acts) {
   closeWelcome();
   try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {}     // a shared game is not a "first game" visit
@@ -3462,6 +3477,16 @@ function openShare(what, title, text, url) {
   if (more) more.hidden = !navigator.share;
   const cp = document.getElementById('shareCopy'); if (cp) cp.textContent = 'Copy link';
   shareEl.classList.add('show');
+  // a game link is long; swap in the short one as soon as the server hands it back
+  const at = url.indexOf('#replay=');
+  if (at >= 0 && WCCLOUD.shareGame) WCCLOUD.shareGame(url.slice(at + 8)).then(function (id) {
+    if (!id || shareCtx.url !== url) return;
+    const short = url.slice(0, at) + '#r=' + id;
+    shareCtx.url = short;
+    document.getElementById('shareUrl').value = short;
+    const l2 = shareLinks(text, short);
+    shareEl.querySelectorAll('a.share-opt').forEach(function (a) { a.href = l2[a.dataset.net]; });
+  });
 }
 function closeShare() { if (shareEl) shareEl.classList.remove('show'); }
 if (shareEl) {
@@ -3839,7 +3864,8 @@ bind('coachMenu', function () { openLobby(); });
 const bootRoom = (typeof WCNET !== 'undefined' && WCNET.roomFromLocation) ? WCNET.roomFromLocation() : null;
 const bootPuzzle = puzzleIdFromHash();
 const bootReplay = replayFromHash();
-if (!bootRoom && !bootedFromLink && !bootPuzzle && !bootReplay && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
+const bootShort = shortIdFromHash();
+if (!bootRoom && !bootedFromLink && !bootPuzzle && !bootReplay && !bootShort && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
 if (resumedGame) {
   closeWelcome();            // straight back to the board you were on
   updateAmbient();
@@ -3850,6 +3876,8 @@ if (resumedGame) {
   openPuzzleById(bootPuzzle);
 } else if (bootReplay) {
   openSharedGame(bootReplay);
+} else if (bootShort) {
+  openShortGame(bootShort);
 } else if (!bootedFromLink && !bootPuzzle) {
   // the welcome screen owns the first paint; enterSite() opens the lobby after
   const w = document.getElementById('welcome');

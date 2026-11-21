@@ -81,7 +81,9 @@ const probe = () => {
       document.getElementById('shareBtn').click();
       return { n: gameActs.length, url: document.getElementById('shareUrl').value, title: document.getElementById('shareTitle').textContent };
     });
-    check(dev + ' · share during a game hands out a link to that game', link.n === 4 && /#replay=\w{20}$/.test(link.url) && /game/i.test(link.title), link);
+    await page.waitForTimeout(2500);
+    link.url = await page.evaluate(() => document.getElementById('shareUrl').value);
+    check(dev + ' · share during a game hands out a short link to that game', link.n === 4 && /#r=[\w-]{8}$/.test(link.url) && /game/i.test(link.title), link);
     await screen('share sheet');
     await page.evaluate(() => document.getElementById('shareClose').click());
 
@@ -89,7 +91,7 @@ const probe = () => {
     const p2 = await ctx.newPage();
     p2.on('pageerror', (e) => errors.push(e.message));
     await p2.goto(BASE + '/?mob3=' + Date.now() + link.url.slice(link.url.indexOf('#')));
-    await p2.waitForTimeout(1500);
+    await p2.waitForTimeout(3000);
     const rep = await p2.evaluate(() => ({ review: document.getElementById('profReview').classList.contains('show'),
       moves: document.querySelectorAll('#revLog .logline').length, title: document.getElementById('reviewTitle').textContent,
       welcome: document.getElementById('welcome').classList.contains('show'), hash: location.hash }));

@@ -293,6 +293,21 @@
     return data || null;
   }
 
+  // ---- short game links ------------------------------------------------------
+  // A game link carries the whole game, which makes it long. The server keeps the
+  // code under an 8-character id (derived from the code, so the same game always
+  // gets the same link). No account needed. See sql/shared-games.sql.
+  async function shareGame(code) {
+    if (!client) return null;
+    try { const { data, error } = await client.rpc('hc_share_game', { p_code: code }); return error ? null : (data || null); }
+    catch (e) { return null; }
+  }
+  async function sharedGame(id) {
+    if (!client) return null;
+    try { const { data, error } = await client.rpc('hc_shared_game', { p_id: id }); return error ? null : (data || null); }
+    catch (e) { return null; }
+  }
+
   // ---- feedback ------------------------------------------------------------
   // Insert-only, no account required. Context (version, screen, signed-in) is
   // attached automatically so a bug report is actionable without interrogating
@@ -329,7 +344,7 @@
     signOut, deleteAccount, currentUser, onChange,
     loadProfile, saveProfile, leaderboard,
     joinQueue, leaveQueue, findWaiting,
-    puzzleRatings, recordPuzzleAttempt,
+    puzzleRatings, recordPuzzleAttempt, shareGame, sharedGame,
     saveGame, loadGames,
   };
 })();
