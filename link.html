@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Linking Lichess · Hollow Chess</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<style>html,body{height:100%;margin:0}body{background:#0b0c0e;color:#f1efe9;font:16px/1.4 system-ui,sans-serif;display:grid;place-items:center}</style>
+</head>
+<body>
+<p>Linking your Lichess account…</p>
+<script>
+// Lichess sends the player back here after they approve. The page asks Lichess
+// who they are, hands the username to the main page through localStorage, gives
+// the token straight back, and leaves. No scope is requested and nothing is kept.
+(async function () {
+  var out = { at: Date.now() };
+  try {
+    var q = new URLSearchParams(location.search);
+    var st = JSON.parse(sessionStorage.getItem('hollowchess.lichess.pkce') || 'null');
+    sessionStorage.removeItem('hollowchess.lichess.pkce');
+    if (st && q.get('code') && q.get('state') === st.s) {
+      var r = await fetch('https://lichess.org/api/token', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ grant_type: 'authorization_code', code: q.get('code'), code_verifier: st.v,
+                                    redirect_uri: location.origin + '/link.html', client_id: 'hollowchess.com' })
+      });
+      var t = await r.json();
+      if (t && t.access_token) {
+        var a = await (await fetch('https://lichess.org/api/account', { headers: { Authorization: 'Bearer ' + t.access_token } })).json();
+        if (a && a.username) out.user = String(a.username);
+        fetch('https://lichess.org/api/token', { method: 'DELETE', headers: { Authorization: 'Bearer ' + t.access_token }, keepalive: true }).catch(function () {});
+      }
+    }
+  } catch (e) {}
+  try { localStorage.setItem('hollowchess.extlink.v1', JSON.stringify(out)); } catch (e) {}
+  location.replace('/');
+})();
+</script>
+</body>
+</html>

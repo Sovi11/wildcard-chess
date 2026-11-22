@@ -2594,6 +2594,42 @@ function paintExtLinks() {
     const add = e.target.closest('.ext-add'), un = e.target.closest('.ext-x');
     if (un) { setLink(un.dataset.unlink, ''); return; }
     if (!add) return;
+    if (add.dataset.site === 'lichess' && lichessConnect()) return;
+    manual(add);
+  });
+  // Lichess can simply be asked who you are (OAuth with no scope: it only says
+  // your username). The player approves on lichess.org and link.html finishes
+  // the job. chess.com offers nothing like it, so that one is typed.
+  const lichessConnect = function () {
+    try {
+      if (document.documentElement.classList.contains('native') || !window.crypto || !crypto.subtle || !/^https?:$/.test(location.protocol)) return false;
+      const enc = function (a) { return btoa(String.fromCharCode.apply(null, a)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+      const rnd = function (n) { const a = new Uint8Array(n); crypto.getRandomValues(a); return enc(a); };
+      const v = rnd(48), s = rnd(16);
+      sessionStorage.setItem('hollowchess.lichess.pkce', JSON.stringify({ v: v, s: s }));
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)).then(function (h) {
+        location.href = 'https://lichess.org/oauth?response_type=code&client_id=hollowchess.com&code_challenge_method=S256' +
+          '&redirect_uri=' + encodeURIComponent(location.origin + '/link.html') +
+          '&code_challenge=' + enc(new Uint8Array(h)) + '&state=' + s;
+      });
+      return true;
+    } catch (e) { return false; }
+  };
+  // back from Lichess: link.html left the answer here
+  try {
+    const raw = localStorage.getItem('hollowchess.extlink.v1');
+    if (raw) {
+      localStorage.removeItem('hollowchess.extlink.v1');
+      const o = JSON.parse(raw);
+      if (o && Date.now() - o.at < 120000) setTimeout(function () {
+        const ok = !!o.user && /^[A-Za-z0-9_-]{2,30}$/.test(o.user);
+        if (ok) setLink('lichess', o.user);
+        openProfile();
+        if (!ok) { const b = el.querySelector('.ext-add[data-site="lichess"]'); if (b) manual(b); }
+      }, 700);
+    }
+  } catch (e) {}
+  function manual(add) {
     const site = add.dataset.site, inp = document.createElement('input');
     inp.className = 'ext-input'; inp.dataset.site = site; inp.maxLength = 60; inp.spellcheck = false;
     inp.autocapitalize = 'off'; inp.autocomplete = 'off';
@@ -2601,7 +2637,7 @@ function paintExtLinks() {
     add.replaceWith(inp); inp.focus();
     inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') commit(inp); if (ev.key === 'Escape') paintExtLinks(); inp.classList.remove('bad'); });
     inp.addEventListener('blur', function () { if ((inp.value || '').trim()) commit(inp); else setTimeout(paintExtLinks, 0); });
-  });
+  }
 })();
 
 let profFilter = 'all';

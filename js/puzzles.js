@@ -64,6 +64,11 @@
     if (!res.ok) throw new Error('puzzle set not found (' + res.status + ')');
     const j = await res.json();
     all = order((j.puzzles || []).slice());
+    for (const p of all) {
+      p.odd = strange(p);
+      const cs = p.cells.map((k) => +k.split(',')[0]), rs = p.cells.map((k) => +k.split(',')[1]);
+      p.small = Math.max(...cs) - Math.min(...cs) < 7 || Math.max(...rs) - Math.min(...rs) < 7;
+    }
     dailyOrder = (j.dailyOrder || []).filter((id) => all.some((p) => p.id === id));
     return all;
   }
@@ -98,14 +103,32 @@
     return out;
   }
 
+  // A pawn standing on the first or the last rank of its board could not have
+  // got there in a game. The proof still holds, but the position reads as a
+  // mistake, so these are never handed out: only a direct link opens one.
+  function strange(p) {
+    let lo = Infinity, hi = -Infinity;
+    for (const k of p.cells) { const r = +k.split(',')[1]; if (r < lo) lo = r; if (r > hi) hi = r; }
+    for (const k of Object.keys(p.pieces)) {
+      if (p.pieces[k][0] !== 'pawn') continue;
+      const r = +k.split(',')[1];
+      if (r === lo || r === hi) return true;
+    }
+    return false;
+  }
+
   const list = () => all;
   // Daily #n (1-based). The order is a fixed list in the data file that only ever
   // grows at the end, so adding puzzles never changes a day that has been played.
   function dailyId(n) {
     const ids = dailyOrder.length ? dailyOrder : all.map((p) => p.id).sort();
-    return ids.length ? ids[(((n - 1) % ids.length) + ids.length) % ids.length] : null;
+    if (n >= 1 && n <= ids.length) return ids[n - 1];
+    // past the end of the list it repeats, but only over full-size, ordinary positions
+    const again = ids.filter((id) => { const p = all.find((x) => x.id === id); return p && !p.odd && !p.small; });
+    const pool = again.length ? again : ids;
+    return pool.length ? pool[(((n - 1) % pool.length) + pool.length) % pool.length] : null;
   }
-  const count = () => all.length;
+  const count = () => all.filter((p) => !p.odd).length;
   const current = () => (idx >= 0 && idx < all.length ? all[idx] : null);
   const active = () => idx >= 0 && !!host;
 
@@ -152,10 +175,14 @@
   // First unsolved puzzle, else the one after the last solved.
   function nextUnsolved() {
     const done = readProgress().solved;
-    const i = all.findIndex((p) => !done[p.id]);
-    return start(i >= 0 ? i : (idx + 1) % all.length);
+    const i = all.findIndex((p) => !p.odd && !done[p.id]);
+    return i >= 0 ? start(i) : next();
   }
-  function next() { return start((idx + 1) % Math.max(1, all.length)); }
+  function next() {
+    const n = all.length;
+    for (let k = 1; k <= n; k++) { const i = (((idx + k) % n) + n) % n; if (!all[i].odd) return start(i); }
+    return null;
+  }
 
   // ---- rating -------------------------------------------------------------
   // Two ratings play each other, chess.com-style. Yours starts at 1000; each
@@ -389,7 +416,7 @@
     return {
       id: p.id, mateIn: p.mateIn, tags: p.tags || [],
       movesLeft: p.mateIn - step, step, failed, finished,
-      index: idx, total: all.length,
+      index: all.slice(0, idx).filter((q) => !q.odd).length, total: count(),
       solved: !!readProgress().solved[p.id],
       hinted, rating: readProgress().rating, puzzleRating: ratingOf(p),
       settle: lastSettle,
