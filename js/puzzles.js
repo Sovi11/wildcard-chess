@@ -68,6 +68,9 @@
       p.odd = strange(p);
       const cs = p.cells.map((k) => +k.split(',')[0]), rs = p.cells.map((k) => +k.split(',')[1]);
       p.small = Math.max(...cs) - Math.min(...cs) < 7 || Math.max(...rs) - Math.min(...rs) < 7;
+      // puzzles are served on a full board only; a small one filled out to 8x8 is a
+      // different position (its mate leans on the edges), so those are held back too
+      p.skip = p.odd || p.small;
     }
     dailyOrder = (j.dailyOrder || []).filter((id) => all.some((p) => p.id === id));
     return all;
@@ -128,7 +131,7 @@
     const pool = again.length ? again : ids;
     return pool.length ? pool[(((n - 1) % pool.length) + pool.length) % pool.length] : null;
   }
-  const count = () => all.filter((p) => !p.odd).length;
+  const count = () => all.filter((p) => !p.skip).length;
   const current = () => (idx >= 0 && idx < all.length ? all[idx] : null);
   const active = () => idx >= 0 && !!host;
 
@@ -175,12 +178,12 @@
   // First unsolved puzzle, else the one after the last solved.
   function nextUnsolved() {
     const done = readProgress().solved;
-    const i = all.findIndex((p) => !p.odd && !done[p.id]);
+    const i = all.findIndex((p) => !p.skip && !done[p.id]);
     return i >= 0 ? start(i) : next();
   }
   function next() {
     const n = all.length;
-    for (let k = 1; k <= n; k++) { const i = (((idx + k) % n) + n) % n; if (!all[i].odd) return start(i); }
+    for (let k = 1; k <= n; k++) { const i = (((idx + k) % n) + n) % n; if (!all[i].skip) return start(i); }
     return null;
   }
 
@@ -416,7 +419,7 @@
     return {
       id: p.id, mateIn: p.mateIn, tags: p.tags || [],
       movesLeft: p.mateIn - step, step, failed, finished,
-      index: all.slice(0, idx).filter((q) => !q.odd).length, total: count(),
+      index: all.slice(0, idx).filter((q) => !q.skip).length, total: count(),
       solved: !!readProgress().solved[p.id],
       hinted, rating: readProgress().rating, puzzleRating: ratingOf(p),
       settle: lastSettle,
