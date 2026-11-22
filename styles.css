@@ -2301,3 +2301,35 @@ main > * { min-width: 0; }
 .arena-regnote a { color: var(--accent-text, var(--accent)); }
 .arena-off { background: none; border: 0; padding: 0; font: inherit; color: var(--muted); text-decoration: underline; cursor: pointer; }
 .arena-off:hover { color: var(--ink); }
+
+/* ---- v97: animated tour, the first-visit intro card, a lobby that leads with the daily ---- */
+.tut-lift-anim .tut-sq { stroke: var(--accent); stroke-width: .05; stroke-opacity: 0; }
+body.deco.ink .tut-lift-anim .tut-sq { stroke: var(--sunset); }
+.tut-beam { stroke: #e0564a; stroke-width: .09; stroke-linecap: round; stroke-dasharray: .16 .12; }
+.tut-hit { fill: #e0564a; }
+.tut-cap { font-size: 27px; font-weight: 600; fill: var(--ink); font-family: inherit; letter-spacing: 0; word-spacing: 0; text-rendering: geometricPrecision; }
+.tut-seq.run i { animation: tutBeat 6.4s infinite; }
+.tut-seq.run i:nth-child(2) { animation-delay: .8s; } .tut-seq.run i:nth-child(3) { animation-delay: 1.6s; }
+.tut-seq.run i:nth-child(4) { animation-delay: 2.4s; } .tut-seq.run i:nth-child(5) { animation-delay: 3.2s; }
+.tut-seq.run i:nth-child(6) { animation-delay: 4s; } .tut-seq.run i:nth-child(7) { animation-delay: 4.8s; }
+.tut-seq.run i:nth-child(8) { animation-delay: 5.6s; }
+@keyframes tutBeat { 0%, 12.5%, 100% { transform: none; box-shadow: none; } 3%, 9% { transform: translateY(-3px) scale(1.12); box-shadow: 0 0 0 2px var(--ink); } }
+@media (prefers-reduced-motion: reduce) { .tut-seq.run i { animation: none; } }
+.tut-intro-nav { display: none; }
+.tut.intro .tut-dots, .tut.intro .tut-nav { display: none; }
+.tut.intro .tut-intro-nav { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-top: 16px; }
+.tut.intro .tut-art { max-width: min(360px, 38dvh); }
+.tut.intro .lobby-title { text-align: center; }
+.tut.intro .tut-body { text-align: center; }
+.tut-try { width: 100%; }
+.tut-play { width: 100%; min-height: 44px; }
+.tut-link { background: none; border: 0; padding: 6px; font: inherit; font-size: 13px; color: var(--muted); text-decoration: underline; cursor: pointer; align-self: center; }
+.tut-link:hover { color: var(--ink); }
+#lobby.fresh .you-card { display: none; }
+.lobby-top { margin-bottom: 12px; }
+#findMatch .find-sub { display: block; margin-top: 3px; }
+#bannerHarderBtn[hidden] { display: none; }
+.pzd-arena { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pzd-remind { width: 100%; min-height: 40px; margin-top: 8px; }
+/* phone: the floating action bar must not sit on top of the footer links */
+@media (max-width: 880px) { body.deco.ink .site-foot { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); } }

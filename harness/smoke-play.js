@@ -18,8 +18,13 @@ const BASE = process.argv[2] || 'http://localhost:5180';
   await page.goto(BASE + '/?smoke=' + Date.now());
   await page.waitForTimeout(3500);                         // past cloud boot: nothing may come back
   const first = await page.evaluate(() => ({ coach: !document.getElementById('coach').hidden, text: document.getElementById('coachText').textContent.slice(0, 40), bot: botEnabled(), botSide: botSide(), clock: clockActive(), rated: ratedGame, turn: game.turn }));
-  check('first visit lands on a board with no overlay', (await overlays()).length === 0, await overlays());
-  check('coach is showing, beginner bot as Black, no clock, unrated', first.coach && first.bot && first.botSide === 'black' && !first.clock && !first.rated, first);
+  // the intro card plays the board move over the board; "Play a game" leaves the visitor on that board
+  const intro = await page.evaluate(() => { const t = document.getElementById('tutorial'); return { on: !!t && t.classList.contains('show') && t.classList.contains('intro'),
+    anim: !!t && t.querySelectorAll('#tutArt animateTransform').length, title: t ? t.querySelector('#tutTitle').textContent : '', tryBtn: !!t && !!t.querySelector('#tutTry').offsetParent }; });
+  check('first visit opens on the intro card with the board-move animation', intro.on && intro.anim >= 2 && /move the squares/.test(intro.title) && intro.tryBtn, intro);
+  await page.evaluate(() => document.getElementById('tutPlay').click()); await page.waitForTimeout(300);
+  check('Play a game leaves a board with no overlay', (await overlays()).length === 0, await overlays());
+  check('coach is showing, casual bot as Black, no clock, unrated', first.coach && first.bot && first.botSide === 'black' && !first.clock && !first.rated, first);
 
   const box = await page.locator('#board').boundingBox();
   const sq = (c, r) => ({ x: box.x + (c + 0.5) / 8 * box.width, y: box.y + (7 - r + 0.5) / 8 * box.height });

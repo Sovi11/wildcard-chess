@@ -1,7 +1,7 @@
 {
   "name": "Hollow Chess",
   "short_name": "Hollow",
-  "description": "Chess where the board itself is fair game \u2014 tear out squares, grow new ground, checkmate anyway.",
+  "description": "Chess where you can move the squares. Every third turn, slide a square of the board instead of moving a piece.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

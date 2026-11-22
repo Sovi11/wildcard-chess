@@ -50,6 +50,22 @@ const probe = () => {
     // first visit: straight onto a board
     await page.goto(BASE + '/?mob=' + Date.now());
     await page.waitForTimeout(1200);
+    await screen('first visit intro');
+    // Try it: the starter puzzle, a mate in 1 by a board move, then the offer of a game
+    const st = await page.evaluate(async () => {
+      document.getElementById('tutTry').click();
+      for (let i = 0; i < 40 && !(puzzleMode && starterOn); i++) await new Promise((r) => setTimeout(r, 150));
+      const before = { id: WCPUZZLE.current() && WCPUZZLE.current().id, msg: document.getElementById('pzMsg').textContent, box: document.getElementById('pzDaily').hidden };
+      const a = WCPUZZLE.expected(); WCPUZZLE.playReply(a); done(a);
+      await new Promise((r) => setTimeout(r, 2000));           // an ordinary puzzle would have moved on by now
+      return { before, kind: a.kind, still: WCPUZZLE.current().id, box: document.getElementById('pzDaily').innerText, msg: document.getElementById('pzMsg').textContent };
+    });
+    check(dev + ' · Try it opens the starter puzzle; solving it offers a game', st.before.id === 'hc-001' && /board move/.test(st.before.msg) && st.before.box && st.kind === 'mc' &&
+      st.still === 'hc-001' && /Play a game/.test(st.box) && /Checkmate/.test(st.msg), st);
+    await screen('starter solved');
+    await page.evaluate(() => document.getElementById('pzsPlay').click()); await page.waitForTimeout(400);
+    const fg = await page.evaluate(() => ({ pz: puzzleMode, first: firstGame, lvl: botLevelEl.value, coach: !document.getElementById('coach').hidden }));
+    check(dev + ' · Play a game starts the first game against the Casual bot', !fg.pz && fg.first && fg.lvl === '2' && fg.coach, fg);
     await screen('first visit');
     // the tour: every slide's picture and buttons are on screen without scrolling
     await page.evaluate(() => document.getElementById('coachTour').click());

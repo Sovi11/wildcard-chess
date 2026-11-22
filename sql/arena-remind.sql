@@ -114,5 +114,5 @@ with check (name = any (array[
   'game_leave','game_return','game_resume','first_move',
   'puzzle_start','puzzle_solved','puzzle_rated','feedback','skip_wait','support_click',
   'signup_prompt','signup_prompt_click','share','daily_start','daily_solved','arena_open','arena_game',
-  'arena_register'
+  'arena_register','intro'
 ]::text[]));

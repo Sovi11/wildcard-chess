@@ -1125,6 +1125,9 @@ function paintProfile() {
   const youRec = document.getElementById('youRecord');
   if (youElo) youElo.textContent = p.elo;
   if (youRec) youRec.textContent = p.wins + 'W \u00b7 ' + p.losses + 'L \u00b7 ' + p.draws + 'D';
+  // "500 · 0W 0L 0D" tells someone who has not played yet nothing; it appears with the first rated game
+  const lob = document.getElementById('lobby');
+  if (lob) lob.classList.toggle('fresh', !(p.wins + p.losses + p.draws) && !(WCCLOUD.currentUser && WCCLOUD.currentUser()));
 }
 
 function paintOppCard() {
@@ -3149,6 +3152,11 @@ function playAgain() {
   refreshBotUI(); refreshShareUI(); maybeAI();
 }
 bind('playAgainBtn', playAgain);
+bind('bannerHarderBtn', function () {
+  if (!gameOver() || !botLevelEl) return;
+  botLevelEl.value = String(Math.min(5, +botLevelEl.value + 1));
+  playAgain();
+});
 // The way out of a finished game: home (the lobby) or your profile, one tap each.
 bind('bannerHomeBtn', function () { if (!gameOver()) return; ui.banner.classList.remove('show'); openLobby(); });
 bind('bannerProfileBtn', function () { if (!gameOver()) return; ui.banner.classList.remove('show'); openProfile(); });
@@ -3333,6 +3341,7 @@ function loadPuzzle(starter) {
   pzReplyPending = false;
   clearTimeout(pzAdvance); clearTimeout(wrongTimer);
   dailyStop();                             // any other puzzle is not the daily; openDaily() turns it back on
+  starterOn = false;                       // nor the starter; openStarter() turns that back on
   document.body.classList.remove('pz-wrong');
   wrongCell = null;
   pzHintLevel = 0;
@@ -3371,6 +3380,7 @@ async function startPuzzles() {
 // who solved it today. Your first solve of the day is the one that counts.
 const DAILY_KEY = 'hollowchess.daily.v1', DAILY_EPOCH = Date.UTC(2026, 10, 21), DAY_MS = 86400000;
 let dailyOn = false, dailyDay = 0, dailyStats = null, dailyTick = null, dailyFetched = 0;
+let starterOn = false;                    // the first-visit puzzle: it stays up when solved and offers a game
 const pzDailyEl = document.getElementById('pzDaily');
 function dailyNo() { return Math.floor((Date.now() - DAILY_EPOCH) / DAY_MS) + 1; }
 function dailyFromHash() { return /[#&]daily(?:&|$)/.test(location.hash || ''); }
@@ -3412,6 +3422,15 @@ function paintDailyCard() {
 }
 function paintDaily() {
   if (!pzDailyEl) return;
+  if (starterOn) {
+    const sst = WCPUZZLE.state();
+    if (!sst || !sst.finished) { pzDailyEl.hidden = true; return; }
+    pzDailyEl.innerHTML = '<div class="pzd-line"><b>That is the whole idea.</b> The board is a piece too, and every third turn it is yours to move.</div>' +
+      '<div class="pzd-btns"><button class="act-btn primary" id="pzsPlay" type="button">Play a game</button>' +
+      '<button class="act-btn" id="pzsDaily" type="button">Today\u2019s puzzle</button></div>';
+    pzDailyEl.hidden = false;
+    return;
+  }
   if (!dailyOn) { pzDailyEl.hidden = true; return; }
   const d = dailyRead(), rec = d.days[dailyDay] || {}, st = dailyToday();
   let h = '';
@@ -3434,13 +3453,20 @@ function paintDaily() {
     h += '<div class="pzd-btns"><button class="act-btn primary" id="pzdShare" type="button">Share result</button>' +
          '<button class="act-btn" id="pzdMore" type="button">More puzzles</button></div>' +
          '<div class="pzd-line pzd-next">Next daily in ' + dailyNextIn() + '</div>';
+    // the moment someone has just enjoyed a puzzle is the moment to ask
+    const ack = arenaClock(), awhen = ack.live ? 'is live now.' : 'is in ' + arenaLeft(ack.starts - Date.now()) + '.';
+    h += '<div class="pzd-line pzd-arena">Sunday Arena ' + awhen + (arenaReg() ? ' Your reminder is on.' : '') + '</div>' +
+      (arenaReg() ? '' : '<button type="button" class="act-btn pzd-remind" id="pzdRemind">Remind me 1 hour before</button>');
   }
   pzDailyEl.innerHTML = h;
   pzDailyEl.hidden = false;
 }
 function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
 if (pzDailyEl) pzDailyEl.addEventListener('click', function (e) {
-  if (e.target.closest('#pzdShare')) shareDaily();
+  if (e.target.closest('#pzsPlay')) { WCSTATS.track('intro', { a: 'game' }); startFirstGame(true); }
+  else if (e.target.closest('#pzsDaily')) openDaily();
+  else if (e.target.closest('#pzdRemind')) arenaRegister();
+  else if (e.target.closest('#pzdShare')) shareDaily();
   else if (e.target.closest('#pzdMore')) loadPuzzle(function () { return WCPUZZLE.nextUnsolved(); });
 });
 async function openDaily() {
@@ -3654,6 +3680,7 @@ function arenaRegister() {
         WCSTATS.track('arena_register', { push: !!sub });
       }
       paintArenaReg();
+      if (puzzleMode) paintDaily();
     };
     if (arenaDev() || !WCCLOUD.arenaRegister) return done(null);          // never from a developer's machine
     return WCCLOUD.arenaRegister(WCSTATS.device(), sub).then(function (r) { done(r || false); });
@@ -3938,10 +3965,11 @@ function puzzleSubmit(gm) {
     // straight on to the next one — a run should not stall waiting on a button
     clearTimeout(pzAdvance);
     if (dailyOn) dailySolved(!(before && (before.failed || before.hinted)));   // the daily stays up: its result is the point
-    else pzAdvance = setTimeout(function () {
+    else if (!starterOn) pzAdvance = setTimeout(function () {
       if (puzzleMode) loadPuzzle(function () { return WCPUZZLE.nextUnsolved(); });
     }, 1600);
     pzSay(before && before.failed ? 'Solved.' : 'Solved, first try.', 'done');
+    if (starterOn) { pzSay('Checkmate. You moved the board, not a piece.', 'done'); WCSTATS.track('intro', { a: 'solved' }); }
     WCSTATS.track('puzzle_solved', { id: before && before.id, mateIn: before && before.mateIn, clean: !(before && before.failed) });
     afterRated(res.rated);
     syncProfileUp();                            // a solve follows the account, like a rating change
@@ -4102,6 +4130,13 @@ function sync() {
     ui.bannerText.append(hEl, sEl);
     const ab = document.getElementById('analyzeBtn');
     if (ab) ab.style.display = gameActs.length ? '' : 'none';
+    const hb = document.getElementById('bannerHarderBtn');
+    if (hb) {
+      const lvl = botLevelEl ? +botLevelEl.value : 3;
+      const up = botEnabled() && !activeBot && !onlineActive && !puzzleMode && game.winner === me && lvl < 5;
+      hb.hidden = !up;
+      if (up) hb.textContent = '\u25b2 Harder bot: ' + WCAI.levelById(lvl + 1).name;
+    }
     const sb = document.getElementById('saveRatingBtn');
     if (sb) {
       const guest = !(WCCLOUD.currentUser && WCCLOUD.currentUser());
@@ -4147,14 +4182,16 @@ refreshShareUI();
 function firstVisit() {
   try { return !localStorage.getItem(FIRSTKEY) && !tutSeen(); } catch (e) { return false; }
 }
-function startFirstGame() {
+function startFirstGame(again) {
   try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {}
   markTutSeen();                       // learning by playing counts; the tour stays on offer
   closeWelcome();
-  WCSTATS.track('enter', { as: 'guest', door: 'play_first' });
+  if (!again) WCSTATS.track('enter', { as: 'guest', door: 'play_first' });
   if (oppModeEl) oppModeEl.value = 'bot';
   if (botSideEl) botSideEl.value = 'black';
-  if (botLevelEl) botLevelEl.value = '1';
+  // Casual, not Beginner: players were beating the first bot five games in six,
+  // and a walkover gives nobody a reason to play again. "Harder bot" goes up from here.
+  if (botLevelEl) botLevelEl.value = '2';
   activeBot = null; ratedGame = false; onlineActive = false; myColor = null;
   gameStarted({ mode: 'first', opponent: 'bot', signedIn: false });
   resetGameState();
@@ -4180,6 +4217,33 @@ function paintCoach() {
 bind('coachTour', function () { WCTUT.open(updateAmbient); updateAmbient(); });
 bind('coachMenu', function () { openLobby(); });
 
+// ---- the intro card and the starter puzzle -----------------------------------
+// Most first visits ended within seconds, on a board that looks like ordinary
+// chess: the board move is not available until turn three, so the one thing
+// that is different was never seen. A first visit now opens on a card that
+// plays the board move on a loop, over the board that is ready underneath.
+// "Try it" is a mate in 1 whose answer is a board move.
+const STARTER_ID = 'hc-001';
+function showIntro() {
+  if (!window.WCTUT || !WCTUT.intro) return;
+  WCSTATS.track('intro', { a: 'shown' });
+  WCTUT.intro({
+    try: function () { WCSTATS.track('intro', { a: 'try' }); openStarter(); },
+    play: function () { WCSTATS.track('intro', { a: 'play' }); updateAmbient(); },
+    close: function () { WCSTATS.track('intro', { a: 'close' }); updateAmbient(); },
+    tour: function () { WCSTATS.track('intro', { a: 'tour' }); },
+  });
+  updateAmbient();
+}
+async function openStarter() {
+  await startPuzzles();
+  if (!puzzleMode || !WCPUZZLE.list().some(function (p) { return p.id === STARTER_ID; })) return;
+  loadPuzzle(function () { return WCPUZZLE.startById(STARTER_ID); });
+  starterOn = true;
+  pzSay('Mate in 1, and the move is a board move. Tap an empty square to lift it, then tap the gap between your queen and the king.');
+  paintPuzzle(); updateAmbient();
+}
+
 const bootRoom = (typeof WCNET !== 'undefined' && WCNET.roomFromLocation) ? WCNET.roomFromLocation() : null;
 const bootPuzzle = puzzleIdFromHash();
 const bootReplay = replayFromHash();
@@ -4204,7 +4268,7 @@ if (resumedGame) {
 if (arenaFromHash()) { try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {} closeWelcome(); if (!resumedGame) openLobby(); openArena(); } else if (!bootedFromLink && !bootPuzzle) {
   // the welcome screen owns the first paint; enterSite() opens the lobby after
   const w = document.getElementById('welcome');
-  if (w && w.classList.contains('show') && firstVisit()) startFirstGame();
+  if (w && w.classList.contains('show') && firstVisit()) { startFirstGame(); showIntro(); }
   else if (!w || !w.classList.contains('show')) openLobby();
 }
 if (bootedFromLink && shareMsgEl) shareMsgEl.textContent = "Your friend's move is loaded. Your turn.";

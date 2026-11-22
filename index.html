@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <title>Hollow Chess — chess where the board itself is fair game</title>
+  <title>Hollow Chess — chess where you can move the squares</title>
   <meta name="description" content="Free chess variant where you move the board itself. Every third turn, lift an empty square and drop it elsewhere - holes block bishops and rooks. No account." />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
   <meta property="og:locale" content="en_US" />
@@ -17,14 +17,14 @@
 
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Hollow Chess" />
-  <meta property="og:title" content="Hollow Chess — chess where the board itself is fair game" />
+  <meta property="og:title" content="Hollow Chess — chess where you can move the squares" />
   <meta property="og:description" content="Tear out squares. Checkmate anyway. Free in your browser — ranked ladder, characterful bots, live play with a friend." />
   <meta property="og:url" content="https://hollowchess.com/" />
   <meta property="og:image" content="https://hollowchess.com/icons/og-card.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Hollow Chess — chess where the board itself is fair game" />
+  <meta name="twitter:title" content="Hollow Chess — chess where you can move the squares" />
   <meta name="twitter:description" content="Tear out squares. Checkmate anyway. Free in your browser." />
   <meta name="twitter:image" content="https://hollowchess.com/icons/og-card.png" />
   <link rel="icon" href="/favicon.ico" sizes="48x48" /><link rel="icon" type="image/png" sizes="96x96" href="/icons/favicon-96.png" />
@@ -34,7 +34,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" /></noscript>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=96" />
+  <link rel="stylesheet" href="styles.css?v=97" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -73,7 +73,7 @@
     <div class="lobby-inner">
       <header class="lobby-head">
         <div>
-          <h2 class="lobby-title">Ranked play</h2>
+          <h2 class="lobby-title">Play</h2>
         </div>
         <div class="acct-col">
           <button id="authBtn" class="auth-btn">Sign in with Google</button>
@@ -90,9 +90,18 @@
         </div>
       </header>
 
+      <div class="lobby-modes lobby-top">
+        <button class="mode-card mode-wide mode-daily" data-lobbymode="daily">
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/><path d="M9 15l2.2 2.2L15.5 13"/></svg></span>
+          <span class="mode-name">Daily puzzle <span id="dailyTag" class="lb-tag">today</span></span>
+          <span class="mode-desc" id="dailyDesc">Same puzzle for everyone.</span>
+        </button>
+      </div>
+
       <div class="queue-box">
         <button id="findMatch" class="find-btn">
           <span class="find-title">Find a match</span>
+          <span class="find-sub">Rated. A human if one is waiting, otherwise a rated bot.</span>
         </button>
         <div id="searchState" class="search-state">
           <div class="search-spin"></div>
@@ -134,11 +143,6 @@
           <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 5.5H4.5V7A3 3 0 0 0 7.2 10M17 5.5h2.500V7a3 3 0 0 1-2.700 3M12 14v3.500M8.500 20h7M9.500 17.500h5"/></svg></span>
           <span class="mode-name">Sunday Arena <span id="arenaTag" class="lb-tag">weekly</span></span>
           <span class="mode-desc">One hour of ranked games. Most points wins.</span>
-        </button>
-        <button class="mode-card mode-wide mode-daily" data-lobbymode="daily">
-          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/><path d="M9 15l2.2 2.2L15.5 13"/></svg></span>
-          <span class="mode-name">Daily puzzle <span id="dailyTag" class="lb-tag">today</span></span>
-          <span class="mode-desc" id="dailyDesc">Same puzzle for everyone.</span>
         </button>
         <button class="mode-card mode-wide" data-lobbymode="puzzles">
           <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.2"/><rect x="13" y="13" width="7" height="7" rx="1.2"/><path d="M15 4.5h4.5V9M9 19.5H4.5V15" /></svg></span>
@@ -301,7 +305,7 @@
         </svg>
       </div>
       <h2 class="welcome-title">Hollow Chess</h2>
-      <p class="welcome-tag">Chess, but the board moves.</p>
+      <p class="welcome-tag">Chess, but you can move the squares.</p>
       <button id="welcomeGuest" class="find-btn welcome-btn">
         <span class="find-title">Play now</span>
         <span class="find-sub">Free · no account</span>
@@ -522,7 +526,7 @@
           <rect x="18" y="26.5" width="6" height="6" fill="#f3e8d2"/>
           <rect x="25.5" y="2.5" width="7" height="7" fill="#e5603a" transform="rotate(-12 29 6)"/>
         </svg>
-        <h1>Hollow&nbsp;Chess <span class="sub">the board itself is fair game</span></h1>
+        <h1>Hollow&nbsp;Chess <span class="sub">chess where you can move the squares</span></h1>
       </div>
       <div class="head-right">
         <span class="elo-chip" id="eloChip" title="Your rating">★ 500</span>
@@ -537,7 +541,7 @@
 
     <main>
       <section class="board-wrap">
-        <div id="banner" class="banner"><span id="bannerText"></span><span id="arenaNote" class="arena-note" hidden></span><button id="analyzeBtn" class="analyze-btn">✦ Analyze game</button><button id="playAgainBtn" class="analyze-btn again">↻ Play again</button><span class="bn-exits"><button id="bannerHomeBtn" class="analyze-btn exit" type="button">⌂ Home</button><button id="bannerProfileBtn" class="analyze-btn exit" type="button">☰ Profile</button><button id="bannerFriendBtn" class="analyze-btn exit" type="button">⚔ Challenge a friend</button><button id="bannerShareBtn" class="analyze-btn exit" type="button">Share</button></span><button id="saveRatingBtn" class="bn-save" type="button" hidden>Keep your rating — sign in</button></div>
+        <div id="banner" class="banner"><span id="bannerText"></span><span id="arenaNote" class="arena-note" hidden></span><button id="analyzeBtn" class="analyze-btn">✦ Analyze game</button><button id="playAgainBtn" class="analyze-btn again">↻ Play again</button><button id="bannerHarderBtn" class="analyze-btn again harder" type="button" hidden>▲ Harder bot</button><span class="bn-exits"><button id="bannerHomeBtn" class="analyze-btn exit" type="button">⌂ Home</button><button id="bannerProfileBtn" class="analyze-btn exit" type="button">☰ Profile</button><button id="bannerFriendBtn" class="analyze-btn exit" type="button">⚔ Challenge a friend</button><button id="bannerShareBtn" class="analyze-btn exit" type="button">Share</button></span><button id="saveRatingBtn" class="bn-save" type="button" hidden>Keep your rating — sign in</button></div>
         <div id="coach" class="coach" hidden>
           <p id="coachText" class="coach-text"></p>
           <span class="coach-acts"><button id="coachTour" class="coach-btn" type="button">Tour</button><button id="coachMenu" class="coach-btn" type="button">Menu</button></span>
@@ -690,29 +694,29 @@
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=96"></script>
+  <script defer src="js/platform.js?v=97"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=96"></script>
-  <script defer src="js/stats.js?v=96"></script>
-  <script defer src="js/cloud.js?v=96"></script>
-  <script defer src="js/postgame-feedback.js?v=96"></script>
-  <script defer src="js/engine.js?v=96"></script>
-  <script defer src="js/pieces.js?v=96"></script>
-  <script defer src="js/themes.js?v=96"></script>
-  <script defer src="js/sound.js?v=96"></script>
-  <script defer src="js/tutorial.js?v=96"></script>
-  <script defer src="js/ai.js?v=96"></script>
-  <script defer src="js/ladder.js?v=96"></script>
+  <script defer src="js/config.js?v=97"></script>
+  <script defer src="js/stats.js?v=97"></script>
+  <script defer src="js/cloud.js?v=97"></script>
+  <script defer src="js/postgame-feedback.js?v=97"></script>
+  <script defer src="js/engine.js?v=97"></script>
+  <script defer src="js/pieces.js?v=97"></script>
+  <script defer src="js/themes.js?v=97"></script>
+  <script defer src="js/sound.js?v=97"></script>
+  <script defer src="js/tutorial.js?v=97"></script>
+  <script defer src="js/ai.js?v=97"></script>
+  <script defer src="js/ladder.js?v=97"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=96"></script>
-  <script defer src="js/net.js?v=96"></script>
-  <script defer src="js/share.js?v=96"></script>
-  <script defer src="js/analysis.js?v=96"></script>
-  <script defer src="js/solver.js?v=96"></script>
-  <script defer src="js/puzzles.js?v=96"></script>
-  <script defer src="js/main.js?v=96"></script>
-  <script defer src="js/ui.js?v=96"></script>
-  <script defer src="js/native.js?v=96"></script>
+  <script defer src="js/matchmaking.js?v=97"></script>
+  <script defer src="js/net.js?v=97"></script>
+  <script defer src="js/share.js?v=97"></script>
+  <script defer src="js/analysis.js?v=97"></script>
+  <script defer src="js/solver.js?v=97"></script>
+  <script defer src="js/puzzles.js?v=97"></script>
+  <script defer src="js/main.js?v=97"></script>
+  <script defer src="js/ui.js?v=97"></script>
+  <script defer src="js/native.js?v=97"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
