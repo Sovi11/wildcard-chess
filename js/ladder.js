@@ -107,6 +107,148 @@
       search: { depth: 5, K: 16, movetime: 1300, jitter: 0, blunder: 0 },
       weights: { kindBias: { ac: 40, rc: 110, mc: 80 }, kingRing: 10 },
     },
+
+    // ---- the wider pool (v105) ----------------------------------------------
+    // Twelve residents meant the queue handed a 500-rated player the same three
+    // faces all evening. These fill the gaps, thickest where most players sit
+    // (300 to 1300). The low ones look one ply ahead and no further: they see
+    // what a move wins right now and nothing of what it loses, which is how a
+    // beginner plays. Each has one fixation so they do not all feel alike.
+    // Seeds are placed by their search settings between calibrated neighbours;
+    // like every bot they drift from there with results.
+    {
+      id: 'dizzy', name: 'Dizzy Dot', elo: 320, emoji: '🌀',
+      blurb: 'Picks up squares and puts them down somewhere else, for no reason at all.',
+      style: 'Feral · moves squares at random',
+      search: { depth: 1, K: 3, movetime: 200, jitter: 420, blunder: 0.44 },
+      weights: { tempo: 0, kindBias: { ac: -100, rc: -100, mc: 140 } },
+    },
+    {
+      id: 'nibbles', name: 'Nibbles', elo: 370, emoji: '🐭',
+      blurb: 'Takes every pawn on offer and never asks why it was offered.',
+      style: 'One ply · pawn grabber',
+      search: { depth: 1, K: 3, movetime: 220, jitter: 230, blunder: 0.38 },
+      weights: { material: mat(230, 300, 310, 480, 900), kindBias: { ac: -160, rc: -160, mc: -160 } },
+    },
+    {
+      id: 'shy', name: 'Shy Shah', elo: 450, emoji: '🫣',
+      blurb: 'Only cares that the king feels safe. The rest of the army is on its own.',
+      style: 'One ply · hides the king',
+      search: { depth: 1, K: 3, movetime: 250, jitter: 180, blunder: 0.34 },
+      weights: { kingRing: 34, mobility: -2, kindBias: { ac: 40, rc: -160, mc: -120 } },
+    },
+    {
+      id: 'roamer', name: 'Queenie', elo: 490, emoji: '💅',
+      blurb: 'Gets the big pieces out at once and wanders. Development is for other people.',
+      style: 'One ply · roams early',
+      search: { depth: 1, K: 4, movetime: 250, jitter: 160, blunder: 0.33 },
+      weights: { mobility: 12, kingRing: -4, kindBias: { ac: -140, rc: -140, mc: -140 } },
+    },
+    {
+      id: 'hops', name: 'Sir Hops-a-Lot', elo: 520, emoji: '🐸',
+      blurb: 'Believes the knight is the best piece on the board and will not give one up.',
+      style: 'One ply · knight lover',
+      search: { depth: 1, K: 4, movetime: 280, jitter: 150, blunder: 0.31 },
+      weights: { material: mat(100, 520, 300, 470, 900), kindBias: { ac: -150, rc: -150, mc: -150 } },
+    },
+    {
+      id: 'digger', name: 'Digger', elo: 600, emoji: '⛏️',
+      blurb: 'Lifts a square out every board turn. Which square is anyone\u2019s guess.',
+      style: 'One ply · digs holes',
+      search: { depth: 1, K: 5, movetime: 300, jitter: 120, blunder: 0.30 },
+      weights: { kindBias: { ac: -100, rc: 230, mc: 60 } },
+    },
+    {
+      id: 'mason', name: 'Mason', elo: 640, emoji: '🧰',
+      blurb: 'Keeps laying new floor. Usually on the wrong side of the board.',
+      style: 'One ply · adds squares',
+      search: { depth: 1, K: 5, movetime: 300, jitter: 120, blunder: 0.28 },
+      weights: { kindBias: { ac: 230, rc: -100, mc: 60 } },
+    },
+    {
+      id: 'stormer', name: 'Pawn Stormer', elo: 690, emoji: '🌊',
+      blurb: 'Every pawn goes forward, every move it can. The pieces watch from home.',
+      style: 'One ply · pawn storm',
+      search: { depth: 1, K: 5, movetime: 320, jitter: 110, blunder: 0.27 },
+      weights: { pawnAdv: 20, mobility: 0, kindBias: { ac: 20, rc: -120, mc: -120 } },
+    },
+    {
+      id: 'bob', name: 'Bishop Bob', elo: 720, emoji: '📐',
+      blurb: 'Loves a long diagonal and gets upset when someone cuts a hole in it.',
+      style: 'Novice · bishop pair',
+      search: { depth: 2, K: 5, movetime: 450, jitter: 115, blunder: 0.27 },
+      weights: { material: mat(100, 290, 480, 470, 900), kindBias: { ac: -90, rc: -90, mc: -90 } },
+    },
+    {
+      id: 'joan', name: 'Trader Joan', elo: 800, emoji: '🔁',
+      blurb: 'Swaps pieces whenever she can. Fewer pieces, fewer problems.',
+      style: 'Novice · trades everything',
+      search: { depth: 2, K: 6, movetime: 500, jitter: 90, blunder: 0.22 },
+      weights: { material: mat(100, 340, 340, 400, 780), mobility: 1, kindBias: { ac: -80, rc: -80, mc: -80 } },
+    },
+    {
+      id: 'turtle', name: 'The Turtle', elo: 850, emoji: '🐢',
+      blurb: 'Pulls everything back around the king and waits for you to overreach.',
+      style: 'Passive · shell',
+      search: { depth: 2, K: 8, movetime: 600, jitter: 70, blunder: 0.18 },
+      weights: { kingRing: 28, mobility: -1, pawnAdv: 0, kindBias: { ac: 60, rc: -80, mc: -40 } },
+    },
+    {
+      id: 'slider', name: 'Slider', elo: 950, emoji: '🛷',
+      blurb: 'Never adds, never removes: carries squares from one place to another all game.',
+      style: 'Tricky · carries squares',
+      search: { depth: 2, K: 12, movetime: 700, jitter: 55, blunder: 0.13 },
+      weights: { kindBias: { ac: -60, rc: -60, mc: 210 } },
+    },
+    {
+      id: 'greta', name: 'Greedy Greta', elo: 1050, emoji: '💰',
+      blurb: 'Counts material and nothing else. Offer her a pawn and see what it costs her.',
+      style: 'Materialist · takes what is offered',
+      search: { depth: 2, K: 10, movetime: 850, jitter: 40, blunder: 0.08 },
+      weights: { material: mat(118, 375, 385, 580, 1060), mobility: 0, kingRing: 0, kindBias: { ac: -60, rc: -40, mc: -40 } },
+    },
+    {
+      id: 'hermit', name: 'The Hermit', elo: 1160, emoji: '🏝️',
+      blurb: 'Cuts the squares around his own king and lives on the island. Bring a knight.',
+      style: 'Odd · island builder',
+      search: { depth: 2, K: 12, movetime: 900, jitter: 40, blunder: 0.05 },
+      weights: { kingRing: 14, kindBias: { ac: -20, rc: 140, mc: 30 } },
+    },
+    {
+      id: 'becky', name: 'Blitz Becky', elo: 1210, emoji: '⚡',
+      blurb: 'Sees a lot and moves at once. Fast enough to miss the quiet move.',
+      style: 'Quick · plays on instinct',
+      search: { depth: 3, K: 8, movetime: 350, jitter: 65, blunder: 0.08 },
+      weights: { mobility: 5 },
+    },
+    {
+      id: 'surveyor', name: 'The Surveyor', elo: 1420, emoji: '📏',
+      blurb: 'Measures the board before every move and shifts one square to exactly where it hurts.',
+      style: 'Positional · precise terrain',
+      search: { depth: 3, K: 12, movetime: 1100, jitter: 15, blunder: 0.02 },
+      weights: { pawnAdv: 6, kindBias: { ac: 60, rc: 20, mc: 120 } },
+    },
+    {
+      id: 'stone', name: 'Stonewall', elo: 1580, emoji: '🪨',
+      blurb: 'Gives nothing away. No holes, no weaknesses, no jokes.',
+      style: 'Solid · hard to break',
+      search: { depth: 3, K: 12, movetime: 1200, jitter: 0, blunder: 0 },
+      weights: { kingRing: 16, mobility: 3, kindBias: { ac: 20, rc: -70, mc: -40 } },
+    },
+    {
+      id: 'reaper', name: 'The Reaper', elo: 1660, emoji: '☠️',
+      blurb: 'Takes the floor from under your pieces first and the pieces second.',
+      style: 'Aggressive · removes squares',
+      search: { depth: 4, K: 10, movetime: 1150, jitter: 20, blunder: 0.02 },
+      weights: { kingRing: -2, mobility: 5, kindBias: { ac: -20, rc: 150, mc: 50 } },
+    },
+    {
+      id: 'oracle', name: 'The Oracle', elo: 1900, emoji: '🔮',
+      blurb: 'Quiet, patient, and already knows where the board will be in three turns.',
+      style: 'Strong · sees the terrain coming',
+      search: { depth: 4, K: 16, movetime: 1300, jitter: 0, blunder: 0 },
+      weights: { kindBias: { ac: 40, rc: 30, mc: 70 } },
+    },
   ];
 
   const byId = (id) => BOTS.find(b => b.id === id) || null;
