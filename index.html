@@ -34,7 +34,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" /></noscript>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=105" />
+  <link rel="stylesheet" href="styles.css?v=107" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -157,6 +157,7 @@
           <span class="daily-body">
             <span class="mode-name">Daily puzzle <span id="dailyTag" class="lb-tag">today</span></span>
             <span class="daily-line" id="dailyLine"></span>
+            <span class="daily-streak" id="dailyStreak" hidden></span>
             <span class="mode-desc" id="dailyDesc">Same puzzle for everyone.</span>
           </span>
         </button>
@@ -251,6 +252,7 @@
 
       <div id="profList">
         <div class="prof-tabs" id="profTabs" role="group" aria-label="Profile section"><button data-t="games" aria-pressed="true" type="button">Games</button><button data-t="puzzles" aria-pressed="false" type="button">Puzzles</button></div>
+        <div id="profBadges" class="prof-badges"></div>
         <div id="profGames">
         <div class="prof-stats" id="profStats"></div>
         <div class="prof-form" id="profForm"></div>
@@ -693,29 +695,29 @@
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=105"></script>
+  <script defer src="js/platform.js?v=107"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=105"></script>
-  <script defer src="js/stats.js?v=105"></script>
-  <script defer src="js/cloud.js?v=105"></script>
-  <script defer src="js/postgame-feedback.js?v=105"></script>
-  <script defer src="js/engine.js?v=105"></script>
-  <script defer src="js/pieces.js?v=105"></script>
-  <script defer src="js/themes.js?v=105"></script>
-  <script defer src="js/sound.js?v=105"></script>
-  <script defer src="js/tutorial.js?v=105"></script>
-  <script defer src="js/ai.js?v=105"></script>
-  <script defer src="js/ladder.js?v=105"></script>
+  <script defer src="js/config.js?v=107"></script>
+  <script defer src="js/stats.js?v=107"></script>
+  <script defer src="js/cloud.js?v=107"></script>
+  <script defer src="js/postgame-feedback.js?v=107"></script>
+  <script defer src="js/engine.js?v=107"></script>
+  <script defer src="js/pieces.js?v=107"></script>
+  <script defer src="js/themes.js?v=107"></script>
+  <script defer src="js/sound.js?v=107"></script>
+  <script defer src="js/tutorial.js?v=107"></script>
+  <script defer src="js/ai.js?v=107"></script>
+  <script defer src="js/ladder.js?v=107"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=105"></script>
-  <script defer src="js/net.js?v=105"></script>
-  <script defer src="js/share.js?v=105"></script>
-  <script defer src="js/analysis.js?v=105"></script>
-  <script defer src="js/solver.js?v=105"></script>
-  <script defer src="js/puzzles.js?v=105"></script>
-  <script defer src="js/main.js?v=105"></script>
-  <script defer src="js/ui.js?v=105"></script>
-  <script defer src="js/native.js?v=105"></script>
+  <script defer src="js/matchmaking.js?v=107"></script>
+  <script defer src="js/net.js?v=107"></script>
+  <script defer src="js/share.js?v=107"></script>
+  <script defer src="js/analysis.js?v=107"></script>
+  <script defer src="js/solver.js?v=107"></script>
+  <script defer src="js/puzzles.js?v=107"></script>
+  <script defer src="js/main.js?v=107"></script>
+  <script defer src="js/ui.js?v=107"></script>
+  <script defer src="js/native.js?v=107"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());

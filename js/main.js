@@ -568,6 +568,7 @@ function done(gm) {
   // In puzzle mode the action has landed on the board but is not yet accepted:
   // the puzzle grades it, and a miss rewinds the position. Nothing else in the
   // game loop applies — there is no opponent to broadcast to and no bot to wake.
+  if (gm && gm.kind !== 'm') badgeBump('board');        // a square of the board, moved by hand
   if (puzzleMode) { puzzleSubmit(gm); return; }
   if (gm) gameActs.push(gm);
   afterMove(); updateShare(); netBroadcast(gm); paintNetCard(); maybeAI();
@@ -1571,9 +1572,10 @@ async function syncProfileDown() {
       const beforeN = Object.keys((remote.puzzles && remote.puzzles.solved) || {}).length;
       const merged = WCPUZZLE.mergeProgress(remote.puzzles);
       if (remote.puzzle_rating > 0) WCPUZZLE.setRating(remote.puzzle_rating);   // server's column wins
+      mergeExtras(remote.puzzles); badgeCheck();
       if (Object.keys(merged.solved).length > beforeN) syncProfileUp();
     } else {
-      await WCCLOUD.saveProfile(Object.assign({}, local, { puzzles: WCPUZZLE.progress() }));
+      await WCCLOUD.saveProfile(Object.assign({}, local, { puzzles: cloudExtras() }));
     }
     if (remote && (remote.chess_level || ((remote.wins | 0) + (remote.losses | 0) + (remote.draws | 0)) > 0)) {
       markTutSeen();                // an account with history knows the game
@@ -1713,7 +1715,7 @@ if (obEl) obEl.addEventListener('click', function (e) {
 function syncProfileUp() {
   if (!WCCLOUD.enabled() || !WCCLOUD.currentUser()) return;
   // puzzle progress travels with the profile so it follows the account too
-  WCCLOUD.saveProfile(Object.assign({}, WCLADDER.getProfile(), { puzzles: WCPUZZLE.progress() }));
+  WCCLOUD.saveProfile(Object.assign({}, WCLADDER.getProfile(), { puzzles: cloudExtras() }));
 }
 
 // A proper sign-in surface: Google when the project has it, an email
@@ -2768,6 +2770,8 @@ function renderProfile() {
       return tile('This week', (dw >= 0 ? '+' : '') + dw, wk.length + ' rated game' + (wk.length === 1 ? '' : 's'));
     })();
   paintExtLinks();
+  badgeCheck();
+  const bg = document.getElementById('profBadges'); if (bg) bg.innerHTML = badgeGrid();
   if (profTab === 'puzzles') renderPuzzleStats();
 
   // form and records: the things a rating alone does not say
@@ -3478,7 +3482,111 @@ const DAILY_KEY = 'hollowchess.daily.v1', DAILY_EPOCH = Date.UTC(2026, 10, 21), 
 let dailyOn = false, dailyDay = 0, dailyStats = null, dailyTick = null, dailyFetched = 0;
 let starterOn = false;                    // the first-visit puzzle: it stays up when solved and offers a game
 const pzDailyEl = document.getElementById('pzDaily');
+setTimeout(function () { try { badgeCheck(); } catch (e) {} }, 1500);
 function dailyNo() { return Math.floor((Date.now() - DAILY_EPOCH) / DAY_MS) + 1; }
+
+// ---- streaks and badges ----------------------------------------------------
+// A badge is a threshold on a number the game already knows: days in a row on
+// the daily, games finished, squares of the board moved, puzzles solved. The
+// two counters nothing else keeps (games, board moves) live here, with the
+// date each badge was earned. Signed in, the lot rides up with the profile.
+const BADGE_KEY = 'hollowchess.badges.v1';
+const BADGES = [
+  { id: 's3', kind: 'streak', n: 3, name: '3-day streak', ico: '\ud83d\udd25' },
+  { id: 's7', kind: 'streak', n: 7, name: '7-day streak', ico: '\ud83d\udd25' },
+  { id: 's10', kind: 'streak', n: 10, name: '10-day streak', ico: '\ud83d\udd25' },
+  { id: 's30', kind: 'streak', n: 30, name: '30-day streak', ico: '\ud83d\udd25' },
+  { id: 's50', kind: 'streak', n: 50, name: '50-day streak', ico: '\ud83d\udd25' },
+  { id: 's100', kind: 'streak', n: 100, name: '100-day streak', ico: '\ud83d\udd25' },
+  { id: 'g1', kind: 'games', n: 1, name: 'First game', ico: '\u265f\ufe0f' },
+  { id: 'g10', kind: 'games', n: 10, name: '10 games', ico: '\u265f\ufe0f' },
+  { id: 'g50', kind: 'games', n: 50, name: '50 games', ico: '\u265f\ufe0f' },
+  { id: 'g100', kind: 'games', n: 100, name: '100 games', ico: '\u265f\ufe0f' },
+  { id: 'b10', kind: 'board', n: 10, name: '10 squares moved', ico: '\u2b1b' },
+  { id: 'b100', kind: 'board', n: 100, name: '100 squares moved', ico: '\u2b1b' },
+  { id: 'b500', kind: 'board', n: 500, name: '500 squares moved', ico: '\u2b1b' },
+  { id: 'p10', kind: 'puzzles', n: 10, name: '10 puzzles', ico: '\ud83e\udde9' },
+  { id: 'p50', kind: 'puzzles', n: 50, name: '50 puzzles', ico: '\ud83e\udde9' },
+  { id: 'p100', kind: 'puzzles', n: 100, name: '100 puzzles', ico: '\ud83e\udde9' },
+];
+const BADGE_UNIT = { streak: 'days in a row on the daily', games: 'games finished', board: 'squares of the board moved', puzzles: 'puzzles solved' };
+function badgeState() {
+  try { const b = JSON.parse(localStorage.getItem(BADGE_KEY)); if (b && b.earned) return b; } catch (e) {}
+  return { board: 0, games: 0, best: 0, earned: {} };
+}
+function badgeWrite(b) { try { localStorage.setItem(BADGE_KEY, JSON.stringify(b)); } catch (e) {} }
+function badgeBump(kind) { const b = badgeState(); b[kind] = (b[kind] | 0) + 1; badgeWrite(b); badgeCheck(); }
+function badgeValues(b) {
+  const p = WCLADDER.getProfile();
+  let solved = 0; try { solved = Object.keys(WCPUZZLE.progress().solved || {}).length; } catch (e) {}
+  return {
+    streak: Math.max(b.best | 0, dailyStreak(dailyRead())),
+    games: Math.max(b.games | 0, (p.wins | 0) + (p.losses | 0) + (p.draws | 0)),
+    board: b.board | 0, puzzles: solved,
+  };
+}
+let badgeQueue = [], badgeShowing = false;
+function badgeToast() {
+  if (badgeShowing || !badgeQueue.length) return;
+  badgeShowing = true;
+  const x = badgeQueue.shift();
+  let el = document.getElementById('badgeToast');
+  if (!el) { el = document.createElement('div'); el.id = 'badgeToast'; el.className = 'badge-toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.innerHTML = '<span class="bt-ico">' + x.ico + '</span><span><span class="bt-k">Badge earned</span><span class="bt-n">' + esc(x.name) + '</span></span>';
+  el.classList.add('show');
+  setTimeout(function () { el.classList.remove('show'); setTimeout(function () { badgeShowing = false; badgeToast(); }, 350); }, 3600);
+}
+// Award whatever the numbers now justify. The first pass on a device is silent:
+// an old hand should not be met by ten pop-ups for things done weeks ago.
+function badgeCheck() {
+  const b = badgeState(), v = badgeValues(b), quiet = !b.init;
+  let fresh = false;
+  if (v.streak > (b.best | 0)) { b.best = v.streak; fresh = true; }
+  BADGES.forEach(function (x) {
+    if (b.earned[x.id] || v[x.kind] < x.n) return;
+    b.earned[x.id] = Date.now(); fresh = true;
+    if (!quiet) { badgeQueue.push(x); WCSTATS.track('badge', { id: x.id }); }
+  });
+  if (!b.init) { b.init = 1; fresh = true; }
+  if (fresh) { badgeWrite(b); syncProfileUp(); }
+  badgeToast();
+  return v;
+}
+// what goes up with the profile, and how what comes down is folded in
+function cloudExtras() {
+  const days = {}, d = dailyRead().days;
+  Object.keys(d).forEach(function (k) { if (d[k] && d[k].ms) days[k] = { ms: d[k].ms, clean: !!d[k].clean }; });
+  return Object.assign({}, WCPUZZLE.progress(), { daily: days, badges: badgeState() });
+}
+function mergeExtras(remote) {
+  if (!remote) return;
+  if (remote.daily) {
+    const d = dailyRead(); let grew = false;
+    Object.keys(remote.daily).forEach(function (k) { const r = remote.daily[k]; if (r && r.ms && !(d.days[k] && d.days[k].ms)) { d.days[k] = { ms: +r.ms, clean: !!r.clean, start: 0 }; grew = true; } });
+    if (grew) dailyWrite(d);
+  }
+  if (remote.badges && remote.badges.earned) {
+    const b = badgeState(), r = remote.badges;
+    b.board = Math.max(b.board | 0, r.board | 0); b.games = Math.max(b.games | 0, r.games | 0); b.best = Math.max(b.best | 0, r.best | 0);
+    Object.keys(r.earned).forEach(function (id) { if (!b.earned[id] || r.earned[id] < b.earned[id]) b.earned[id] = r.earned[id]; });
+    b.init = 1;
+    badgeWrite(b);
+  }
+}
+function badgeGrid() {
+  const b = badgeState(), v = badgeValues(b);
+  const got = BADGES.filter(function (x) { return b.earned[x.id]; }).length;
+  return '<div class="badge-head"><span class="lobby-label">Badges</span><span class="badge-count">' + got + ' of ' + BADGES.length + '</span></div><div class="badge-grid">' +
+    BADGES.map(function (x) {
+      const on = !!b.earned[x.id], have = Math.min(v[x.kind], x.n);
+      return '<div class="hbadge' + (on ? ' on' : '') + '" title="' + esc(x.n + ' ' + BADGE_UNIT[x.kind]) + '">' +
+        '<span class="badge-ico">' + x.ico + '</span><span class="badge-name">' + esc(x.name) + '</span>' +
+        '<span class="badge-sub">' + (on ? new Date(b.earned[x.id]).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : have + ' / ' + x.n) + '</span>' +
+        (on ? '' : '<span class="badge-bar"><i style="width:' + Math.round(100 * have / x.n) + '%"></i></span>') + '</div>';
+    }).join('') + '</div>';
+}
+// the next streak badge still ahead, for "2 more days to ..."
+function nextStreakBadge(n) { return BADGES.filter(function (x) { return x.kind === 'streak' && x.n > n; })[0] || null; }
 function dailyFromHash() { return /[#&]daily(?:&|$)/.test(location.hash || ''); }
 function dailyRead() {
   try { const d = JSON.parse(localStorage.getItem(DAILY_KEY)); return d && d.days ? d : { days: {} }; } catch (e) { return { days: {} }; }
@@ -3542,6 +3650,13 @@ function paintDailyCard() {
   const no = dailyNo(), rec = dailyRead().days[no], st = dailyToday();
   // the lobby shows only the name and this tag, so the tag carries the news
   tag.textContent = rec && rec.ms ? 'solved in ' + fmtDur(rec.ms) : (st && st.solved ? st.solved + ' solved today' : 'new today');
+  const sk = document.getElementById('dailyStreak');
+  if (sk) {
+    const n = dailyStreak(dailyRead()), doneToday = !!(rec && rec.ms);
+    sk.hidden = n < 1;
+    sk.textContent = n < 1 ? '' : '\ud83d\udd25 ' + n + '-day streak' + (doneToday ? '' : ' \u00b7 solve today to keep it');
+    sk.classList.toggle('risk', n >= 1 && !doneToday);
+  }
   const crowd = st && st.solved ? people(st.solved) + ' solved it today' : '';
   desc.textContent = rec && rec.ms ? 'Solved in ' + fmtDur(rec.ms) + (crowd ? ' · ' + crowd : '') + ' · next in ' + dailyNextIn()
     : 'Same puzzle for everyone' + (crowd ? ' · ' + crowd : '. Be the first today.');
@@ -3566,7 +3681,10 @@ function paintDaily() {
   } else {
     const streak = dailyStreak(d);
     h = '<div class="pzd-clock done">' + fmtDur(rec.ms) + '</div>' +
-        '<div class="pzd-line"><b>' + (rec.clean ? 'Solved first try' : 'Solved') + '</b>' + (streak > 1 ? ' · ' + streak + ' days in a row' : '') + '</div>';
+        '<div class="pzd-line"><b>' + (rec.clean ? 'Solved first try' : 'Solved') + '</b></div>';
+    const nb = nextStreakBadge(streak);
+    h += '<div class="pzd-streak"><span class="pzd-flame">\ud83d\udd25</span><span class="pzd-sn">' + streak + '</span>' +
+         '<span class="pzd-st">day streak' + (nb ? '<small>' + (nb.n - streak) + ' more ' + (nb.n - streak === 1 ? 'day' : 'days') + ' to the ' + nb.n + '-day badge</small>' : '') + '</span></div>';
     if (st && st.solved) {
       const bits = [people(st.solved) + ' solved it today'];
       if (st.solved > 1) bits.push(Math.round(100 * st.clean / st.solved) + '% first try');
@@ -3627,8 +3745,9 @@ function dailySolved(clean) {
   const d = dailyRead(), rec = d.days[dailyDay] || (d.days[dailyDay] = { start: Date.now() });
   if (rec.ms) return;                               // a replay; the first solve stands
   rec.ms = Math.max(1000, Date.now() - rec.start); rec.clean = !!clean;
-  Object.keys(d.days).forEach(function (k) { if (+k < dailyDay - 90) delete d.days[k]; });
+  Object.keys(d.days).forEach(function (k) { if (+k < dailyDay - 400) delete d.days[k]; });
   dailyWrite(d);
+  badgeCheck();
   if (dailyTick) { clearInterval(dailyTick); dailyTick = null; }
   WCSTATS.track('daily_solved', { day: dailyDay, clean: !!clean, s: Math.round(rec.ms / 1000) });
   // a solve on a developer's machine must not land in the real count
@@ -4093,6 +4212,7 @@ function puzzleSubmit(gm) {
     return;
   }
   if (res.state === 'solved') {
+    badgeCheck();
     WCSOUND.play('win');
     pzLog(before && before.id, true, !(before && before.failed));
     // straight on to the next one — a run should not stall waiting on a button
@@ -4208,6 +4328,7 @@ function sync() {
       const me = localColor();
       gtFinished();
       const personalGame = !!(activeBot || onlineActive || botEnabled());
+      if (personalGame) badgeBump('games');
       if (wantsNudge(personalGame && game.winner && game.winner === me)) {
         nudgeThisGame = true;
         const shown = nudgeCount() + 1;
