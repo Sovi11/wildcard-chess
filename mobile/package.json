@@ -1,0 +1,19 @@
+{
+  "name": "hollow-chess-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-web.cjs",
+    "sync": "npm run build && cap sync",
+    "open:ios": "cap open ios",
+    "open:android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0",
+    "@supabase/supabase-js": "2.95.3",
+    "peerjs": "1.5.4"
+  },
+  "devDependencies": { "@capacitor/cli": "8.6.0" }
+}
