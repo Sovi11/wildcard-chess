@@ -19,6 +19,22 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
 ```
 
+## One-time setup on the Windows PC (done 2026-11-23)
+
+No installer and no admin rights: a portable JDK and the Android command-line
+tools live in `%USERPROFILE%/android-build` (`jdk-21...` and `sdk`), and
+`android/local.properties` points Gradle at that SDK. In Git Bash:
+
+```bash
+export JAVA_HOME="$HOME/android-build/jdk-21.0.13.1+2"
+export ANDROID_HOME="$HOME/android-build/sdk"
+export PATH="$JAVA_HOME/bin:$PATH"
+cd app && npm run sync && cd android && ./gradlew.bat bundleRelease
+```
+
+The upload key is `android/upload-keystore.jks` with its password in
+`android/keystore.properties`. Neither is in git: back both up somewhere safe.
+
 ## Everyday
 
 ```bash

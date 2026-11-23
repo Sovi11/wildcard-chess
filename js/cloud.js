@@ -60,7 +60,9 @@
     }
   }
 
-  const hasGoogle = () => providers.indexOf('google') >= 0;
+  // Google refuses to sign people in from inside an app's embedded web view,
+  // so the Android and iOS apps offer email sign-in only.
+  const hasGoogle = () => providers.indexOf('google') >= 0 && !(window.HC && HC.native);
   const providerList = () => providers.slice();
 
   // Passwordless email link. Works with no provider setup at all, so accounts

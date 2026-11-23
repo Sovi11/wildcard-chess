@@ -2,14 +2,14 @@
   "appId": "com.hollowchess.app",
   "appName": "Hollow Chess",
   "webDir": "www",
-  "backgroundColor": "#f6efe2",
+  "backgroundColor": "#0b0c0e",
   "android": {
-    "backgroundColor": "#f6efe2"
+    "backgroundColor": "#0b0c0e"
   },
   "plugins": {
     "SplashScreen": {
       "launchAutoHide": true,
-      "backgroundColor": "#f6efe2",
+      "backgroundColor": "#0b0c0e",
       "showSpinner": false,
       "launchShowDuration": 700
     },
