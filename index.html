@@ -34,7 +34,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" /></noscript>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=102" />
+  <link rel="stylesheet" href="styles.css?v=103" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -90,18 +90,10 @@
         </div>
       </header>
 
-      <div class="lobby-modes lobby-top">
-        <button class="mode-card mode-wide mode-daily" data-lobbymode="daily">
-          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/><path d="M9 15l2.2 2.2L15.5 13"/></svg></span>
-          <span class="mode-name">Daily puzzle <span id="dailyTag" class="lb-tag">today</span></span>
-          <span class="mode-desc" id="dailyDesc">Same puzzle for everyone.</span>
-        </button>
-      </div>
-
       <div class="queue-box">
         <button id="findMatch" class="find-btn">
           <span class="find-title">Find a match</span>
-          <span class="find-sub">Rated. A human if one is waiting, otherwise a rated bot.</span>
+          <span class="find-sub">Rated</span>
         </button>
         <div id="searchState" class="search-state">
           <div class="search-spin"></div>
@@ -122,7 +114,6 @@
         </div>
       </div>
 
-      <div class="lobby-label">Other ways to play</div>
       <div class="lobby-modes">
         <button class="mode-card" data-lobbymode="computer" type="button">
           <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M9 20h6M12 16v4"/></svg></span>
@@ -134,24 +125,7 @@
           <span class="mode-name">Online, live</span>
           <span class="mode-desc">Send one link. You both play in real time.</span>
         </button>
-        <button class="mode-card" data-lobbymode="hotseat">
-          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.5a6.2 6.2 0 0 1 12.4 0"/><circle cx="16.5" cy="9" r="2.7"/><path d="M15.8 13.6a5.2 5.2 0 0 1 5.4 5.9"/></svg></span>
-          <span class="mode-name">2 players, one screen</span>
-          <span class="mode-desc">Offline hotseat. Pass the mouse.</span>
-        </button>
-        <button class="mode-card mode-wide mode-arena" data-lobbymode="arena">
-          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 5.5H4.5V7A3 3 0 0 0 7.2 10M17 5.5h2.500V7a3 3 0 0 1-2.700 3M12 14v3.500M8.500 20h7M9.500 17.500h5"/></svg></span>
-          <span class="mode-name">Sunday Arena <span id="arenaTag" class="lb-tag">weekly</span></span>
-          <span class="mode-desc">One hour of ranked games. Most points wins.</span>
-        </button>
-        <button class="mode-card mode-wide" data-lobbymode="puzzles">
-          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.2"/><rect x="13" y="13" width="7" height="7" rx="1.2"/><path d="M15 4.5h4.5V9M9 19.5H4.5V15" /></svg></span>
-          <span class="mode-name">Puzzles</span>
-          <span class="mode-desc">Forced mates where the terrain is the answer. One solution, proved.</span>
-        </button>
-      </div>
-
-      <div id="roomBox" class="room-box">
+        <div id="roomBox" class="room-box">
         <div id="roomState" class="room-state">Opening a room…</div>
         <div class="room-siderow">
           <label class="room-sidelabel">You play</label>
@@ -172,7 +146,42 @@
           <button id="joinRoom" class="ghost-btn">Join</button>
         </div>
         <button id="cancelRoom" class="ghost-btn room-cancel">Cancel</button>
+        </div>
+        <button class="mode-card mode-wide" data-lobbymode="puzzles">
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.2"/><rect x="13" y="13" width="7" height="7" rx="1.2"/><path d="M15 4.5h4.5V9M9 19.5H4.5V15" /></svg></span>
+          <span class="mode-name">Puzzles</span>
+          <span class="mode-desc">Forced mates where the terrain is the answer. One solution, proved.</span>
+        </button>
+        <button class="mode-card mode-wide mode-daily daily-big" data-lobbymode="daily" type="button">
+          <svg id="dailyThumb" class="daily-thumb" viewBox="0 0 8 8" aria-hidden="true"></svg>
+          <span class="daily-body">
+            <span class="mode-name">Daily puzzle <span id="dailyTag" class="lb-tag">today</span></span>
+            <span class="daily-line" id="dailyLine"></span>
+            <span class="mode-desc" id="dailyDesc">Same puzzle for everyone.</span>
+          </span>
+        </button>
       </div>
+
+      <details class="pool-peek more-peek">
+        <summary>More ways to play</summary>
+        <div class="lobby-modes more-modes">
+        <button class="mode-card" data-lobbymode="hotseat">
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.5a6.2 6.2 0 0 1 12.4 0"/><circle cx="16.5" cy="9" r="2.7"/><path d="M15.8 13.6a5.2 5.2 0 0 1 5.4 5.9"/></svg></span>
+          <span class="mode-name">2 players, one screen</span>
+          <span class="mode-desc">Offline hotseat. Pass the mouse.</span>
+        </button>
+        <button class="mode-card mode-wide mode-arena" data-lobbymode="arena">
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 5.5H4.5V7A3 3 0 0 0 7.2 10M17 5.5h2.500V7a3 3 0 0 1-2.700 3M12 14v3.500M8.500 20h7M9.500 17.500h5"/></svg></span>
+          <span class="mode-name">Sunday Arena <span id="arenaTag" class="lb-tag">weekly</span></span>
+          <span class="mode-desc">One hour of ranked games. Most points wins.</span>
+        </button>
+        <button class="mode-card mode-wide" data-lobbymode="link" type="button">
+          <span class="mode-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.700-5.700l-1 1"/><path d="M14 10a4 4 0 0 0-5.700 0l-3 3a4 4 0 0 0 5.700 5.700l1-1"/></svg></span>
+          <span class="mode-name">Play by link</span>
+          <span class="mode-desc">Correspondence: send a link after each move.</span>
+        </button>
+        </div>
+      </details>
 
       <details class="pool-peek lb-peek">
         <summary>Leaderboard</summary>
@@ -180,18 +189,8 @@
       </details>
 
       <details class="pool-peek">
-        <summary>Opponent details <span id="poolCount"></span></summary>
+        <summary>Play a bot <span id="poolCount"></span></summary>
         <div id="botList" class="bot-list"></div>
-      </details>
-
-      <details class="pool-peek">
-        <summary>Correspondence mode</summary>
-        <p class="corr-note">Friend not online right now? Play by link instead — you send a
-          fresh link after each move and they reply with theirs. Slower, but it works even if
-          you are never online at the same time.</p>
-        <button class="mode-card corr-card" data-lobbymode="link">
-          <span class="mode-name">🔗 Play by link (correspondence)</span>
-        </button>
       </details>
 
       <div class="lobby-foot">
@@ -261,7 +260,7 @@
           <div class="prof-wld" id="profWld"></div>
         </div>
         <div class="prof-gameshead">
-          <span class="lobby-label">Past games <span class="lobby-hint">tap one to review it with the coach</span></span>
+          <span class="lobby-label">Past games</span>
           <span class="prof-filter" id="profFilter" role="group" aria-label="Filter games">
             <button data-f="all" aria-pressed="true">All</button><button data-f="win" aria-pressed="false">Wins</button><button data-f="loss" aria-pressed="false">Losses</button><button data-f="draw" aria-pressed="false">Draws</button>
           </span>
@@ -694,29 +693,29 @@
     </main>
   </div>
 
-  <script defer src="js/platform.js?v=102"></script>
+  <script defer src="js/platform.js?v=103"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script defer src="js/config.js?v=102"></script>
-  <script defer src="js/stats.js?v=102"></script>
-  <script defer src="js/cloud.js?v=102"></script>
-  <script defer src="js/postgame-feedback.js?v=102"></script>
-  <script defer src="js/engine.js?v=102"></script>
-  <script defer src="js/pieces.js?v=102"></script>
-  <script defer src="js/themes.js?v=102"></script>
-  <script defer src="js/sound.js?v=102"></script>
-  <script defer src="js/tutorial.js?v=102"></script>
-  <script defer src="js/ai.js?v=102"></script>
-  <script defer src="js/ladder.js?v=102"></script>
+  <script defer src="js/config.js?v=103"></script>
+  <script defer src="js/stats.js?v=103"></script>
+  <script defer src="js/cloud.js?v=103"></script>
+  <script defer src="js/postgame-feedback.js?v=103"></script>
+  <script defer src="js/engine.js?v=103"></script>
+  <script defer src="js/pieces.js?v=103"></script>
+  <script defer src="js/themes.js?v=103"></script>
+  <script defer src="js/sound.js?v=103"></script>
+  <script defer src="js/tutorial.js?v=103"></script>
+  <script defer src="js/ai.js?v=103"></script>
+  <script defer src="js/ladder.js?v=103"></script>
   <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="js/matchmaking.js?v=102"></script>
-  <script defer src="js/net.js?v=102"></script>
-  <script defer src="js/share.js?v=102"></script>
-  <script defer src="js/analysis.js?v=102"></script>
-  <script defer src="js/solver.js?v=102"></script>
-  <script defer src="js/puzzles.js?v=102"></script>
-  <script defer src="js/main.js?v=102"></script>
-  <script defer src="js/ui.js?v=102"></script>
-  <script defer src="js/native.js?v=102"></script>
+  <script defer src="js/matchmaking.js?v=103"></script>
+  <script defer src="js/net.js?v=103"></script>
+  <script defer src="js/share.js?v=103"></script>
+  <script defer src="js/analysis.js?v=103"></script>
+  <script defer src="js/solver.js?v=103"></script>
+  <script defer src="js/puzzles.js?v=103"></script>
+  <script defer src="js/main.js?v=103"></script>
+  <script defer src="js/ui.js?v=103"></script>
+  <script defer src="js/native.js?v=103"></script>
   <script>
     // not inside the phone app: its files are already on the device
     var isApp = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());

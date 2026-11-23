@@ -1153,23 +1153,27 @@ function renderLobby() {
     const tag = Math.abs(b.gap) <= 120 ? 'even' : (b.gap > 0 ? 'harder' : 'easier');
     const tagText = tag === 'even' ? 'fair fight'
       : (b.gap > 0 ? ('+' + b.gap + ' above you') : (b.gap + ' below you'));
-    return '<div class="bot-row static">' +
+    return '<button type="button" class="bot-row" data-bot="' + esc(b.id) + '" title="Play ' + esc(b.name) + ' (rated)">' +
       '<span class="br-ico">' + b.emoji + '</span>' +
       '<span class="br-main">' +
-        '<span class="br-top"><span class="br-name">' + esc(b.name) + '</span>' +
-        '<span class="br-tag ' + tag + '">' + tagText + '</span></span>' +
+        '<span class="br-top"><span class="br-name">' + esc(b.name) + '</span></span>' +
         '<span class="br-style">' + esc(b.style) + '</span>' +
-        '<span class="br-blurb">' + esc(b.blurb) + '</span>' +
       '</span>' +
       '<span class="br-right">' +
         '<span class="br-elo">' + b.elo + '</span>' +
         '<span class="br-odds">' + b.winChance + '% win</span>' +
-        '<span class="br-stake">+' + st.win + ' / ' + st.loss + '</span>' +
-      '</span></div>';
+      '</span></button>';
   }).join('');
   const count = document.getElementById('poolCount');
-  if (count) count.textContent = '(' + rows.length + ' rated players)';
+  if (count) count.textContent = '(' + rows.length + ')';
 }
+
+// any bot on the ladder can be challenged directly, as a rated game
+if (botListEl) botListEl.addEventListener('click', function (e) {
+  const row = e.target.closest('.bot-row[data-bot]');
+  if (!row || !leaveLiveGame()) return;
+  startMatch(row.dataset.bot);
+});
 
 function openLobby() {
   renderLobby(); renderLeaderboard(); resetQueueUI(); lobbyEl.classList.add('show'); updateAmbient();
@@ -1185,8 +1189,7 @@ function lbRows(el, rows) {
   el.innerHTML = rows.map(function (r, i) {
     return '<div class="lb-row' + (r.you ? ' you' : '') + '">' +
       '<span class="lb-rank">' + (i + 1) + '</span>' +
-      '<span class="lb-name">' + esc(r.name) +
-        (r.human ? ' <span class="lb-tag">player</span>' : '') + '</span>' +
+      '<span class="lb-name">' + esc(r.name) + '</span>' +
       '<span class="lb-elo">' + r.elo + '</span></div>';
   }).join('');
 }
@@ -1196,26 +1199,20 @@ function renderLeaderboard() {
   if (!el) return;
   const me = WCLADDER.getProfile();
   const myName = (me.name && me.name !== 'You') ? me.name : 'You';
-  const bots = WCLADDER.livePool()
-    .map(function (b) { return { name: b.name, elo: b.elo, you: false, human: false }; });
-
   if (WCCLOUD.enabled()) {
-    WCCLOUD.leaderboard(25).then(function (rows) {
+    WCCLOUD.leaderboard(100).then(function (rows) {
       if (!rows || !rows.length) return;            // fall back to what is drawn below
       const humans = rows.map(function (r) {
         return { name: r.name, elo: r.elo, you: r.name === me.name, human: true };
       });
       const iAmListed = humans.some(function (h) { return h.you; });
       const all = humans
-        .concat(bots)
         .concat(iAmListed ? [] : [{ name: myName, elo: me.elo, you: true, human: true }])
         .sort(function (a, b) { return b.elo - a.elo; });
       lbRows(el, all);
     }).catch(function () {});
   }
-  lbRows(el, bots
-    .concat([{ name: myName, elo: me.elo, you: true, human: true }])
-    .sort(function (a, b) { return b.elo - a.elo; }));
+  if (!el.children.length) lbRows(el, [{ name: myName, elo: me.elo, you: true, human: true }]);
   let note = document.getElementById('lbGuest');
   if (!note) {
     note = document.createElement('div'); note.id = 'lbGuest'; note.className = 'guest-cta';
@@ -1387,7 +1384,7 @@ function netApply(msg) {
 function netHandlers(labelWhenJoined) {
   return {
     onOpen: function (info) {
-      showRoomBox('Room open \u2014 send this link to your friend. Waiting for them to join\u2026', info.link);
+      showRoomBox('Send this link to a friend', info.link);
     },
     onPeer: function (info) {
       let color;
@@ -1540,12 +1537,15 @@ function paintAuth() {
     authBtn.textContent = 'Sign out';
     if (authStateEl) {
       const who = (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || u.email || 'signed in';
-      authStateEl.textContent = esc(who) + ' \u00b7 rating synced';
+      authStateEl.textContent = '';
     }
   } else {
     authBtn.textContent = WCCLOUD.hasGoogle() ? 'Sign in with Google' : 'Sign in with email';
     if (authStateEl) authStateEl.textContent = '';
   }
+  const pe = document.getElementById('profile');
+  if (pe && pe.classList.contains('show')) renderProfile();
+  if (lobbyEl && lobbyEl.classList.contains('show')) renderLeaderboard();
 }
 
 // On sign-in the cloud profile is authoritative; if the account is brand new we
@@ -2416,6 +2416,10 @@ document.querySelectorAll('.mode-card').forEach(function (el) {
   el.addEventListener('click', function () {
     const kind = el.dataset.lobbymode;
     if (kind === 'arena') { openArena(); return; }
+    if (kind === 'online' && roomBoxEl && roomBoxEl.classList.contains('show')) {
+      if (cancelRoomBtn) cancelRoomBtn.click(); else hideRoomBox();
+      return;
+    }
     if (!leaveLiveGame()) return;
     if (kind === 'online') { hostRoom(); return; }
     if (kind === 'puzzles') { startPuzzles(); return; }
@@ -2736,8 +2740,7 @@ function renderProfile() {
   const above = WCLADDER.livePool().filter(function (b) { return b.elo > p.elo; }).length;
   const field = WCLADDER.livePool().length + 1;
   document.getElementById('profSummary').textContent =
-    (total ? 'Rated ' + p.elo + ' \u00b7 #' + (above + 1) + ' of ' + field + ' on the ladder' : 'No rated games yet') +
-    (signedIn ? ' \u00b7 saved to your account' : ' \u00b7 saved on this device only');
+    signedIn ? 'Saved to your account' : 'Saved on this device only';
   const authB = document.getElementById('profAuth');
   if (authB) {
     authB.hidden = !WCCLOUD.enabled();
@@ -3503,9 +3506,39 @@ function dailyFetch(force) {
   });
 }
 const people = function (n) { return n === 1 ? '1 person' : n + ' people'; };
+function paintDailyThumb() {
+  const el = document.getElementById('dailyThumb'), line = document.getElementById('dailyLine');
+  if (!el) return;
+  WCPUZZLE.load().then(function () {
+    const p = WCPUZZLE.list().find(function (x) { return x.id === WCPUZZLE.dailyId(dailyNo()); });
+    if (!p) return;
+    const cs = p.cells.map(function (k) { return k.split(',').map(Number); });
+    const minC = Math.min.apply(null, cs.map(function (q) { return q[0]; })), maxC = Math.max.apply(null, cs.map(function (q) { return q[0]; }));
+    const minR = Math.min.apply(null, cs.map(function (q) { return q[1]; })), maxR = Math.max.apply(null, cs.map(function (q) { return q[1]; }));
+    const flip = p.turn === 'black';                      // seen from the side that is to move
+    const X = function (c) { return flip ? maxC - c : c - minC; }, Y = function (r) { return flip ? r - minR : maxR - r; };
+    el.setAttribute('viewBox', '0 0 ' + (maxC - minC + 1) + ' ' + (maxR - minR + 1));
+    let svg = pieceDefs(WCTHEME.get().pieces);
+    cs.forEach(function (q) {
+      const light = (((q[0] + q[1]) % 2) + 2) % 2 === 1;
+      svg += '<rect x="' + X(q[0]) + '" y="' + Y(q[1]) + '" width="1" height="1" class="sq ' + (light ? 'lt' : 'dk') + '"/>';
+    });
+    Object.keys(p.pieces).forEach(function (k) {
+      const q = k.split(',').map(Number), pc = p.pieces[k];
+      svg += '<use href="#' + symFor(pc[0]) + '" x="' + X(q[0]) + '" y="' + Y(q[1]) + '" width="1" height="1" class="pc ' + (pc[1] === 'white' ? 'w' : 'b') + '"/>';
+    });
+    el.innerHTML = svg;
+    if (line) {
+      const tg = p.tags || [];
+      line.textContent = (tg.indexOf('island-king') >= 0 ? 'A king alone on an island. ' : tg.indexOf('peninsula-king') >= 0 ? 'A king out on a peninsula. ' : '') +
+        (p.turn === 'white' ? 'White' : 'Black') + ' to play, mate in ' + p.mateIn + '.';
+    }
+  }).catch(function () {});
+}
 function paintDailyCard() {
   const tag = document.getElementById('dailyTag'), desc = document.getElementById('dailyDesc');
   if (!tag || !desc) return;
+  paintDailyThumb();
   const no = dailyNo(), rec = dailyRead().days[no], st = dailyToday();
   // the lobby shows only the name and this tag, so the tag carries the news
   tag.textContent = rec && rec.ms ? 'solved in ' + fmtDur(rec.ms) : (st && st.solved ? st.solved + ' solved today' : 'new today');

@@ -206,7 +206,7 @@ const check = (name, ok, detail) => { results.push({ name, ok, detail }); consol
     const inp = document.getElementById('profNameInput'); inp.value = 'AuditRook77'; inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     return { empty, all, losses, chips: document.querySelectorAll('.pf-chip').length, name: document.getElementById('profName').textContent, saved: WCLADDER.getProfile().name, summary: document.getElementById('profSummary').textContent };
   });
-  check('profile: empty state, form row, loss filter, rename', prof.empty && prof.all === 4 && prof.losses === 1 && prof.chips === 4 && prof.name === 'AuditRook77' && prof.saved === 'AuditRook77' && /on the ladder/.test(prof.summary), prof);
+  check('profile: empty state, form row, loss filter, rename', prof.empty && prof.all === 4 && prof.losses === 1 && prof.chips === 4 && prof.name === 'AuditRook77' && prof.saved === 'AuditRook77' && /Saved on this device/.test(prof.summary), prof);
   check('no page errors on the puzzle/review page', pzErrs.length === 0, pzErrs);
   await pzp.close();
 
