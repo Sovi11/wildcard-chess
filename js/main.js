@@ -3585,6 +3585,31 @@ function badgeGrid() {
         (on ? '' : '<span class="badge-bar"><i style="width:' + Math.round(100 * have / x.n) + '%"></i></span>') + '</div>';
     }).join('') + '</div>';
 }
+// ---- streak reminders ---------------------------------------------------------
+// Opt in from a solved daily. A browser notification goes out the evening a
+// streak is about to end; an email too for a signed-in player, once outgoing
+// mail is switched on (STREAK_MAIL). The server keeps the email wish either way.
+const SR_KEY = 'hollowchess.streakremind.v1', STREAK_MAIL = false;
+let srBusy = false, srMsg = '';
+function srState() { try { return JSON.parse(localStorage.getItem(SR_KEY)) || null; } catch (e) { return null; } }
+function streakRemindOn() {
+  if (srBusy) return;
+  if (arenaDev()) { srMsg = 'Reminders are not registered from a developer machine.'; paintDaily(); return; }
+  srBusy = true; srMsg = ''; paintDaily();
+  arenaPushSub().then(function (sub) { return WCCLOUD.streakRemind(WCSTATS.device(), sub, !isGuest()); }).then(function (r) {
+    srBusy = false;
+    const works = r && r.on && (r.push || (r.email && STREAK_MAIL));
+    if (works) { try { localStorage.setItem(SR_KEY, JSON.stringify({ push: !!r.push, email: !!r.email })); } catch (e) {} WCSTATS.track('streak_remind', { push: !!r.push, email: !!r.email }); }
+    else srMsg = r === null ? 'Could not turn it on. Check your connection and try again.'
+      : (pushOK() ? 'Allow notifications for this site, then try again.' : 'This browser cannot show notifications' + (/iPhone|iPad/.test(navigator.userAgent) ? '. On iPhone, add Hollow Chess to your Home Screen first.' : '.'));
+    paintDaily();
+  });
+}
+function streakRemindOff() {
+  try { localStorage.removeItem(SR_KEY); } catch (e) {}
+  if (!arenaDev()) WCCLOUD.streakUnremind(WCSTATS.device());
+  srMsg = ''; paintDaily();
+}
 // the next streak badge still ahead, for "2 more days to ..."
 function nextStreakBadge(n) { return BADGES.filter(function (x) { return x.kind === 'streak' && x.n > n; })[0] || null; }
 function dailyFromHash() { return /[#&]daily(?:&|$)/.test(location.hash || ''); }
@@ -3685,6 +3710,12 @@ function paintDaily() {
     const nb = nextStreakBadge(streak);
     h += '<div class="pzd-streak"><span class="pzd-flame">\ud83d\udd25</span><span class="pzd-sn">' + streak + '</span>' +
          '<span class="pzd-st">day streak' + (nb ? '<small>' + (nb.n - streak) + ' more ' + (nb.n - streak === 1 ? 'day' : 'days') + ' to the ' + nb.n + '-day badge</small>' : '') + '</span></div>';
+    const sr = srState();
+    h += sr
+      ? '<div class="pzd-line pzd-sr">Reminder on: ' + (sr.push && sr.email && STREAK_MAIL ? 'a notification and an email' : sr.push ? 'a notification' : 'an email') +
+        ' the evening your streak is about to end. <button type="button" class="arena-off" id="pzdSrOff">Turn off reminders</button></div>'
+      : '<button type="button" class="act-btn pzd-remind" id="pzdSr"' + (srBusy ? ' disabled' : '') + '>' + (srBusy ? 'Turning on…' : 'Remind me before my streak ends') + '</button>' +
+        (srMsg ? '<div class="pzd-line">' + esc(srMsg) + '</div>' : '');
     if (st && st.solved) {
       const bits = [people(st.solved) + ' solved it today'];
       if (st.solved > 1) bits.push(Math.round(100 * st.clean / st.solved) + '% first try');
@@ -3712,6 +3743,8 @@ if (pzDailyEl) pzDailyEl.addEventListener('click', function (e) {
   if (e.target.closest('#pzsPlay')) { WCSTATS.track('intro', { a: 'game' }); startFirstGame(true); }
   else if (e.target.closest('#pzsDaily')) openDaily();
   else if (e.target.closest('#pzdRemind')) arenaRegister();
+  else if (e.target.closest('#pzdSrOff')) streakRemindOff();
+  else if (e.target.closest('#pzdSr')) streakRemindOn();
   else if (e.target.closest('#pzdShare')) shareDaily();
   else if (e.target.closest('#pzdMore')) loadPuzzle(function () { return WCPUZZLE.nextUnsolved(); });
 });

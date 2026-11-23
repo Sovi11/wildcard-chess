@@ -347,6 +347,18 @@
     catch (e) { return null; }
   }
 
+  // streak reminders: a push address and/or an email opt-in for this identity
+  async function streakRemind(who, sub, email) {
+    if (!client) return null;
+    try { const { data, error } = await client.rpc('hc_streak_remind', { p_who: who || null, p_sub: sub || null, p_email: !!email }); return error ? null : (data || null); }
+    catch (e) { return null; }
+  }
+  async function streakUnremind(who) {
+    if (!client) return null;
+    try { const { data, error } = await client.rpc('hc_streak_unremind', { p_who: who || null }); return error ? null : (data || null); }
+    catch (e) { return null; }
+  }
+
   // ---- feedback ------------------------------------------------------------
   // Insert-only, no account required. Context (version, screen, signed-in) is
   // attached automatically so a bug report is actionable without interrogating
@@ -383,7 +395,7 @@
     signOut, deleteAccount, currentUser, onChange,
     loadProfile, saveProfile, leaderboard,
     joinQueue, leaveQueue, findWaiting,
-    puzzleRatings, recordPuzzleAttempt, shareGame, sharedGame, dailyStats, dailySolve, arenaBoard, arenaReport, arenaRegister, arenaUnregister,
+    puzzleRatings, recordPuzzleAttempt, shareGame, sharedGame, dailyStats, dailySolve, arenaBoard, arenaReport, arenaRegister, arenaUnregister, streakRemind, streakUnremind,
     saveGame, loadGames,
   };
 })();
