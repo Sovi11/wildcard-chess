@@ -1216,6 +1216,13 @@ function renderLeaderboard() {
   lbRows(el, bots
     .concat([{ name: myName, elo: me.elo, you: true, human: true }])
     .sort(function (a, b) { return b.elo - a.elo; }));
+  let note = document.getElementById('lbGuest');
+  if (!note) {
+    note = document.createElement('div'); note.id = 'lbGuest'; note.className = 'guest-cta';
+    note.innerHTML = '<span>Only you can see your row.</span><button type="button" class="guest-cta-btn" data-gate="board">Sign in to be listed</button>';
+    el.insertAdjacentElement('afterend', note);
+  }
+  note.hidden = !isGuest();
 }
 
 // ---- online play (real-time, peer to peer) ---------------------------------
@@ -1716,8 +1723,12 @@ const googleBtn = document.getElementById('googleBtn');
 const emailInput = document.getElementById('emailInput');
 const authMsgEl = document.getElementById('authMsg');
 
-function openAuthModal() {
+const AUTH_TITLE = 'Save your progress', AUTH_SUB = 'Sign in and your rating, record and past games follow you to any device.';
+function openAuthModal(title, sub) {
   if (!authModalEl) return;
+  const h = authModalEl.querySelector('.lobby-title'), s = authModalEl.querySelector('.lobby-sub');
+  if (h) h.textContent = typeof title === 'string' ? title : AUTH_TITLE;
+  if (s) s.textContent = typeof sub === 'string' ? sub : AUTH_SUB;
   if (googleBtn) googleBtn.style.display = WCCLOUD.hasGoogle() ? '' : 'none';
   if (authMsgEl) authMsgEl.textContent = 'Use a password, or get a one-tap link by email instead.';
   authBusy(false);
@@ -1725,6 +1736,41 @@ function openAuthModal() {
   if (!WCCLOUD.hasGoogle() && emailInput) setTimeout(function () { emailInput.focus(); }, 60);
 }
 function closeAuthModal() { if (authModalEl) authModalEl.classList.remove('show'); }
+
+// ---- what an account is for --------------------------------------------------
+// Guests can play everything. The things that only mean something with an
+// account (a kept history, a name on the boards, a streak on every device, and
+// game review after the first one) ask for it at the moment they are wanted.
+function isGuest() { return !!(WCCLOUD.enabled && WCCLOUD.enabled()) && !(WCCLOUD.currentUser && WCCLOUD.currentUser()); }
+const GATE_COPY = {
+  analyze: ['Game review is free with an account', 'Your first review was on us. Sign in to review every game, and to keep your games and rating on any device.'],
+  history: ['Keep your games', 'Right now these games live on this device only. Sign in and they are saved to your account, each with a move-by-move review.'],
+  board:   ['Put your name on the board', 'Guests are not listed. Sign in and your name and rating appear on the leaderboard and in the arena standings.'],
+  streak:  ['Keep your streak everywhere', 'Sign in and your daily streak and puzzle rating follow you to any phone or computer.'],
+};
+function askSignIn(what) {
+  const c = GATE_COPY[what] || [];
+  setAuthVia(what);
+  WCSTATS.track('signup_gate', { what: what });
+  openAuthModal(c[0], c[1]);
+}
+// one review is free for a guest; reopening that same game does not count again
+const ANA_FREE_KEY = 'hollowchess.anafree.v1';
+let anaFreeSig = '';
+function anaFreeUsed() { try { return +localStorage.getItem(ANA_FREE_KEY) || 0; } catch (e) { return 0; } }
+function reviewAllowed(acts, what) {
+  if (!isGuest()) return true;
+  const sig = acts.length + ':' + JSON.stringify(acts.slice(0, 6));
+  if (sig === anaFreeSig) return true;
+  if (anaFreeUsed() >= 1) { askSignIn(what); return false; }
+  anaFreeSig = sig;
+  try { localStorage.setItem(ANA_FREE_KEY, '1'); } catch (e) {}
+  return true;
+}
+document.addEventListener('click', function (e) {
+  const g = e.target.closest && e.target.closest('[data-gate]');
+  if (g && isGuest()) { e.preventDefault(); askSignIn(g.dataset.gate); }
+});
 bindClick('saveRatingBtn', function () {
   setAuthVia('win_prompt');
   WCSTATS.track('signup_prompt_click', { shown: nudgeCount() });
@@ -2772,7 +2818,10 @@ function renderProfile() {
   const shown = log.map(function (e, i) { return { e: e, i: i }; })
                    .filter(function (x) { return profFilter === 'all' || resOf(x.e) === profFilter; });
   if (!shown.length) { matchListEl.innerHTML = '<div class="match-empty">No ' + profFilter + 's yet.</div>'; return; }
-  matchListEl.innerHTML = shown.map(function (x) {
+  const lockNote = isGuest()
+    ? '<div class="guest-cta"><span>These games are saved on this device only.</span><button type="button" class="guest-cta-btn" data-gate="history">Sign in to keep them</button></div>' : '';
+  matchListEl.classList.toggle('guest-locked', isGuest() && anaFreeUsed() >= 1);
+  matchListEl.innerHTML = lockNote + shown.map(function (x) {
     const e = x.e, i = x.i;
     const res = e.score === 1 ? 'win' : (e.score === 0 ? 'loss' : 'draw');
     const delta = (typeof e.after === 'number' && typeof e.before === 'number')
@@ -2907,6 +2956,7 @@ function openReview(acts, title, expectedPlies) {
 // Analyze the game that JUST ended, straight from the game-over banner.
 function analyzeCurrentGame() {
   if (!gameActs.length || !gameOver()) return;
+  if (!reviewAllowed(gameActs, 'analyze')) return;
   const opp = onlineActive ? (oppLabel || 'Online player')
     : (activeBot ? activeBot.name : 'Friendly game');
   const me = onlineActive ? myColor : (botEnabled() ? (botSide() === 'white' ? 'black' : 'white') : 'white');
@@ -3052,7 +3102,10 @@ function drawReviewBoard(g) {
 
 if (matchListEl) matchListEl.addEventListener('click', function (e) {
   const row = e.target.closest('.match-row');
-  if (row && !row.disabled) reviewMatch(+row.dataset.idx);
+  if (!row || row.disabled) return;
+  const en = (WCLADDER.getProfile().log || [])[+row.dataset.idx];
+  if (en && en.acts && !reviewAllowed(en.acts, 'history')) return;
+  reviewMatch(+row.dataset.idx);
 });
 const bind = function (id, fn) { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
 bind('openProfile', function () { closeLobby(); openProfile(); });
@@ -3489,6 +3542,8 @@ function paintDaily() {
     h += '<div class="pzd-btns"><button class="act-btn primary" id="pzdShare" type="button">Share result</button>' +
          '<button class="act-btn" id="pzdMore" type="button">More puzzles</button></div>' +
          '<div class="pzd-line pzd-next">Next daily in ' + dailyNextIn() + '</div>';
+    if (isGuest()) h += '<button type="button" class="pzd-gate" data-gate="streak">' +
+      (streak > 1 ? 'Sign in to keep your ' + streak + '-day streak on every device' : 'Sign in to keep your streak on every device') + '</button>';
     // the moment someone has just enjoyed a puzzle is the moment to ask
     const ack = arenaClock(), awhen = ack.live ? 'is live now.' : 'is in ' + arenaLeft(ack.starts - Date.now()) + '.';
     h += '<div class="pzd-line pzd-arena">Sunday Arena ' + awhen + (arenaReg() ? ' Your reminder is on.' : '') + '</div>' +
@@ -3606,7 +3661,8 @@ function paintArena() {
   }).join('') : '<div class="arena-empty">' + (ck.live ? 'No games finished yet. The first result takes the lead.' : 'Nobody has played an arena yet. The first one sets the record.') + '</div>';
   const you = showing && b.you ? b.you : null;
   $('arenaYou').textContent = you ? (ck.live ? 'You: ' : 'You finished ') + ordinal(you.rank) + (ck.live ? ' of ' + b.players : '') + ' with ' + you.pts + (you.pts === 1 ? ' point' : ' points') + '.'
-    : (ck.live && !(WCCLOUD.currentUser && WCCLOUD.currentUser()) ? 'Guests show as Guest. Sign in to put your name on the board.' : '');
+    : (isGuest() ? 'Guests show as Guest. Sign in to put your name on the board.' : '');
+  if (isGuest() && !you) $('arenaYou').dataset.gate = 'board'; else delete $('arenaYou').dataset.gate;
   $('arenaGo').querySelector('.find-title').textContent = ck.live ? 'Play now' : 'Invite players';
   paintArenaReg();
 }
@@ -4165,7 +4221,10 @@ function sync() {
     const sEl = document.createElement('span'); sEl.className = 'bn-sub'; sEl.textContent = how;
     ui.bannerText.append(hEl, sEl);
     const ab = document.getElementById('analyzeBtn');
-    if (ab) ab.style.display = gameActs.length ? '' : 'none';
+    if (ab) {
+      ab.style.display = gameActs.length ? '' : 'none';
+      ab.textContent = (isGuest() && anaFreeUsed() >= 1) ? '\u2726 Analyze \u00b7 free account' : '\u2726 Analyze game';
+    }
     const hb = document.getElementById('bannerHarderBtn');
     if (hb) {
       const lvl = botLevelEl ? +botLevelEl.value : 3;
@@ -4178,8 +4237,8 @@ function sync() {
       const guest = !(WCCLOUD.currentUser && WCCLOUD.currentUser());
       sb.hidden = !(nudgeThisGame && guest);
       sb.textContent = (r && r.after)
-        ? 'Keep your ' + r.after + ' rating\u00a0\u2014 sign\u00a0in'
-        : 'Keep your rating and games\u00a0\u2014 sign\u00a0in';
+        ? 'Save this win and your ' + r.after + ' rating'
+        : 'Save this win to your profile';
     }
     ui.banner.classList.add('show');
   }
