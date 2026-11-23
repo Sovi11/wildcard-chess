@@ -3351,6 +3351,10 @@ const TAG_LABEL = {
   'wildcard-key': 'the key move is a board move',
   'wildcard-defence': 'the defence uses the board',
   'board-move-first': 'starts with a board move',
+  'island-king': 'the king is on an island',
+  'peninsula-king': 'the king is on a peninsula',
+  'knight-mate': 'a knight jumps the water',
+  'slide-in': 'a carried square opens the line',
 };
 
 function paintPuzzle() {
@@ -3602,7 +3606,11 @@ function dailySolved(clean) {
 }
 function shareDaily() {
   const no = dailyOn ? dailyDay : dailyNo(), rec = dailyRead().days[no] || {}, p = WCPUZZLE.current();
-  const what = 'mate in ' + (p ? p.mateIn : 2) + ', and the board itself can move.';
+  // the island is in plain sight on the board, so naming it gives nothing away
+  const tg = (p && p.tags) || [];
+  const what = (tg.indexOf('island-king') >= 0 ? 'a king alone on an island, mate in ' + p.mateIn + '.'
+    : tg.indexOf('peninsula-king') >= 0 ? 'a king out on a peninsula, mate in ' + p.mateIn + '.'
+    : 'mate in ' + (p ? p.mateIn : 2) + ', and the board itself can move.');
   openShare('daily', 'Share the daily puzzle',
     rec.ms ? 'Hollow Chess Daily #' + no + ': solved ' + (rec.clean ? 'first try ' : '') + 'in ' + fmtDur(rec.ms) + '. It is ' + what + ' Beat my time:'
            : 'Hollow Chess Daily #' + no + ': ' + what + ' Everyone gets the same puzzle today:',

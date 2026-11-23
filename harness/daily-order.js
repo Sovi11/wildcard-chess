@@ -37,6 +37,14 @@ while (hard.length || easy.length) {
   for (let k = 0; k < 2 && hard.length; k++) add.push(hard.shift().id);
   if (easy.length) add.push(easy.shift().id);
 }
+// --front puts the new puzzles straight after the days already played, taking
+// turns with what was queued, so a fresh batch is seen this week and not in
+// three months. Played days still never move.
+if (process.argv.includes('--front') && add.length) {
+  const head = have.slice(0, played), queued = have.slice(played), mix = [];
+  while (add.length || queued.length) { if (add.length) mix.push(add.shift()); if (add.length) mix.push(add.shift()); if (queued.length) mix.push(queued.shift()); }
+  have.length = 0; have.push(...head, ...mix);
+}
 data.dailyOrder = have.concat(add);
 if (new Set(data.dailyOrder).size !== data.dailyOrder.length) throw new Error('daily order repeats a puzzle');
 fs.writeFileSync(out, JSON.stringify(data, null, 1));
