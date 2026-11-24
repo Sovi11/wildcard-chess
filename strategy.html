@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hollow Chess strategy: 10 ideas for a board that changes shape</title>
+<meta name="description" content="How to win at Hollow Chess, the chess variant where you move the squares. Cut lines, open lines with the board, time your attack around board turns, and use knights against island kings." />
+<link rel="canonical" href="https://hollowchess.com/strategy.html" />
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Hollow Chess" />
+<meta property="og:title" content="Hollow Chess strategy: 10 ideas for a board that changes shape" />
+<meta property="og:description" content="Cut lines, open lines with the board, time your attack around board turns, and use knights against island kings." />
+<meta property="og:url" content="https://hollowchess.com/strategy.html" />
+<meta property="og:image" content="https://hollowchess.com/icons/og-card.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="/favicon.ico" sizes="48x48" /><link rel="icon" type="image/png" sizes="96x96" href="/icons/favicon-96.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap" />
+<style>
+  :root { color-scheme: dark; --paper:#0b0c0e; --card:#131417; --ink:#f2f1ed; --muted:#8b9097; --rule:#23262b; --peacock:#f2f1ed; --sunset:#c8f03c; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:"Geist",system-ui,sans-serif; font-size:17px; line-height:1.6; }
+  .wrap { max-width:760px; margin:0 auto; padding:28px 20px 70px; }
+  nav { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:26px; font-size:15px; }
+  nav a { color:var(--ink); text-decoration:none; font-weight:600; } nav a:hover { text-decoration:underline; }
+  nav .brand { font-family:"Geist",system-ui,sans-serif; font-size:20px; font-weight:650; letter-spacing:-.03em; margin-right:auto; }
+  h1 { font-family:"Geist",system-ui,sans-serif; font-weight:650; letter-spacing:-.035em; font-size:40px; line-height:1.1; margin:0 0 10px; }
+  h2 { font-family:"Geist",system-ui,sans-serif; font-weight:650; letter-spacing:-.035em; font-size:27px; margin:34px 0 8px; }
+  h3 { font-size:18px; margin:22px 0 4px; }
+  p { margin:0 0 14px; } .lede { font-size:19px; color:var(--muted); }
+  a { color:var(--sunset); }
+  .cta { display:inline-block; margin:8px 0 6px; padding:13px 26px; border-radius:10px; background:var(--peacock); color:#0b0c0e; font-weight:600; text-decoration:none; }
+  .seq { display:inline-flex; gap:6px; flex-wrap:wrap; margin:4px 0 12px; }
+  .seq i { font-style:normal; font-weight:600; padding:4px 10px; border-radius:8px; border:1px solid var(--rule); background:var(--card); }
+  .seq i.s { border-color:var(--sunset); color:var(--sunset); }
+  footer { margin-top:44px; padding-top:16px; border-top:1px solid var(--rule); font-size:14.5px; color:var(--muted); }
+  @media (max-width:520px) { h1 { font-size:32px; } h2 { font-size:23px; } }
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Article","headline":"Hollow Chess strategy: 10 ideas for a board that changes shape","description":"How to win at Hollow Chess, the chess variant where you move the squares.","url":"https://hollowchess.com/strategy.html","datePublished":"2026-11-24","dateModified":"2026-11-24","image":"https://hollowchess.com/icons/og-card.png","author":{"@type":"Organization","name":"Hollow Chess","url":"https://hollowchess.com/"},"publisher":{"@type":"Organization","name":"Hollow Chess","url":"https://hollowchess.com/"},"about":{"@id":"https://hollowchess.com/#game"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Hollow Chess","item":"https://hollowchess.com/"},{"@type":"ListItem","position":2,"name":"Strategy","item":"https://hollowchess.com/strategy.html"}]}]}</script>
+</head>
+<body>
+<div class="wrap">
+<nav><a class="brand" href="/">Hollow Chess</a><a href="how-to-play.html">How to play</a><a href="strategy.html">Strategy</a><a href="puzzles.html">Puzzles</a><a href="/">Play</a></nav>
+<h1>Hollow Chess strategy</h1>
+<p class="lede">Ten ideas that only exist because the board can change shape. If you already play chess, these are the habits to add; everything you know about tactics still applies.</p>
+<a class="cta" href="/">Try them against a bot</a>
+
+<p>New here? Read <a href="how-to-play.html">the rules</a> first. The short version: every third turn of the game is a board turn, and on it you may lift one empty square and set it down anywhere that shares an edge with the rest of the board. The place it came from becomes a hole.</p>
+
+<h2>1. Count the board turns</h2>
+<p>Board turns come in a fixed rhythm, alternating between the players:</p>
+<div class="seq"><i>White</i><i class="s">Black ✦</i><i>White</i><i>Black</i><i class="s">White ✦</i><i>Black</i><i>White</i><i class="s">Black ✦</i></div>
+<p>Each player gets one on every third move of their own. Before you commit to a plan, work out whose board turn comes next. A threat that depends on an open file is only a threat until your opponent is allowed to cut that file.</p>
+
+<h2>2. Attack when the defender has no board turn</h2>
+<p>A check can be answered by taking a square out of the attacker&rsquo;s line, but only on a board turn. Two moves out of three, the defender has no such option and has to run, block or capture as in ordinary chess. Most mating attacks in Hollow Chess are timed so the final check lands on one of those two moves.</p>
+
+<h2>3. Cut a line instead of blocking it</h2>
+<p>When a bishop, rook or queen is bearing down on you, the chess answer is to put a piece in the way. The Hollow Chess answer is often better: remove one empty square on the line. It costs no material, the piece you would have used stays active, and the line stays shut until someone spends a board turn filling the hole.</p>
+
+<h2>4. Open a line with the board</h2>
+<p>The reverse works as an attack. Put a rook or queen on a file with a hole between it and the enemy king, then drop a square into the hole on your board turn. It is a discovered check in which nothing had to move out of the way, and it is easy to miss because the attacking piece has been sitting still.</p>
+
+<h2>5. Knights get stronger</h2>
+<p>Holes stop rooks, bishops and queens. They do not stop a knight, which only needs a real square to land on. On a board with a dozen holes, a knight can be worth more than a bishop that has lost its diagonals. Think twice before trading knights early.</p>
+
+<h2>6. Take away the escape square</h2>
+<p>A king cannot step into a hole. If the enemy king has one empty square to run to, lifting that square can turn a check into checkmate on the next move. Look for this whenever a king is on the edge of the board or already next to a hole.</p>
+
+<h2>7. A piece guards the square it stands on</h2>
+<p>Only empty squares can be lifted. A square with a piece on it is safe, whoever owns the piece. If a single square connects your king to the rest of the board, or holds your attack together, keep something standing on it.</p>
+
+<h2>8. Freeze a pawn, or make it walk further</h2>
+<p>A pawn cannot advance into a hole, so one hole directly in front of a passed pawn stops it without tying down a piece. You can also add squares beyond the last rank: a pawn promotes only when it moves onto a square with nothing ahead of it in its file, so a longer file means a longer march.</p>
+
+<h2>9. Shorten your own pawn&rsquo;s road</h2>
+<p>The same rule helps the attacker. If the far squares of a file are empty, lifting them brings the edge of the board closer, and your pawn promotes sooner. In pawn races this can be worth more than a tempo.</p>
+
+<h2>10. Islands are a draw, not a fortress</h2>
+<p>A king can be walled off behind holes where no rook or bishop can reach it. That is safe from sliding pieces, but not from knights, and it does not win anything. Board moves do not reset the fifty-move count, so hiding only heads for a draw. Use an island when you are worse, and bring a knight when your opponent builds one.</p>
+
+<h2>Practise it</h2>
+<p>The fastest way to learn these patterns is the <a href="puzzles.html">puzzles</a>: over 150 mates in one and two where the key move is usually a board move. There is also a <a href="/daily">daily puzzle</a>, the same for everyone.</p>
+<p><a class="cta" href="/">Play Hollow Chess</a></p>
+<footer>Hollow Chess is a free chess variant that runs in your browser. <a href="/">Play it now</a> · <a href="how-to-play.html">How to play</a> · <a href="strategy.html">Strategy</a> · <a href="puzzles.html">Puzzles</a> · <a href="chess-variants.html">Chess variants compared</a> · <a href="notation.html">Notation</a> · <a href="privacy.html">Privacy</a></footer>
+</div>
+</body>
+</html>

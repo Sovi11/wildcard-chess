@@ -2246,6 +2246,7 @@ body.deco.ink #lobby .mode-card { align-items: center; }
 /* the footer links sat on one unbreakable line and held every phone page 395px wide */
 .site-foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; }
 .site-foot a { margin: 0; }
+.site-foot .site-about { flex-basis: 100%; max-width: 560px; margin: 0 auto 6px; line-height: 1.55; text-wrap: pretty; }
 main > * { min-width: 0; }
 @media (max-width: 360px) {
   header #soundBtn { display: none !important; }
