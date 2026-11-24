@@ -4104,7 +4104,7 @@ function openShare(what, title, text, url) {
   shareEl.querySelectorAll('a.share-opt').forEach(function (a) { a.href = links[a.dataset.net]; });
   const more = document.getElementById('shareMore');
   if (more) more.hidden = !navigator.share;
-  const cp = document.getElementById('shareCopy'); if (cp) cp.textContent = 'Copy link';
+  const cp = document.getElementById('shareCopy'); if (cp) cp.textContent = 'Copy';
   shareEl.classList.add('show');
   // a game link is long; swap in the short one as soon as the server hands it back
   const at = url.indexOf('#replay=');
@@ -4129,11 +4129,23 @@ if (shareEl) {
     if (navigator.share) navigator.share({ title: 'Hollow Chess', text: shareCtx.text, url: shareCtx.url }).catch(function () {});
   });
   bind('shareCopy', function () {
-    const btn = document.getElementById('shareCopy'), inp = document.getElementById('shareUrl');
-    const done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy link'; }, 1800); };
+    // the message and the link together, so a paste carries the result (the daily's
+    // time, a puzzle's challenge) and not just a bare URL
+    const btn = document.getElementById('shareCopy');
+    const msg = shareCtx.text ? shareCtx.text + ' ' + shareCtx.url : shareCtx.url;
+    const done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1800); };
+    const fallback = function () {
+      const ta = document.createElement('textarea');
+      ta.value = msg; ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed'; ta.style.top = '0'; ta.style.left = '0'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      if (ok) done(); else document.getElementById('shareUrl').select();
+    };
     WCSTATS.track('share', { what: shareCtx.what, via: 'copy' });
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(shareCtx.url).then(done, function () { inp.select(); });
-    else { inp.select(); try { document.execCommand('copy'); done(); } catch (e) {} }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(msg).then(done, fallback);
+    else fallback();
   });
 }
 const SITE_URL = function () { return (window.HC ? HC.publicBase : location.origin + location.pathname); };
