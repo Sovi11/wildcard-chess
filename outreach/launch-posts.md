@@ -149,8 +149,8 @@ outreach/contacts.csv:
 
     I made a chess variant where every third turn you can move a square of the
     board instead of a piece. The square leaves a hole that rooks, bishops and
-    queens can't cross. Today's daily puzzle is a king stuck on an island with
-    one knight coming for it. Free in the browser: https://hollowchess.com
+    queens can't cross. The daily puzzles this week are kings stuck on islands,
+    cut off by missing squares. Free in the browser: https://hollowchess.com
     Happy to play anyone here by link.
 
 For Naviary's server, open with: "Fellow variant maker here; Infinite Chess is
