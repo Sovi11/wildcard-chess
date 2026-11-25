@@ -7,11 +7,17 @@
   'use strict';
   const cap = window.Capacitor;
   const native = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+  // Framed inside another site (the itch.io build runs in an iframe on itch's
+  // domain). Links for other people must still point at the public site, and
+  // Google sign-in cannot run inside a frame.
+  let embedded = false;
+  try { embedded = !native && window.self !== window.top; } catch (e) { embedded = !native; }
   window.HC = {
     native: native,
-    platform: native && cap.getPlatform ? cap.getPlatform() : 'web',
+    embedded: embedded,
+    platform: native && cap.getPlatform ? cap.getPlatform() : (embedded ? 'embed' : 'web'),
     // where links shared with other people should point
-    publicBase: native ? 'https://hollowchess.com/' : location.origin + location.pathname,
+    publicBase: (native || embedded) ? 'https://hollowchess.com/' : location.origin + location.pathname,
   };
   if (native) document.documentElement.classList.add('native', 'native-' + window.HC.platform);
 })();
