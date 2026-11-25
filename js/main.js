@@ -1745,7 +1745,7 @@ function closeAuthModal() { if (authModalEl) authModalEl.classList.remove('show'
 // game review after the first one) ask for it at the moment they are wanted.
 function isGuest() { return !!(WCCLOUD.enabled && WCCLOUD.enabled()) && !(WCCLOUD.currentUser && WCCLOUD.currentUser()); }
 const GATE_COPY = {
-  analyze: ['Game review is free with an account', 'Your first review was on us. Sign in to review every game, and to keep your games and rating on any device.'],
+  analyze: ['Game review is free with an account', 'Sign in to see where each game turned, move by move, and to keep your games and rating on any device.'],
   history: ['Keep your games', 'Right now these games live on this device only. Sign in and they are saved to your account, each with a move-by-move review.'],
   board:   ['Put your name on the board', 'Guests are not listed. Sign in and your name and rating appear on the leaderboard and in the arena standings.'],
   streak:  ['Keep your streak everywhere', 'Sign in and your daily streak and puzzle rating follow you to any phone or computer.'],
@@ -1756,18 +1756,13 @@ function askSignIn(what) {
   WCSTATS.track('signup_gate', { what: what });
   openAuthModal(c[0], c[1]);
 }
-// one review is free for a guest; reopening that same game does not count again
-const ANA_FREE_KEY = 'hollowchess.anafree.v1';
-let anaFreeSig = '';
-function anaFreeUsed() { try { return +localStorage.getItem(ANA_FREE_KEY) || 0; } catch (e) { return 0; } }
+// Game review needs an account. Until v111 a guest's first review was free and
+// the ask came on the second; in three days no guest ever reached a second
+// review, so the ask was never shown. Now it is the first thing Analyze does.
 function reviewAllowed(acts, what) {
   if (!isGuest()) return true;
-  const sig = acts.length + ':' + JSON.stringify(acts.slice(0, 6));
-  if (sig === anaFreeSig) return true;
-  if (anaFreeUsed() >= 1) { askSignIn(what); return false; }
-  anaFreeSig = sig;
-  try { localStorage.setItem(ANA_FREE_KEY, '1'); } catch (e) {}
-  return true;
+  askSignIn(what);
+  return false;
 }
 document.addEventListener('click', function (e) {
   const g = e.target.closest && e.target.closest('[data-gate]');
@@ -2827,7 +2822,7 @@ function renderProfile() {
   if (!shown.length) { matchListEl.innerHTML = '<div class="match-empty">No ' + profFilter + 's yet.</div>'; return; }
   const lockNote = isGuest()
     ? '<div class="guest-cta"><span>These games are saved on this device only.</span><button type="button" class="guest-cta-btn" data-gate="history">Sign in to keep them</button></div>' : '';
-  matchListEl.classList.toggle('guest-locked', isGuest() && anaFreeUsed() >= 1);
+  matchListEl.classList.toggle('guest-locked', isGuest());
   matchListEl.innerHTML = lockNote + shown.map(function (x) {
     const e = x.e, i = x.i;
     const res = e.score === 1 ? 'win' : (e.score === 0 ? 'loss' : 'draw');
@@ -4430,7 +4425,7 @@ function sync() {
     const ab = document.getElementById('analyzeBtn');
     if (ab) {
       ab.style.display = gameActs.length ? '' : 'none';
-      ab.textContent = (isGuest() && anaFreeUsed() >= 1) ? '\u2726 Analyze \u00b7 free account' : '\u2726 Analyze game';
+      ab.textContent = isGuest() ? '\u2726 Analyze \u00b7 free account' : '\u2726 Analyze game';
     }
     const hb = document.getElementById('bannerHarderBtn');
     if (hb) {
