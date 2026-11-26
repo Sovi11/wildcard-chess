@@ -289,8 +289,11 @@
 
   // ---- Elo ----------------------------------------------------------------
   const expected = (a, b) => 1 / (1 + Math.pow(10, (b - a) / 400));
-  // Provisional players move fast, settled players move slowly.
-  const kFactor = (games) => (games < 10 ? 48 : games < 30 ? 32 : 20);
+  // Placement: everyone starts at the same number, so the first games have to
+  // move a player a long way or a 1200-strength newcomer spends an evening
+  // beating 500s. Five big steps (about 60 points for beating an equal), five
+  // medium, then it tightens until a settled player moves slowly.
+  const kFactor = (games) => (games < 5 ? 120 : games < 10 ? 80 : games < 20 ? 48 : games < 30 ? 32 : 20);
 
   function blankProfile() {
     return { name: 'You', elo: START_ELO, wins: 0, losses: 0, draws: 0, log: [] };

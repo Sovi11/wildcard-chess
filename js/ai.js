@@ -764,11 +764,19 @@
       if (!rootMoves.length) return { move: null, score: this.inCheck(side) ? -MATE : 0, depth: 0, nodes: 0 };
 
       const kb = this.w.kindBias || {};
-      const adjFor = (m) => (m.kind === 'm' ? 0 : (kb[m.kind] || 0));
+      // opts.settle (0..1, bots only) phases a bot's LIKING for board moves in
+      // with the game; a dislike of them applies from move one. Early on there
+      // is also a flat reluctance to touch the board at all: at depth 1 the
+      // evaluation rates "carry a square to the far side" as the best first
+      // move, which is the opening no person plays. A board move that wins
+      // more than a pawn still gets played.
+      const ease = opts.settle == null ? 1 : opts.settle;
+      const openPen = opts.settle == null ? 0 : (1 - ease) * 120;
+      const adjFor = (m) => { if (m.kind === 'm') return 0; const b = kb[m.kind] || 0; return (b > 0 ? b * ease : b) - openPen; };
       // Personality bots re-rank by kindBias after searching, so a narrow window
       // could prune a move their bias would still have preferred. They search
       // full-width; the unbiased analysis engine gets the fast path.
-      const biased = !!(kb.ac || kb.rc || kb.mc) || jitter > 0;
+      const biased = !!(kb.ac || kb.rc || kb.mc) || jitter > 0 || openPen > 0;
 
       let bestMove = rootMoves[0], bestScore = -Infinity, lastDepth = 0;
       for (let d = 1; d <= maxDepth; d++) {
@@ -867,19 +875,36 @@
   ];
   const levelById = (id) => LEVELS.find(l => l.id === +id) || LEVELS[2];
 
+  // Weak bots are weak by being loose: wide jitter and outright blunders. From
+  // the starting position that looked like nonsense, because with nothing to
+  // attack every move is "near best" and a 30-40% blunder rate threw in random
+  // squares and random pawn pushes on move one. So looseness is phased in:
+  // none for the first two moves each, full strength of it by move ten. A bot
+  // opens like a person and then starts making its mistakes.
+  const settle = (pos) => Math.max(0, Math.min(1, (pos.counts[0] + pos.counts[1] - 4) / 16));
+  const looseJitter = (j, f) => { const floor = Math.min(j || 0, 12); return Math.round(floor + ((j || 0) - floor) * f); };
+  // A blunder is a careless piece move, not a random rearrangement of the
+  // board: board moves are only blundered into when there is nothing else.
+  function blunderMove(pos, K, rand) {
+    const all = pos.genAll(K);
+    if (!all.length) return null;
+    const pieces = all.filter(m => m.kind === 'm');
+    const from = pieces.length ? pieces : all;
+    return from[Math.floor(rand() * from.length)];
+  }
+
   // Pick an action at the given difficulty. Returns a search result, plus
   // {level, blundered}. seed is optional (harness reproducibility).
   function chooseMove(pos, levelId, seed) {
     const lv = levelById(levelId);
     const rand = seed != null ? rng(seed) : Math.random;
-    if (lv.blunder > 0 && rand() < lv.blunder) {
-      const all = pos.genAll(lv.K);
-      if (all.length) {
-        return { move: all[Math.floor(rand() * all.length)], score: 0, depth: 0, nodes: 0, level: lv.name, blundered: true };
-      }
+    const f = settle(pos);
+    if (lv.blunder > 0 && rand() < lv.blunder * f) {
+      const m = blunderMove(pos, lv.K, rand);
+      if (m) return { move: m, score: 0, depth: 0, nodes: 0, level: lv.name, blundered: true };
     }
     const res = pos.search({
-      depth: lv.depth, K: lv.K, movetime: lv.movetime, jitter: lv.jitter,
+      depth: lv.depth, K: lv.K, movetime: lv.movetime, jitter: looseJitter(lv.jitter, f), settle: f,
       seed: seed != null ? seed : (Math.random() * 1e9) | 0,
     });
     res.level = lv.name; res.blundered = false;
@@ -889,13 +914,14 @@
   // Pick an action for a persona: {depth,K,movetime,jitter,blunder,weights}.
   function chooseMoveFor(pos, persona, seed) {
     const rand = seed != null ? rng(seed) : Math.random;
-    if (persona.blunder > 0 && rand() < persona.blunder) {
-      const all = pos.genAll(persona.K || 10);
-      if (all.length) return { move: all[Math.floor(rand() * all.length)], score: 0, depth: 0, nodes: 0, blundered: true };
+    const f = settle(pos);
+    if (persona.blunder > 0 && rand() < persona.blunder * f) {
+      const m = blunderMove(pos, persona.K || 10, rand);
+      if (m) return { move: m, score: 0, depth: 0, nodes: 0, blundered: true };
     }
     const res = pos.search({
       depth: persona.depth || 3, K: persona.K || 10,
-      movetime: persona.movetime || 1200, jitter: persona.jitter || 0,
+      movetime: persona.movetime || 1200, jitter: looseJitter(persona.jitter, f), settle: f,
       seed: seed != null ? seed : (Math.random() * 1e9) | 0,
     });
     res.blundered = false;
