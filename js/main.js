@@ -20,6 +20,8 @@ const ui = {
 let mode = 'normal';        // normal | addcell | removecell | movecell
 let selected = null;
 let legal = [];
+let premove = null;         // {from, to}: a move queued for when the other side has moved
+let preSel = null;          // the piece picked up for a premove, before its target is chosen
 let hintMove = null;        // best-action overlay, cleared on the next move
 let flipped = false;        // true when the board is drawn from Black's side
 let gameActs = [];          // every action this game, so it can be replayed later
@@ -129,6 +131,13 @@ function render() {
 
   if (selected) {
     svg += `<rect x="${X(selected.c)}" y="${Y(selected.r)}" width="1" height="1" class="${mode === 'movecell' ? 'selcell' : 'sel'}"/>`;
+  }
+
+  if (B === game) {
+    if (preSel) svg += `<rect x="${X(preSel.c)}" y="${Y(preSel.r)}" width="1" height="1" class="presel"/>`;
+    if (premove) for (const s of [premove.from, premove.to]) {
+      if (B.hasCell(s.c, s.r)) svg += `<rect x="${X(s.c)}" y="${Y(s.r)}" width="1" height="1" class="premove"/>`;
+    }
   }
 
   if (wrongCell) {
@@ -264,16 +273,76 @@ function canActNow() {
   return true;
 }
 
-boardEl.addEventListener('click', (e) => {
-  if (dragSuppressClick) { dragSuppressClick = false; return; }   // a drag already handled it
+// ---- premoves ---------------------------------------------------------------
+// While the other side is thinking you may queue one piece move. It is played
+// the instant it becomes legal and dropped if it is not. Bots and live online
+// games only: a puzzle, a correspondence link and two people at one screen
+// have nobody to wait for. Board moves cannot be premoved (the squares you
+// could carry depend on the move you have not seen yet), and a premoved pawn
+// reaching the edge queens.
+function premoveSide() {
+  if (puzzleMode || gameOver() || browsePly !== null || clockFlagged()) return null;
+  if (onlineActive) return myColor;
+  if (botEnabled() && !linkMode()) return botSide() === 'white' ? 'black' : 'white';
+  return null;
+}
+function canPremove() { const s = premoveSide(); return !!s && game.turn !== s && !promoOpen(); }
+function clearPremove() { const had = !!(premove || preSel); premove = null; preSel = null; return had; }
+// a tap on the board while it is the other side's move
+function preSquare(c, r) {
+  const me = premoveSide();
+  const p = game.hasCell(c, r) ? game.get(c, r) : null;
+  const mine = !!p && p.color === me;
+  if (premove) {                       // any tap drops the queued move; on your own piece it starts a new one
+    premove = null; preSel = mine ? { c: c, r: r } : null;
+    setMode('normal'); render(); return;
+  }
+  if (preSel) {
+    if (preSel.c === c && preSel.r === r) { preSel = null; render(); return; }
+    if (mine) { preSel = { c: c, r: r }; render(); return; }
+    if (!game.hasCell(c, r)) { preSel = null; render(); return; }
+    premove = { from: preSel, to: { c: c, r: r } }; preSel = null;
+    ui.hint.textContent = 'Premove set. It plays as soon as they move; tap the board to cancel.';
+    render(); return;
+  }
+  if (mine) { preSel = { c: c, r: r }; render(); }
+}
+function tryPremove() {
+  if (!premove) return;
+  const pm = premove;
+  premove = null; preSel = null;
+  if (canActNow() && game.turn === premoveSide()) {
+    const p = game.hasCell(pm.from.c, pm.from.r) ? game.get(pm.from.c, pm.from.r) : null;
+    if (p && p.color === game.turn && game.makeMove(pm.from.c, pm.from.r, pm.to.c, pm.to.r)) {
+      done({ kind: 'm', from: pm.from, to: pm.to });
+      return;
+    }
+  }
+  render();                            // not legal after all: it is simply dropped
+}
+
+// One tap on the board, wherever it came from (a click, or a finger that never moved).
+function boardTap(clientX, clientY) {
   if (promoOpen()) { closePromo(); return; }
   if (browsePly !== null) { browseTo(null); return; }   // looking at history: first click returns
-  if (!canActNow()) { if (gt && !gameOver()) gt.waitTaps++; return; }
-  const sq = squareFromPoint(e.clientX, e.clientY);
+  const sq = squareFromPoint(clientX, clientY);
+  if (!canActNow()) {
+    if (canPremove()) { preSquare(sq.c, sq.r); return; }
+    if (gt && !gameOver()) gt.waitTaps++;
+    return;
+  }
+  if (premove || preSel) clearPremove();                // your move now: play it by hand
   const before = game.history.length, hadSel = !!selected, hadMode = mode;
   onSquare(sq.c, sq.r);
   // a tap that changed nothing (no move, no selection, no lift) = confusion
   if (gt && game.history.length === before && !selected && !hadSel && mode === hadMode) gt.deadTaps++;
+}
+boardEl.addEventListener('click', (e) => {
+  if (dragSuppressClick) { dragSuppressClick = false; return; }   // a drag already handled it
+  boardTap(e.clientX, e.clientY);
+});
+boardEl.addEventListener('contextmenu', (e) => {       // right-click cancels a premove
+  if (clearPremove()) { e.preventDefault(); render(); }
 });
 
 // Everything a click (or a drop) on a square means.
@@ -369,6 +438,7 @@ function openPromo(from, to, color) {
 document.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape') return;
   if (promoOpen()) { closePromo(); return; }
+  if (clearPremove()) { render(); return; }
   // Esc closes the topmost panel. Welcome, tutorial and onboarding are steps
   // you are taken through, so they are left alone.
   for (const id of ['authModal', 'feedback', 'profile', 'lobby']) {
@@ -382,50 +452,159 @@ document.addEventListener('keydown', function (e) {
 });
 
 // ---- drag to move -----------------------------------------------------------
-// Mouse and pen only: on a phone a drag across the board has to stay a scroll,
-// and tap-tap is the norm there anyway. A press that never moves 5px is a click
-// and is left to the click handler.
+// Mouse, pen and finger. Three things can be carried: one of your pieces, an
+// empty square on your board turn, and a piece for a premove while the other
+// side thinks. A press that never moves is a tap and goes to boardTap.
+//
+// On a touch screen a drag across the board is normally the page scrolling, so
+// touchstart is cancelled, but ONLY when the finger lands on something that can
+// be carried. Everywhere else the board still scrolls the page. Cancelling
+// touchstart also cancels the browser's click, which is why the tap is
+// delivered by hand in pointerup.
 let drag = null, dragSuppressClick = false;
-boardEl.addEventListener('pointerdown', function (e) {
-  if (e.pointerType === 'touch' || e.button !== 0) return;
-  if (browsePly !== null || promoOpen() || mode !== 'normal' || !canActNow()) return;
-  const sq = squareFromPoint(e.clientX, e.clientY);
-  const p = game.hasCell(sq.c, sq.r) ? game.get(sq.c, sq.r) : null;
-  if (!p || p.color !== game.turn) return;
-  drag = { c: sq.c, r: sq.r, x0: e.clientX, y0: e.clientY, id: e.pointerId, active: false };
-});
-window.addEventListener('pointermove', function (e) {
-  if (!drag || e.pointerId !== drag.id) return;
-  if (!drag.active) {
-    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 5) return;
-    drag.active = true;
-    selected = { c: drag.c, r: drag.r }; legal = game.legalMoves(drag.c, drag.r); hintMove = null;
-    render();
-    boardEl.classList.add('dragging');
+function dragKind(sq) {
+  if (browsePly !== null || promoOpen()) return null;
+  const on = game.hasCell(sq.c, sq.r);
+  const p = on ? game.get(sq.c, sq.r) : null;
+  if (canActNow()) {
+    if (mode === 'normal' && p && p.color === game.turn) return 'piece';
+    if ((mode === 'normal' || mode === 'movecell') && on && !p && game.canWildcard()) {
+      // a selected piece that can move here means the press is that move, not a lift
+      if (mode === 'normal' && selected && legal.some(function (m) { return m.c === sq.c && m.r === sq.r; })) return null;
+      return 'cell';
+    }
+    return null;
+  }
+  if (canPremove() && p && p.color === premoveSide()) return 'pre';
+  return null;
+}
+function dragEnd() {
+  drag = null;
+  boardEl.classList.remove('dragging', 'dragging-touch');
+}
+// where a board square sits in the SVG right now (the inverse of squareFromPoint)
+function squareXY(c, r) {
+  const v = view();
+  return { x: flipped ? v.maxC - c : c - v.minC, y: flipped ? r - v.minR : v.maxR - r };
+}
+function dragPaint(clientX, clientY) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const pt = boardEl.createSVGPoint(); pt.x = clientX; pt.y = clientY;
+  const u = pt.matrixTransform(boardEl.getScreenCTM().inverse());
+  const lift = drag.touch ? 0.85 : 0;              // a finger hides what it carries: hold it above
+  // the square under the pointer
+  const t = squareFromPoint(clientX, clientY);
+  let over = boardEl.querySelector('#dragOver');
+  if (!over) {
+    over = document.createElementNS(NS, 'rect');
+    over.id = 'dragOver'; over.setAttribute('class', 'dragover');
+    over.setAttribute('width', 1); over.setAttribute('height', 1);
+    boardEl.appendChild(over);
+  }
+  const ok = drag.kind === 'cell'
+    ? game._attachTargetsExcluding(keyJS(drag.c, drag.r)).has(keyJS(t.c, t.r))
+    : game.hasCell(t.c, t.r) && !(t.c === drag.c && t.r === drag.r);
+  const xy = squareXY(t.c, t.r);
+  over.setAttribute('x', xy.x); over.setAttribute('y', xy.y);
+  over.style.display = ok ? '' : 'none';
+
+  if (drag.kind === 'cell') {
+    let g = boardEl.querySelector('#dragGhost');
+    if (!g) {
+      g = document.createElementNS(NS, 'rect');
+      g.id = 'dragGhost'; g.setAttribute('class', 'dragghost');
+      g.setAttribute('width', 1); g.setAttribute('height', 1);
+      boardEl.appendChild(g);
+    }
+    g.setAttribute('x', u.x - 0.5); g.setAttribute('y', u.y - 0.5 - lift);
+    return;
   }
   const el = boardEl.querySelector('.pc[data-k="' + drag.c + ',' + drag.r + '"]');
   if (!el) return;
   if (el.parentNode.lastChild !== el) el.parentNode.appendChild(el);   // on top of everything
-  const pt = boardEl.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
-  const u = pt.matrixTransform(boardEl.getScreenCTM().inverse());
   el.style.transform = 'translate(' + (u.x - (+el.getAttribute('x') + 0.5)) + 'px, ' +
-                                      (u.y - (+el.getAttribute('y') + 0.5)) + 'px)';
+                                      (u.y - lift - (+el.getAttribute('y') + 0.5)) + 'px)';
   el.style.pointerEvents = 'none';
+}
+boardEl.addEventListener('pointerdown', function (e) {
+  if (e.pointerType !== 'touch' && e.button !== 0) return;
+  if (drag) return;                                // a second finger does not steal the first one's piece
+  const sq = squareFromPoint(e.clientX, e.clientY);
+  const kind = dragKind(sq);
+  if (!kind) return;
+  drag = { kind: kind, c: sq.c, r: sq.r, x0: e.clientX, y0: e.clientY, id: e.pointerId, active: false,
+           touch: e.pointerType === 'touch' };
+});
+boardEl.addEventListener('touchstart', function (e) {
+  if (e.touches.length !== 1) { if (drag) { dragEnd(); render(); } return; }   // two fingers: that is a pinch
+  const t = e.touches[0];
+  if (dragKind(squareFromPoint(t.clientX, t.clientY))) e.preventDefault();
+}, { passive: false });
+window.addEventListener('pointermove', function (e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (!drag.active) {
+    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < (drag.touch ? 8 : 5)) return;
+    drag.active = true;
+    if (drag.kind === 'piece') {
+      selected = { c: drag.c, r: drag.r }; legal = game.legalMoves(drag.c, drag.r); hintMove = null;
+    } else if (drag.kind === 'pre') {
+      premove = null; preSel = { c: drag.c, r: drag.r };
+    } else {
+      // lift the square exactly as a tap would, unless it is the one already in hand
+      if (!(mode === 'movecell' && selected && selected.c === drag.c && selected.r === drag.r)) {
+        if (mode !== 'normal') setMode('normal');
+        selected = null; legal = [];
+        onSquare(drag.c, drag.r);
+      }
+      if (mode !== 'movecell' || !selected) { dragEnd(); render(); return; }
+    }
+    render();
+    boardEl.classList.add('dragging');
+    if (drag.touch) boardEl.classList.add('dragging-touch');
+  }
+  dragPaint(e.clientX, e.clientY);
 });
 window.addEventListener('pointerup', function (e) {
   if (!drag || e.pointerId !== drag.id) return;
-  const d = drag; drag = null;
-  boardEl.classList.remove('dragging');
-  if (!d.active) return;                         // never moved: it is a click
+  const d = drag; dragEnd();
+  if (!d.active) {                               // never moved: it is a tap
+    if (d.touch) {                               // ...whose click we cancelled in touchstart
+      dragSuppressClick = true;
+      setTimeout(function () { dragSuppressClick = false; }, 80);
+      boardTap(e.clientX, e.clientY);
+    }
+    return;
+  }
   dragSuppressClick = true;
-  setTimeout(function () { dragSuppressClick = false; }, 0);   // if the click never comes
+  setTimeout(function () { dragSuppressClick = false; }, d.touch ? 80 : 0);   // if the click never comes
   const t = squareFromPoint(e.clientX, e.clientY);
-  if (t.c === d.c && t.r === d.r) { render(); return; }      // put back: stays selected
+  const same = t.c === d.c && t.r === d.r;
+  if (d.kind === 'pre') {
+    if (same || !canPremove()) { if (!canPremove()) clearPremove(); render(); return; }   // put back: stays picked up
+    preSquare(t.c, t.r);
+    return;
+  }
+  if (d.kind === 'cell') {
+    // only a dashed spot takes it; anywhere else it stays in hand for a tap
+    if (same || !game._attachTargetsExcluding(keyJS(d.c, d.r)).has(keyJS(t.c, t.r))) { render(); return; }
+    const was = game.lastAction;
+    skipNextAnim = true;
+    onSquare(t.c, t.r);
+    if (game.lastAction === was) { skipNextAnim = false; render(); }
+    return;
+  }
+  if (same) { render(); return; }                // put back: stays selected
   const before = game.lastAction;
   skipNextAnim = true;                           // the hand already carried it there
   onSquare(t.c, t.r);
   if (game.lastAction === before) skipNextAnim = false;      // no move happened (or a picker opened)
   if (game.lastAction === before) render();                  // illegal drop: snap home
+});
+window.addEventListener('pointercancel', function (e) {       // the browser took the gesture (a scroll, a system swipe)
+  if (!drag || e.pointerId !== drag.id) return;
+  const was = drag.active;
+  dragEnd();
+  if (was) render();
 });
 
 // ---- browsing the game so far ----------------------------------------------
@@ -746,8 +925,11 @@ function afterMove() {
   setMode('normal');
   actionFX();
   runAnalysis();
+  if (gameOver()) clearPremove();
   sync(); render();
   liveSave();
+  // a queued premove answers at once; the short beat lets their move be seen land
+  if (premove) { const g = aiGen; setTimeout(function () { if (g === aiGen) tryPremove(); }, 140); }
 }
 
 // ---- bot opponent ---------------------------------------------------------
@@ -2349,6 +2531,7 @@ function resetGameState() {
   leavePuzzleMode();
   aiGen++;                   // invalidate any bot move still sitting on a timer
   aiThinking = false;
+  clearPremove();
   endSounded = false;
   firstGame = false;         // the coach belongs to the first game only
   nudgeThisGame = false;

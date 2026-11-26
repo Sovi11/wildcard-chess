@@ -1365,6 +1365,13 @@ body.puzzle-mode .clock-bar { display: none; }
 
 /* ---- drag ---- */
 #board.dragging, #board.dragging * { cursor: grabbing; }
+/* drag: the square under the pointer, the carried square, and premoves */
+#board .dragover { fill: rgba(255,255,255,.16); stroke: rgba(255,255,255,.85); stroke-width: .06; pointer-events: none; }
+#board .dragghost { fill: rgba(200,240,60,.55); stroke: #c8f03c; stroke-width: .05; pointer-events: none; filter: drop-shadow(0 .08px .1px rgba(0,0,0,.5)); }
+#board .premove { fill: rgba(224,82,66,.5); pointer-events: none; }
+#board .presel { fill: rgba(224,82,66,.3); pointer-events: none; }
+/* under a finger the carried piece is held above it and drawn larger */
+#board.dragging-touch .pc[style*="translate"] { filter: drop-shadow(0 .1px .12px rgba(0,0,0,.55)); }
 
 /* =====================================================================
    v71: BOMBAY DECO
