@@ -77,6 +77,9 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; al
    square, and the inset rim guarantees an edge even when the fill is close. */
 .hole { fill: var(--hole); }
 .hole-rim { fill: none; stroke: var(--hole-rim); stroke-width: .045; }
+/* diagonal hatching: the mark that says "not a square" on every theme */
+.hole-hatch { pointer-events: none; }
+.hole-hatch-line { stroke: var(--hole-rim); stroke-width: .055; }
 
 /* last move: a real gold tint — the old 20% read as grey on slate */
 .last.lt { fill: rgba(226,176,40,.42); }
@@ -229,6 +232,11 @@ header h1 .sub { font-family: "Inter", system-ui, sans-serif; letter-spacing: 0;
 
 /* best-move overlay */
 .hintcell { fill: rgba(231,193,74,.18); stroke: var(--accent); stroke-width: .035; }
+.hintcell.pulse { fill: rgba(231,193,74,.34); stroke-width: .06; animation: hint-pulse 1.1s ease-in-out infinite; pointer-events: none; }
+@keyframes hint-pulse { 0%, 100% { fill-opacity: .35; stroke-opacity: .55; } 50% { fill-opacity: 1; stroke-opacity: 1; } }
+.act-btn.nudge { border-color: var(--accent); color: var(--accent-text, var(--accent)); animation: btn-nudge 1.3s ease-in-out infinite; }
+@keyframes btn-nudge { 0%, 100% { box-shadow: 0 0 0 0 rgba(231,193,74,0); } 50% { box-shadow: 0 0 0 4px rgba(231,193,74,.28); } }
+@media (prefers-reduced-motion: reduce) { .hintcell.pulse, .act-btn.nudge { animation: none; } }
 .hintarrow { stroke: var(--accent); stroke-width: .085; stroke-linecap: round; opacity: .95; }
 .hintmark { fill: var(--accent); font-size: .5px; font-weight: 800; text-anchor: middle; }
 
@@ -2277,6 +2285,11 @@ main > * { min-width: 0; }
 .pzd-clock { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); line-height: 1.1; }
 .pzd-clock.done { color: var(--accent-text, var(--accent)); }
 .pzd-line { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-top: 4px; }
+.pzd-today { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; width: 100%; min-height: 40px; margin: 2px 0 8px;
+  padding: 8px 10px; font: inherit; font-size: 12.5px; font-weight: 600; text-align: left; color: var(--ink); cursor: pointer;
+  background: transparent; border: 1px dashed var(--accent); border-radius: 8px; }
+.pzd-today small { font-weight: 500; color: var(--muted); white-space: nowrap; }
+.pzd-today:hover { background: rgba(231,193,74,.08); }
 .pzd-line b { color: var(--ink); }
 .pzd-fast { margin-top: 10px; }
 .pzd-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--ink); padding: 3px 0; font-variant-numeric: tabular-nums; }

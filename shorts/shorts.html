@@ -321,7 +321,12 @@
     return true;
   }
 
-  async function endCard(holdMs, voLine, voice) {
+  async function endCard(holdMs, voLine, voice, link) {
+    // a puzzle short ends on its own address, so the viewer can play that position
+    if (link) {
+      document.querySelector('#endcard .tag').textContent = 'solve this one yourself';
+      document.querySelector('#endcard .url').textContent = link;
+    }
     hideCaps(); $('counter').classList.remove('show'); hudHide(); pawnOut();
     hit();
     $('endcard').classList.add('show');
@@ -700,6 +705,12 @@
     const data = await (await fetch((qs.get('src') || 'puzzles.json') + '?t=' + Date.now())).json();
     const pz = data.puzzles[id];
     if (!pz) throw new Error('no puzzle ' + id);
+    // hollowchess.com/p/N opens this position, when the site has it (harness/shorts-to-site.js)
+    let link = '';
+    if (!qs.get('src')) try {
+      const sp = await (await fetch('../js/short-puzzles.json?t=' + Date.now())).json();
+      if ((sp.puzzles || []).some((x) => x.n === id + 1)) link = 'hollowchess.com/p/' + (id + 1);
+    } catch (e) {}
     game = gameFromSpec(pz.spec);
     document.body.classList.add('puzzle');
     const SQ = document.body.classList.contains('sq'), Z = SQ ? 0.82 : 1;
@@ -780,7 +791,7 @@
     await say(L.mate, 'smug');
     await sleep(1400);
     hide('capMid'); camReset();
-    await endCard(5000, L.outro, 'pawn');
+    await endCard(5000, L.outro, 'pawn', link);
   }
 
   // =================== DAY 1 ===================

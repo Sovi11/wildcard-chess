@@ -42,6 +42,8 @@
   let lastSettle = null;        // the rating game this attempt produced, if any
   let cloudRatings = {};        // puzzle id -> live rating from the server
   let dailyOrder = [];          // puzzle ids in the order the daily hands them out
+  let practice = false;         // the first-visit puzzle: graded, never rated
+  let shorts = null;            // puzzles shown in the shorts, by number (loaded on demand)
 
   function attach(h) { host = h; }
 
@@ -121,6 +123,21 @@
   }
 
   const list = () => all;
+  // Puzzle N of the shorts (hollowchess.com/p/N). They sit outside the ordinary
+  // run and the daily: only that address opens one, and it is never rated.
+  async function loadShort(n) {
+    try {
+      await load();
+      if (!shorts) {
+        const res = await fetch('js/short-puzzles.json' + VER, { cache: 'no-cache' });
+        shorts = res.ok ? ((await res.json()).puzzles || []) : [];
+      }
+      const p = shorts.find((x) => x.n === n);
+      if (!p) return null;
+      if (!all.some((x) => x.id === p.id)) { p.skip = true; p.unrated = true; all.push(p); }
+      return p;
+    } catch (e) { return null; }
+  }
   // Daily #n (1-based). The order is a fixed list in the data file that only ever
   // grows at the end, so adding puzzles never changes a day that has been played.
   function dailyId(n) {
@@ -204,7 +221,7 @@
 
   function settle(score) {
     const p = current();
-    if (!p) return null;
+    if (!p || practice || p.unrated) return null;       // the introduction and the shorts are not rating games
     const pr = readProgress();
     if (pr.rated[p.id]) return null;                    // first attempt only
     const rp = pr.rating, rq = ratingOf(p);
@@ -264,7 +281,9 @@
     const p = current();
     if (!p || finished) return { ok: false, state: 'idle' };
     const want = expected();
-    if (!sameAction(action, want)) {
+    // a puzzle from a short may have more than one mate on its last move: any of them is right
+    const anyMate = p.loose && p.mateIn - step === 1 && host.game.status === 'checkmate';
+    if (!sameAction(action, want) && !anyMate) {
       failed = true;
       const why = whyNot(p);              // read the board BEFORE it is rewound
       rewind();
@@ -428,7 +447,8 @@
   }
 
   window.WCPUZZLE = {
-    attach, load, list, count, start, startById, next, nextUnsolved, dailyId,
+    attach, load, loadShort, list, count, start, startById, next, nextUnsolved, dailyId,
+    setPractice: function (v) { practice = !!v; },
     current, active, expected, submit, playReply, hint, state, progress, mergeProgress, exit, resetProgress,
     rating, setRating, ratingOf, setPuzzleRatings, setPuzzleRating,
     actionText, sameAction, retry: function () { const p = current(); if (p) { step = 0; failed = true; finished = false; hinted = false; place(p); } },

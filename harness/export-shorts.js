@@ -17,6 +17,9 @@ const BATCH = 10;
 const WORDS = ['', 'one', 'two', 'three'];
 
 const puzzles = JSON.parse(fs.readFileSync(path.join(ROOT, 'shorts', 'puzzles.json'), 'utf8')).puzzles;
+// the ones the site can open at hollowchess.com/p/N (harness/shorts-to-site.js)
+const playable = new Set();
+try { for (const p of JSON.parse(fs.readFileSync(path.join(ROOT, 'js', 'short-puzzles.json'), 'utf8')).puzzles) playable.add(p.n); } catch (e) {}
 
 function copy(src, dst) {
   if (!fs.existsSync(src)) return false;
@@ -32,6 +35,9 @@ function puzzleText(p, i) {
   const whenShort = p.phase === 'now' ? 'now' : 'on move 2';
   const solution = p.line.map((m, j) => (j % 2 === 0 ? Math.floor(j / 2) + 1 + '. ' : '') + m.hcn).join(' ');
   const tag = ['', '#mateinone', '#mateintwo', '#mateinthree'][p.n];
+  // links in Shorts descriptions and comments are not clickable, so the address has to be short enough to type
+  const link = playable.has(n) ? 'hollowchess.com/p/' + n : 'hollowchess.com';
+  const solveLine = playable.has(n) ? `Solve this exact position yourself: ${link}\n\n` : '';
   return `Hollow Chess puzzle #${n}  |  mate in ${p.n}, ${side} to play, board move ${whenShort}
 Files: puzzle-${i}.mp4 (9:16 for Reels / Shorts)   puzzle-${i}-sq.mp4 (1:1 for the Instagram feed)
 Series rule: keep the Day count going — replace [DAY] with today's number.
@@ -48,7 +54,7 @@ Rules in one line: every third turn you can move a square of the board instead o
 
 Pause before the solution. Comment your answer if you had it before the reveal.
 
-Free in your browser, no download, no login: https://hollowchess.com
+${solveLine}Free in your browser, no download, no login: https://hollowchess.com
 
 #chess #chesspuzzle #chessvariant #hollowchess #shorts ${tag} #hikaru
 
@@ -58,12 +64,12 @@ day [DAY] of posting until Hikaru plays my chess game ♟️🕳️
 mate in ${WORDS[p.n]}. ${side.toLowerCase()} to play. you can move a square of the board ${when}.
 pause it. find it. solution at the end.
 
-puzzle #${n} — play the game free, link in bio.
+puzzle #${n} — ${playable.has(n) ? 'solve it yourself at ' + link : 'play the game free, link in bio'}.
 
 #chess #chesspuzzle #chessreels #chessvariant #hollowchess ${tag} #hikaru #indiegame
 
 === FIRST COMMENT (both platforms) ===
-hollowchess.com — every 3rd turn you may pick up an EMPTY square and re-attach it edge-to-edge anywhere. Holes block rooks/bishops/queens.
+${link} — every 3rd turn you may pick up an EMPTY square and re-attach it edge-to-edge anywhere. Holes block rooks/bishops/queens.
 
 === SOLUTION (pin it after 24h, or answer whoever asks) ===
 ${solution}

@@ -69,7 +69,7 @@ function view() {
   const b = shown().bounds();
   let pad = 0;
   if (mode === 'movecell' && selected) pad = 1;
-  if (hintMove && hintMove.kind && hintMove.kind !== 'm') pad = 1;
+  if (hintMove && hintMove.kind && hintMove.kind !== 'm' && !hintMove.fromOnly) pad = 1;
   const minC = b.minC - pad, maxC = b.maxC + pad, minR = b.minR - pad, maxR = b.maxR + pad;
   return { minC, maxC, minR, maxR, cols: maxC - minC + 1, rows: maxR - minR + 1 };
 }
@@ -83,7 +83,8 @@ function render() {
   const X = flipped ? (c) => v.maxC - c : (c) => c - v.minC;
   const Y = flipped ? (r) => r - v.minR : (r) => v.maxR - r;
   let svg = pieceDefs(WCTHEME.get().pieces);
-  svg += `<defs><marker id="hintHead" viewBox="0 0 10 10" refX="7.5" refY="5" markerWidth="3.6" markerHeight="3.6" orient="auto-start-reverse"><path d="M1 1L9 5L1 9Z" fill="#e7c14a"/></marker></defs>`;
+  svg += `<defs><marker id="hintHead" viewBox="0 0 10 10" refX="7.5" refY="5" markerWidth="3.6" markerHeight="3.6" orient="auto-start-reverse"><path d="M1 1L9 5L1 9Z" fill="#e7c14a"/></marker>` +
+    `<pattern id="holeHatch" width="0.2" height="0.2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0.1" y1="0" x2="0.1" y2="0.2" class="hole-hatch-line"/></pattern></defs>`;
 
   // Holes are DRAWN, not left as bare background. Off-board space and a hole in
   // the middle of the board used to be the same pixel — the SVG's background —
@@ -96,6 +97,9 @@ function render() {
     for (let r = hb.minR; r <= hb.maxR; r++) {
       if (B.hasCell(c, r)) continue;
       svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" class="hole"/>`;
+      // Hatching is the one mark no square carries: a flat dark fill was being
+      // read as a dark square (players said so), whatever its exact tone.
+      svg += `<rect x="${X(c)}" y="${Y(r)}" width="1" height="1" fill="url(#holeHatch)" class="hole-hatch"/>`;
       // The rim is what actually reads when fill and square are close in tone,
       // so it is not decoration — inset so it never bleeds onto a neighbour.
       svg += `<rect x="${X(c) + 0.045}" y="${Y(r) + 0.045}" width="0.91" height="0.91" rx="0.06" class="hole-rim"/>`;
@@ -167,7 +171,10 @@ function render() {
   // tutor: best-action overlay
   if (hintMove) {
     const gm = hintMove.game ? hintMove : WCAI.moveToGame(hintMove);
-    if (gm.kind === 'm' || gm.kind === 'mc') {
+    if (gm.fromOnly) {
+      const at = gm.cell || gm.from;
+      svg += `<rect x="${X(at.c) + 0.04}" y="${Y(at.r) + 0.04}" width="0.92" height="0.92" rx="0.1" class="hintcell pulse"/>`;
+    } else if (gm.kind === 'm' || gm.kind === 'mc') {
       const fx = X(gm.from.c) + 0.5, fy = Y(gm.from.r) + 0.5;
       const tx = X(gm.to.c) + 0.5, ty = Y(gm.to.r) + 0.5;
       const dx = tx - fx, dy = ty - fy, len = Math.hypot(dx, dy) || 1;
@@ -1956,9 +1963,14 @@ const GATE_COPY = {
   history: ['Keep your games', 'Right now these games live on this device only. Sign in and they are saved to your account, each with a move-by-move review.'],
   board:   ['Put your name on the board', 'Guests are not listed. Sign in and your name and rating appear on the leaderboard and in the arena standings.'],
   streak:  ['Keep your streak everywhere', 'Sign in and your daily streak and puzzle rating follow you to any phone or computer.'],
+  pzrating: function () {
+    const pr = WCPUZZLE.progress(), n = Object.keys(pr.solved || {}).length;
+    return ['Keep your ' + pr.rating + ' puzzle rating', 'Your rating and the ' + n + ' ' + (n === 1 ? 'puzzle' : 'puzzles') +
+      ' you have solved are saved in this browser only. Sign in and they follow you to any phone or computer.'];
+  },
 };
 function askSignIn(what) {
-  const c = GATE_COPY[what] || [];
+  const c = (typeof GATE_COPY[what] === 'function' ? GATE_COPY[what]() : GATE_COPY[what]) || [];
   setAuthVia(what);
   WCSTATS.track('signup_gate', { what: what });
   openAuthModal(c[0], c[1]);
@@ -2284,7 +2296,7 @@ WCCLOUD.onChange(function (u) {
 // The welcome screen must be there the instant the page paints — cloud init is
 // an await away, so decide synchronously from supabase-js's cached session in
 // localStorage. bootCloud corrects the guess if it was wrong.
-const bootOnInvite = /[#&](room|g|puzzle|replay|r)=/.test(location.hash || '');
+const bootOnInvite = /[#&](room|g|puzzle|replay|r|p)=/.test(location.hash || '');
 function hasCachedSession() {
   try {
     return Object.keys(localStorage).some(function (k) {
@@ -3401,6 +3413,7 @@ window.addEventListener('hashchange', () => {
     if (room) { openLobby(); joinRoom(room); return; }
   } catch (e) {}
   { const pid = puzzleIdFromHash(); if (pid) { if (leaveLiveGame()) openPuzzleById(pid); return; } }
+  { const sn = shortPuzzleFromHash(); if (sn) { if (leaveLiveGame()) openShortPuzzle(sn); return; } }
   if (dailyFromHash()) { if (leaveLiveGame()) openDaily(); return; }
   if (arenaFromHash()) { openArena(); return; }
   { const ra = replayFromHash(); if (ra) { openSharedGame(ra); return; } }
@@ -3451,6 +3464,7 @@ function playAgain() {
   refreshBotUI(); refreshShareUI(); maybeAI();
 }
 bind('playAgainBtn', playAgain);
+bind('bannerDailyBtn', function () { WCSTATS.track('daily_cta', { from: 'banner' }); openDaily(); });
 bind('bannerHarderBtn', function () {
   if (!gameOver() || !botLevelEl) return;
   botLevelEl.value = String(Math.min(5, +botLevelEl.value + 1));
@@ -3549,6 +3563,35 @@ const pzEl = {
   session: document.getElementById('pzSession'),
 };
 let wrongCell = null, wrongTimer = null, pzAdvance = null;
+// Help that arrives by itself. Two puzzle attempts in three were ending on a
+// miss and almost nobody pressed Hint, so the hint now comes to the player:
+// after one miss the button says it is free (the rating game is already lost),
+// after two the square or piece the move starts from glows, after three the
+// move is drawn. The first-visit puzzle runs one step ahead and also glows if
+// nothing is touched for a few seconds: nobody should fail the introduction.
+let pzMisses = 0, starterIdle = null;
+function pzNudgeReset() {
+  pzMisses = 0;
+  clearTimeout(starterIdle); starterIdle = null;
+  if (pzEl.hint) { pzEl.hint.classList.remove('nudge'); pzEl.hint.textContent = 'Hint'; }
+}
+function pzGlow(want) { hintMove = Object.assign({ game: true, fromOnly: true }, want); }
+function pzNudge() {
+  const want = WCPUZZLE.expected();
+  if (!want) return '';
+  const lvl = starterOn ? pzMisses + 1 : pzMisses;
+  WCSTATS.track('puzzle_nudge', { lvl: Math.min(lvl, 3), starter: !!starterOn });
+  if (lvl <= 1) {
+    if (pzEl.hint) { pzEl.hint.classList.add('nudge'); pzEl.hint.textContent = 'Hint (free now)'; }
+    return 'Stuck? The hint is free now.';
+  }
+  if (lvl === 2) {
+    pzGlow(want);
+    return want.kind === 'm' ? 'It starts with the glowing piece.' : 'It starts with the glowing square. Tap it to lift it.';
+  }
+  hintMove = gameToHint(want);
+  return want.kind === 'm' ? 'Follow the arrow.' : 'Follow the arrow: lift the glowing square and drop it where the arrow points.';
+}
 
 function pzSay(text, cls) {
   if (!pzEl.msg) return;
@@ -3572,6 +3615,7 @@ function paintPuzzle() {
   if (!st) return;
   const p = WCPUZZLE.current();
   pzEl.count.textContent = dailyOn ? 'Daily #' + dailyDay + ' · rated ' + st.puzzleRating
+    : p.unrated && p.n ? 'Puzzle #' + p.n + ' · from the video'
     : 'Puzzle ' + (st.index + 1) + ' of ' + st.total + ' · rated ' + st.puzzleRating;
   const side = p.turn === 'white' ? 'White' : 'Black';
   pzEl.goal.textContent = side + ' to play. Mate in ' + st.mateIn + '.';
@@ -3595,6 +3639,13 @@ function paintPuzzle() {
     '<b>' + solved + '</b> of <b>' + st.total + '</b> solved' +
     (pr.streak ? ' · streak <b>' + pr.streak + '</b>' : '') +
     (pr.best ? ' · best <b>' + pr.best + '</b>' : '');
+  // A guest's rating lives in this browser only. Once it means something (three
+  // rated puzzles) say so, with the number: that is the reason to sign in.
+  const ratedN = Object.keys(pr.rated || {}).length;
+  if (isGuest() && ratedN >= 3 && !starterOn) {
+    pzEl.progress.innerHTML += '<button type="button" class="pzd-gate" data-gate="pzrating">Sign in to keep your ' + st.rating + ' puzzle rating</button>';
+    if (!pzGateSeen) { pzGateSeen = true; WCSTATS.track('signup_prompt', { where: 'puzzle', rating: st.rating, n: ratedN }); }
+  }
   document.body.classList.toggle('puzzle-solved', !!st.finished);
   pzEl.hint.disabled = !!st.finished;
   paintPhase();
@@ -3602,7 +3653,7 @@ function paintPuzzle() {
   paintDaily();
 }
 
-let pzReplyTimer = null, pzReplyPending = false;
+let pzReplyTimer = null, pzReplyPending = false, pzGateSeen = false;
 // Board turns land every 3rd ply, so "can I move a square right now" depends
 // on a counter you cannot see. In a mode built entirely around the wildcard
 // that belongs on screen: a dot per ply of the cadence, the current one
@@ -3645,6 +3696,9 @@ function loadPuzzle(starter) {
   clearTimeout(pzAdvance); clearTimeout(wrongTimer);
   dailyStop();                             // any other puzzle is not the daily; openDaily() turns it back on
   starterOn = false;                       // nor the starter; openStarter() turns that back on
+  shortOn = false;                         // nor the one from a short; openShortPuzzle() turns that back on
+  WCPUZZLE.setPractice(false);
+  pzNudgeReset();
   document.body.classList.remove('pz-wrong');
   wrongCell = null;
   pzHintLevel = 0;
@@ -3684,6 +3738,7 @@ async function startPuzzles() {
 const DAILY_KEY = 'hollowchess.daily.v1', DAILY_EPOCH = Date.UTC(2026, 10, 21), DAY_MS = 86400000;
 let dailyOn = false, dailyDay = 0, dailyStats = null, dailyTick = null, dailyFetched = 0;
 let starterOn = false;                    // the first-visit puzzle: it stays up when solved and offers a game
+let shortOn = false;                      // the puzzle from a short (hollowchess.com/p/N): it stays up when solved too
 const pzDailyEl = document.getElementById('pzDaily');
 setTimeout(function () { try { badgeCheck(); } catch (e) {} }, 1500);
 function dailyNo() { return Math.floor((Date.now() - DAILY_EPOCH) / DAY_MS) + 1; }
@@ -3832,6 +3887,11 @@ function dailyNextIn() {
   return h ? h + 'h ' + m + 'm' : Math.max(1, m) + 'm';
 }
 function dailyStop() { dailyOn = false; if (dailyTick) { clearInterval(dailyTick); dailyTick = null; } if (pzDailyEl) pzDailyEl.hidden = true; }
+function dailyCtaText() {                   // '' once today's is solved
+  const dd = dailyRead(), today = dd.days[dailyNo()], run = dailyStreak(dd);
+  if (today && today.ms) return '';
+  return run > 0 ? '\ud83d\udd25 Keep your ' + run + '-day streak: today\u2019s puzzle' : 'Try today\u2019s daily puzzle';
+}
 function dailyToday() { return dailyStats && dailyStats.day === dailyNo() ? dailyStats : null; }
 function dailyFetch(force) {
   if (!WCCLOUD.dailyStats || (!force && Date.now() - dailyFetched < 60000)) return;
@@ -3900,7 +3960,27 @@ function paintDaily() {
     pzDailyEl.hidden = false;
     return;
   }
-  if (!dailyOn) { pzDailyEl.hidden = true; return; }
+  if (shortOn) {
+    const sst = WCPUZZLE.state();
+    if (!sst || !sst.finished) { pzDailyEl.hidden = true; return; }
+    pzDailyEl.innerHTML = '<div class="pzd-line"><b>That is the one from the video.</b> There are ' + WCPUZZLE.count() +
+      ' more here, and a new one for everyone each day.</div>' +
+      '<div class="pzd-btns"><button class="act-btn primary" id="pzsDaily" type="button">Today\u2019s puzzle</button>' +
+      '<button class="act-btn" id="pzsPlay" type="button">Play a game</button></div>';
+    pzDailyEl.hidden = false;
+    return;
+  }
+  if (!dailyOn) {
+    // an ordinary puzzle run: the daily is the thing worth coming back for, so
+    // while today's is unsolved it is one tap away, with the streak it protects
+    const dd = dailyRead(), today = dd.days[dailyNo()], run = dailyStreak(dd);
+    if (today && today.ms) { pzDailyEl.hidden = true; return; }
+    pzDailyEl.innerHTML = '<button type="button" class="pzd-today" id="pzdToday">' +
+      (run > 0 ? '\ud83d\udd25 Today\u2019s puzzle keeps your ' + run + '-day streak' : 'Today\u2019s puzzle: the same one for everyone') +
+      '<small>new in ' + dailyNextIn() + '</small></button>';
+    pzDailyEl.hidden = false;
+    return;
+  }
   const d = dailyRead(), rec = d.days[dailyDay] || {}, st = dailyToday();
   let h = '';
   if (!rec.ms) {
@@ -3945,6 +4025,7 @@ function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n 
 if (pzDailyEl) pzDailyEl.addEventListener('click', function (e) {
   if (e.target.closest('#pzsPlay')) { WCSTATS.track('intro', { a: 'game' }); startFirstGame(true); }
   else if (e.target.closest('#pzsDaily')) openDaily();
+  else if (e.target.closest('#pzdToday')) { WCSTATS.track('daily_cta', { from: 'puzzles' }); openDaily(); }
   else if (e.target.closest('#pzdRemind')) arenaRegister();
   else if (e.target.closest('#pzdSrOff')) streakRemindOff();
   else if (e.target.closest('#pzdSr')) streakRemindOn();
@@ -4205,6 +4286,30 @@ async function openPuzzleById(id) {
   }
   history.replaceState(null, '', location.pathname + location.search);
 }
+// ---- the puzzle from a short --------------------------------------------------
+// A short ends on "solve it yourself: hollowchess.com/p/12". 404.html turns that
+// into #p=12, which opens the very position from the video on the real board
+// (js/short-puzzles.json, built by harness/shorts-to-site.js). A number that
+// has no playable puzzle lands on the daily instead of a dead end.
+function shortPuzzleFromHash() {
+  const m = /[#&]p=(\d{1,4})(?:&|$)/.exec(location.hash || '');
+  return m ? +m[1] : 0;
+}
+async function openShortPuzzle(n) {
+  closeWelcome();
+  try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {}     // they came for a puzzle, not a first game
+  const p = await WCPUZZLE.loadShort(n);
+  history.replaceState(null, '', location.pathname + location.search);
+  WCSTATS.track('short_open', { n: n, found: !!p });
+  if (!p) { openDaily(); return; }
+  await startPuzzles();
+  if (!puzzleMode) return;
+  loadPuzzle(function () { return WCPUZZLE.startById(p.id); });
+  shortOn = true;
+  pzSay('Puzzle #' + n + ' from the video. ' + (p.turn === 'white' ? 'White' : 'Black') + ' to play, mate in ' + p.mateIn + '.' +
+    (game.canWildcard() ? ' You may move a square of the board this turn.' : ' No board move on this turn: it comes on your second move.'));
+  paintPuzzle(); updateAmbient();
+}
 // ---- game links ------------------------------------------------------------------
 // A game has an address too: hollowchess.com/#replay=... carries every action of
 // the game (five characters a ply), and opens on the review board with the coach.
@@ -4430,7 +4535,9 @@ function puzzleSubmit(gm) {
   selected = null; legal = []; hintMove = null; setMode('normal');
   if (!res.ok && res.state === 'wrong') {
     WCSOUND.play('wrong');
-    pzSay(res.message, 'bad');
+    pzMisses++;
+    const tip = pzNudge();
+    pzSay(starterOn ? 'Not that one. ' + tip : res.message + (tip ? ' ' + tip : ''), 'bad');
     afterRated(res.rated);
     pzLog(before && before.id, false, false);
     // Say it ON the board. A line of text in the side panel is easy to miss
@@ -4443,7 +4550,8 @@ function puzzleSubmit(gm) {
     wrongTimer = setTimeout(function () {
       bd.classList.remove('pz-wrong'); wrongCell = null; render();
     }, 750);
-    sync(); render(); paintPuzzle();
+    const glow = hintMove;                      // sync() drops the tutor's overlay; this one is ours
+    sync(); hintMove = glow; render(); paintPuzzle();
     return;
   }
   actionFX();                                   // your move gets the game's own sound
@@ -4455,23 +4563,25 @@ function puzzleSubmit(gm) {
       pzReplyTimer = null; pzReplyPending = false;
       WCPUZZLE.playReply(res.pendingReply);
       actionFX();
-      pzHintLevel = 0;
+      pzHintLevel = 0; pzNudgeReset();
       sync(); render(); paintPuzzle();
     }, 420);
     return;
   }
   if (res.state === 'solved') {
+    pzNudgeReset();
     badgeCheck();
     WCSOUND.play('win');
     pzLog(before && before.id, true, !(before && before.failed));
     // straight on to the next one — a run should not stall waiting on a button
     clearTimeout(pzAdvance);
     if (dailyOn) dailySolved(!(before && (before.failed || before.hinted)));   // the daily stays up: its result is the point
-    else if (!starterOn) pzAdvance = setTimeout(function () {
+    else if (!starterOn && !shortOn) pzAdvance = setTimeout(function () {
       if (puzzleMode) loadPuzzle(function () { return WCPUZZLE.nextUnsolved(); });
     }, 1600);
     pzSay(before && before.failed ? 'Solved.' : 'Solved, first try.', 'done');
     if (starterOn) { pzSay('Checkmate. You moved the board, not a piece.', 'done'); WCSTATS.track('intro', { a: 'solved' }); }
+    if (shortOn) WCSTATS.track('short_solved', { n: (WCPUZZLE.current() || {}).n, clean: !(before && before.failed) });
     WCSTATS.track('puzzle_solved', { id: before && before.id, mateIn: before && before.mateIn, clean: !(before && before.failed) });
     afterRated(res.rated);
     syncProfileUp();                            // a solve follows the account, like a rating change
@@ -4492,17 +4602,23 @@ if (pzEl.next) pzEl.next.addEventListener('click', function () {
 if (pzEl.retry) pzEl.retry.addEventListener('click', function () {
   if (pzReplyTimer) { clearTimeout(pzReplyTimer); pzReplyTimer = null; }
   pzReplyPending = false;
-  WCPUZZLE.retry(); pzHintLevel = 0; hintMove = null;
+  WCPUZZLE.retry(); pzHintLevel = 0; hintMove = null; pzNudgeReset();
   pzSay('From the top.');
   sync(); render(); paintPuzzle();
 });
 if (pzEl.exit) pzEl.exit.addEventListener('click', exitPuzzles);
 if (pzEl.hint) pzEl.hint.addEventListener('click', function () {
-  pzHintLevel++;
+  // after a miss the first press already says where the move starts: "it is a
+  // board move" is not much of an answer to someone who has just got it wrong
+  pzHintLevel = Math.max(pzHintLevel + 1, pzMisses ? 2 : 1);
   const h = WCPUZZLE.hint(pzHintLevel);
   if (!h) return;
+  pzEl.hint.classList.remove('nudge');
   afterRated(h.rated);                          // the first hint costs the rating game
-  if (h.text) { pzSay(h.text); paintPuzzle(); return; }
+  if (h.text) {
+    if (pzHintLevel === 2) { pzGlow(WCPUZZLE.expected()); render(); }   // and show it, not only name it
+    pzSay(h.text); paintPuzzle(); return;
+  }
   // level 3: draw it on the board, using the tutor's own arrow overlay
   hintMove = gameToHint(h.reveal);
   pzSay('The move is ' + WCPUZZLE.actionText(h.reveal) + '.');
@@ -4643,6 +4759,11 @@ function sync() {
       hb.hidden = !up;
       if (up) hb.textContent = '\u25b2 Harder bot: ' + WCAI.levelById(lvl + 1).name;
     }
+    const db = document.getElementById('bannerDailyBtn');
+    if (db) {
+      const txt = (onlineActive || puzzleMode) ? '' : dailyCtaText();
+      db.hidden = !txt; db.textContent = txt;
+    }
     const sb = document.getElementById('saveRatingBtn');
     if (sb) {
       const guest = !(WCCLOUD.currentUser && WCCLOUD.currentUser());
@@ -4750,7 +4871,17 @@ async function openStarter() {
   if (!puzzleMode || !WCPUZZLE.list().some(function (p) { return p.id === STARTER_ID; })) return;
   loadPuzzle(function () { return WCPUZZLE.startById(STARTER_ID); });
   starterOn = true;
+  WCPUZZLE.setPractice(true);            // the introduction is not a rating game
   pzSay('Mate in 1, and the move is a board move. Tap an empty square to lift it, then tap the gap between your queen and the king.');
+  clearTimeout(starterIdle);
+  starterIdle = setTimeout(function () {
+    const st = WCPUZZLE.state();
+    if (!starterOn || !puzzleMode || !st || st.finished || pzMisses || hintMove || selected) return;
+    pzGlow(WCPUZZLE.expected());
+    pzSay('Tap the glowing square to lift it, then tap the gap between your queen and the king.');
+    WCSTATS.track('puzzle_nudge', { lvl: 0, starter: true });
+    render();
+  }, 6000);
   paintPuzzle(); updateAmbient();
 }
 
@@ -4759,7 +4890,8 @@ const bootPuzzle = puzzleIdFromHash();
 const bootReplay = replayFromHash();
 const bootShort = shortIdFromHash();
 const bootDaily = dailyFromHash();
-if (!bootRoom && !bootedFromLink && !bootPuzzle && !bootReplay && !bootShort && !bootDaily && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
+const bootShortPz = shortPuzzleFromHash();
+if (!bootRoom && !bootedFromLink && !bootPuzzle && !bootShortPz && !bootReplay && !bootShort && !bootDaily && liveAtBoot) resumedGame = liveRestore(liveAtBoot);
 if (resumedGame) {
   closeWelcome();            // straight back to the board you were on
   updateAmbient();
@@ -4768,6 +4900,8 @@ if (resumedGame) {
   joinRoom(bootRoom);
 } else if (bootPuzzle) {
   openPuzzleById(bootPuzzle);
+} else if (bootShortPz) {
+  openShortPuzzle(bootShortPz);
 } else if (bootReplay) {
   openSharedGame(bootReplay);
 } else if (bootShort) {
@@ -4775,7 +4909,7 @@ if (resumedGame) {
 } else if (bootDaily) {
   openDaily();
 }
-if (arenaFromHash()) { try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {} closeWelcome(); if (!resumedGame) openLobby(); openArena(); } else if (!bootedFromLink && !bootPuzzle) {
+if (arenaFromHash()) { try { localStorage.setItem(FIRSTKEY, '1'); } catch (e) {} closeWelcome(); if (!resumedGame) openLobby(); openArena(); } else if (!bootedFromLink && !bootPuzzle && !bootShortPz) {
   // the welcome screen owns the first paint; enterSite() opens the lobby after
   const w = document.getElementById('welcome');
   if (w && w.classList.contains('show') && firstVisit()) { startFirstGame(); showIntro(); }
