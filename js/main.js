@@ -117,7 +117,7 @@ function render() {
   if (mode === 'addcell' || (mode === 'movecell' && selected)) {
     const targets = mode === 'addcell'
       ? B.addTargets()
-      : [...B._attachTargetsExcluding(keyJS(selected.c, selected.r))].map(parseKeyJS);
+      : [...cellTargets(B, selected.c, selected.r)].map(parseKeyJS);
     for (const t of targets)
       svg += `<rect x="${X(t.c) + 0.07}" y="${Y(t.r) + 0.07}" width="0.86" height="0.86" rx="0.08" class="guide"/>`;
   }
@@ -125,6 +125,8 @@ function render() {
     for (const k of B.cells) {
       if (B.board.has(k)) continue;
       const { c, r } = parseKeyJS(k);
+      // in check, only the squares that can actually answer it are on offer
+      if (mode === 'movecell' && B.status === 'check' && !cellTargets(B, c, r).size) continue;
       svg += `<rect x="${X(c) + 0.05}" y="${Y(r) + 0.05}" width="0.9" height="0.9" rx="0.09" class="target ${mode === 'removecell' ? 'remove' : 'movecell'}"/>`;
     }
   }
@@ -346,6 +348,18 @@ boardEl.addEventListener('contextmenu', (e) => {       // right-click cancels a 
 });
 
 // Everything a click (or a drop) on a square means.
+// Where a lifted square may legally land: touching the rest of the board, and
+// not leaving your own king in check. The engine refuses the rest anyway, and
+// drawing them as dashed spots made a check look like it had exits it did not.
+function cellTargets(B, c, r) {
+  const k = keyJS(c, r), out = new Set();
+  if (!B.cells.has(k) || B.board.has(k)) return out;
+  for (const t of B._attachTargetsExcluding(k)) {
+    if (B._trial(B.turn, function () { B.cells.delete(k); B.cells.add(t); })) out.add(t);
+  }
+  return out;
+}
+
 function onSquare(c, r) {
   const p = game.hasCell(c, r) ? game.get(c, r) : null;
 
@@ -393,10 +407,21 @@ function onSquare(c, r) {
   // Board turn, nothing selected, empty square: ONE click lifts it. A second
   // click on a dashed spot places it; clicking it again puts it back down.
   if (game.canWildcard() && game.hasCell(c, r) && !p) {
+    const inCheck = game.status === 'check';
+    if (!cellTargets(game, c, r).size) {
+      // nothing legal to do with this one: say so instead of lifting it into a dead end
+      ui.hint.textContent = inCheck
+        ? 'You are in check, and moving that square does not stop it. Move a piece, or try a square on the line of the check.'
+        : 'That square cannot move right now: every spot for it would leave your king in check.';
+      render();
+      return;
+    }
     setMode('movecell');
     selected = { c, r };
     WCSOUND.play('lift');
-    ui.hint.textContent = 'Square lifted — click a dashed spot to place it, or click it again to cancel.';
+    ui.hint.textContent = inCheck
+      ? 'Check: only the dashed spots stop it. Click one, or click the square again to cancel.'
+      : 'Square lifted — click a dashed spot to place it, or click it again to cancel.';
     render();
   }
 }
@@ -502,7 +527,7 @@ function dragPaint(clientX, clientY) {
     boardEl.appendChild(over);
   }
   const ok = drag.kind === 'cell'
-    ? game._attachTargetsExcluding(keyJS(drag.c, drag.r)).has(keyJS(t.c, t.r))
+    ? cellTargets(game, drag.c, drag.r).has(keyJS(t.c, t.r))
     : game.hasCell(t.c, t.r) && !(t.c === drag.c && t.r === drag.r);
   const xy = squareXY(t.c, t.r);
   over.setAttribute('x', xy.x); over.setAttribute('y', xy.y);
@@ -586,7 +611,7 @@ window.addEventListener('pointerup', function (e) {
   }
   if (d.kind === 'cell') {
     // only a dashed spot takes it; anywhere else it stays in hand for a tap
-    if (same || !game._attachTargetsExcluding(keyJS(d.c, d.r)).has(keyJS(t.c, t.r))) { render(); return; }
+    if (same || !cellTargets(game, d.c, d.r).has(keyJS(t.c, t.r))) { render(); return; }
     const was = game.lastAction;
     skipNextAnim = true;
     onSquare(t.c, t.r);
@@ -4374,6 +4399,7 @@ function exitPuzzles() {
   activeBot = null; ratedGame = false;
   if (oppModeEl) oppModeEl.value = 'bot';
   resetGameState();
+  flipped = (botSide() === 'white');      // the board behind the menu faces the side you will play
   paintOppCard(); applyTutorVisibility(); refreshBotUI(); refreshShareUI();
   runAnalysis(); sync(); render();
   openLobby();
@@ -4691,7 +4717,11 @@ function paintCoach() {
   } else if (!game.history.length) {
     t.innerHTML = '<b>You are White.</b> Every third turn you can move a square instead of a piece.';
   } else {
-    t.innerHTML = 'Your first board turn is on move 3.';
+    // White's board turns are moves 3, 6, 9, ...
+    const upcoming = Math.ceil(game.history.length / 2) + 1;
+    const next = Math.ceil(upcoming / 3) * 3;
+    t.innerHTML = next === 3 ? 'Your first board turn is on move 3.'
+      : 'Your next board turn is on move ' + next + '.';
   }
 }
 bind('coachTour', function () { WCTUT.open(updateAmbient); updateAmbient(); });
